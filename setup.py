@@ -24,4 +24,5 @@ setup(name='Ming',
       entry_points="""
       # -*- Entry points: -*-
       """,
+      test_suite='ming.tests',
       )
