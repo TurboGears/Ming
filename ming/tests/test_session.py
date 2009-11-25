@@ -31,6 +31,7 @@ class TestSession(TestCase):
             _id=Field(S.ObjectId, if_missing=None)
             a=Field(S.Int, if_missing=None)
             b=Field(S.Object, dict(a=S.Int(if_missing=None)))
+            cc=dict(dd=int, ee=int)
         class TestDocNoSchema(Document):
             class __mongometa__:
                 name='test_doc'
@@ -100,6 +101,10 @@ class TestSession(TestCase):
         doc = self.TestDocNoSchema(dict(_id=1, a=5))
         sess.set(doc, dict(b=5))
         self.assertEqual(doc.b, 5)
+
+        doc = self.TestDocNoSchema(dict(_id=1, cc=dict(dd=1, ee=2)))
+        sess.set(doc, {'cc.ee': 9})
+        self.assertEqual(doc.cc.ee, 9)
 
         doc = self.TestDocNoSchema(dict(_id=1, a=5))
         sess.increase_field(doc, a=60)

@@ -104,13 +104,22 @@ class Session(object):
     def delete(self, doc):
         self._impl(doc).remove({'_id':doc._id}, safe=True)
 
+    def _set(self, doc, key_parts, value):
+        if len(key_parts) == 0:
+            return
+        elif len(key_parts) == 1:
+            doc[key_parts[0]] = value
+        else:
+            self._set(doc[key_parts[0]], key_parts[1:], value)
+
     def set(self, doc, fields_values):
         """
         sets a key/value pairs, and persists those changes to the datastore immediately
         """
         fields_values = Object.from_bson(fields_values)
         fields_values.make_safe()
-        doc.update(fields_values)
+        for k,v in fields_values.iteritems():
+            self._set(doc, k.split('.'), v)
         impl = self._impl(doc)
         impl.update({'_id':doc._id}, {'$set':fields_values}, safe=True)
         
