@@ -49,13 +49,13 @@ class TestSession(TestCase):
         TestDoc = self.TestDoc
         self.assertEqual(sess.get(TestDoc, a=5), dict(a=None, b=dict(a=None), _id=None))
         sess.find(TestDoc, dict(a=5))
-        sess.remove(TestDoc, dict(a=5))
+        sess.remove(TestDoc, dict(a=5), safe=True)
         sess.group(TestDoc, 'a')
         sess.update_partial(TestDoc, dict(a=5), dict(b=6), False)
         
         impl.find_one.assert_called_with(dict(a=5))
         impl.find.assert_called_with(dict(a=5))
-        impl.remove.assert_called_with(dict(a=5))
+        impl.remove.assert_called_with(dict(a=5), safe=True)
         impl.group.assert_called_with('a')
         impl.update.assert_called_with(dict(a=5), dict(b=6), False, safe=True)
 
@@ -70,14 +70,14 @@ class TestSession(TestCase):
         impl.save.assert_called_with(doc, safe=True)
         impl.insert.assert_called_with(doc, safe=True)
         impl.update.assert_called_with(doc, dict(a=1), False, safe=True)
-        impl.remove.assert_called_with(dict(_id=None))
+        impl.remove.assert_called_with(dict(_id=None), safe=True)
 
         doc = self.TestDocNoSchema({'_id':5, 'a':5})
         sess.save(doc)
         impl.save.assert_called_with(dict(_id=5, a=5), safe=True)
         doc = self.TestDocNoSchema({'_id':5, 'a':5})
         sess.save(doc, 'a')
-        impl.update.assert_called_with(dict(_id=5), {'$set':dict(a=5)})
+        impl.update.assert_called_with(dict(_id=5), {'$set':dict(a=5)}, safe=True)
         doc = self.TestDocNoSchema({'_id':5, 'a':5})
         impl.insert.return_value = pymongo.bson.ObjectId()
         sess.insert(doc)
@@ -104,10 +104,12 @@ class TestSession(TestCase):
         doc = self.TestDocNoSchema(dict(_id=1, a=5))
         sess.increase_field(doc, a=60)
         impl.update.assert_called_with(dict(_id=1, a={'$lt': 60}),
-                                       {'$set': dict(a=60)})
+                                       {'$set': dict(a=60)},
+                                       safe=True)
         sess.increase_field(doc, b=60)
         impl.update.assert_called_with(dict(_id=1, b={'$lt': 60}),
-                                       {'$set': dict(b=60)})
+                                       {'$set': dict(b=60)},
+                                       safe=True)
         self.assertRaises(ValueError, sess.increase_field, doc, b=None)
         
 
