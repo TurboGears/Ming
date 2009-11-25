@@ -85,7 +85,6 @@ class TestDocument(TestCase):
         self.TestDoc.m.update_partial(dict(a=5), dict(b=6))
         doc = self.TestDoc.make(dict(a=5))
         doc.m.save()
-        doc.m.update(dict(b=10))
         doc.m.delete()
         doc.m.set(dict(b=10))
         doc.m.increase_field(a=10)
@@ -100,7 +99,6 @@ class TestDocument(TestCase):
         self.MockSession.update_partial.assert_called_with(
             self.TestDoc, dict(a=5), dict(b=6), False)
         self.MockSession.save.assert_called_with(doc)
-        self.MockSession.update.assert_called_with(doc, dict(b=10), False)
         self.MockSession.delete.assert_called_with(doc)
         self.MockSession.set.assert_called_with(doc, dict(b=10))
         self.MockSession.increase_field.assert_called_with(doc, a=10)

@@ -65,11 +65,9 @@ class TestSession(TestCase):
         self.assertEqual(doc.b, dict(a=None))
         del doc._id
         sess.insert(doc)
-        sess.update(doc, dict(a=1))
         sess.delete(doc)
         impl.save.assert_called_with(doc, safe=True)
         impl.insert.assert_called_with(doc, safe=True)
-        impl.update.assert_called_with(doc, dict(a=1), False, safe=True)
         impl.remove.assert_called_with(dict(_id=None), safe=True)
 
         doc = self.TestDocNoSchema({'_id':5, 'a':5})
@@ -83,9 +81,11 @@ class TestSession(TestCase):
         sess.insert(doc)
         impl.insert.assert_called_with(dict(_id=5, a=5), safe=True)
         doc = self.TestDocNoSchema({'_id':5, 'a':5})
-        sess.update(doc, dict(a=1))
-        impl.update.assert_called_with(doc, dict(a=1), False, safe=True)
-
+        sess.upsert(doc, ['a'])
+        impl.update.assert_called_with(dict(a=5), dict(_id=5, a=5), upsert=True, safe=True)
+        sess.upsert(doc, '_id')
+        impl.update.assert_called_with(dict(_id=5), dict(_id=5, a=5), upsert=True, safe=True)
+        
         sess.find_by(self.TestDoc, a=5)
         sess.count(self.TestDoc)
         sess.ensure_index(self.TestDoc, 'a')

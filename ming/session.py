@@ -87,14 +87,19 @@ class Session(object):
         if isinstance(bson, pymongo.objectid.ObjectId):
             doc.update(_id=bson)
 
-    def update(self, doc, spec, upsert=False):
+    def upsert(self, doc, spec_fields):
         doc.make_safe()
         if doc.__mongometa__.schema is not None:
             data = doc.__mongometa__.schema.validate(doc)
         else:
             data = dict(doc)
         doc.update(data)
-        self._impl(doc).update(doc, spec, upsert, safe=True)
+        if type(spec_fields) != list:
+            spec_fields = [spec_fields]
+        self._impl(doc).update(dict((k,doc[k]) for k in spec_fields),
+                               doc,
+                               upsert=True,
+                               safe=True)
 
     def delete(self, doc):
         self._impl(doc).remove({'_id':doc._id}, safe=True)

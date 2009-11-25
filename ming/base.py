@@ -155,13 +155,15 @@ class Manager(object):
         """
         return self.session.insert(self.instance)
 
-    def update(self, spec, upsert=False):
+    def upsert(self, spec_fields):
         """
-        Acts on object instance
+        Acts on object instance.
+        spec_fields is a field or list of fields used to see if the record already exists
         e.g.
-            model.CustomPage(...).m.update({'foo':'bar'})
+            model.CustomPage(...).m.upsert('my_key_field')
+            model.CustomPage(...).m.upsert(['field1','field2'])
         """
-        return self.session.update(self.instance, spec, upsert)
+        return self.session.upsert(self.instance, spec_fields)
 
     def delete(self):
         """
