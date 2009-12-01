@@ -62,6 +62,8 @@ class Session(object):
         return self._impl(cls).update(spec, fields, upsert, safe=True)
 
     def save(self, doc, *args):
+        hook = getattr(doc.__mongometa__, 'before_save', None)
+        if hook: hook.im_func(doc)
         doc.make_safe()
         if doc.__mongometa__.schema is not None:
             data = doc.__mongometa__.schema.validate(doc)

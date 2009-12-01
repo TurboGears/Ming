@@ -1,12 +1,23 @@
 from datetime import datetime
 from decimal import Decimal
 from unittest import TestCase, main
+from collections import defaultdict
 
 import mock
 
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
 from pymongo.bson import ObjectId
+
+def mock_datastore():
+    ds = mock.Mock()
+    ds.db = defaultdict(mock_collection)
+    return ds
+
+def mock_collection():
+    c = mock.Mock()
+    c.find_one = mock.Mock(return_value={})
+    return c
 
 class TestObject(TestCase):
 
@@ -195,6 +206,44 @@ class TestPolymorphic(TestCase):
         self.assertEqual(self.Base.make(dict(type='derived')),
                          dict(type='derived', a=None, b=None))
         
+
+class TestHooks(TestCase):
+
+    def setUp(self):
+        from ming.session import Session
+        self.bind = mock_datastore()
+        self.session = Session(self.bind)
+        self.hooks_called = defaultdict(list)
+        tc = self
+        class Base(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.session
+                polymorphic_registry={}
+                polymorphic_on='type'
+                polymorphic_identity='base'
+                def before_save(instance):
+                    tc.hooks_called['before_save'].append(instance)
+            type=Field(str)
+            a=Field(int)
+        class Derived(Base):
+            class __mongometa__:
+                name='test_doc'
+                session = self.session
+                polymorphic_identity='derived'
+            b=Field(int)
+        self.Base = Base
+        self.Derived = Derived
+
+    def test_hook_base(self):
+        b = self.Base(dict(a=5))
+        b.m.save()
+        self.assertEqual(self.hooks_called['before_save'], [b])
+        d = self.Derived(dict(a=5, b=6))
+        d.m.save()
+        self.assertEqual(self.hooks_called['before_save'], [b, d])
+        
+
 if __name__ == '__main__':
     main()
 
