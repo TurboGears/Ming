@@ -243,10 +243,16 @@ class DocumentMeta(type):
             mm.schema = None
         else:
             polymorphic_identity = mm_dict.get('polymorphic_identity', cls.__name__)
-            mm.schema = my_schema
-            mm.schema.managed_class = cls
-            mm.schema.set_polymorphic(
+            prev_version = getattr(mm, 'version_of', None)
+            my_schema.managed_class = cls
+            my_schema.set_polymorphic(
                 mm.polymorphic_on, mm.polymorphic_registry, polymorphic_identity)
+            if prev_version:
+                mm.schema = schema.Migrate(prev_version.__mongometa__.schema,
+                                           my_schema,
+                                           mm.migrate.im_func)
+            else:
+                mm.schema = my_schema
         
 class Document(Object):
     '''Base class for all mapped MongoDB objects (the Document class can be
