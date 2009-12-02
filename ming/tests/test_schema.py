@@ -56,6 +56,11 @@ class TestSchemaItem(TestCase):
         self.assertRaises(S.Invalid, si.validate, dict(a='as'))
         self.assertRaises(S.Invalid, si.validate, {5:5})
 
+    def test_exact_value(self):
+        si = S.SchemaItem.make(dict(version=4))
+        self.assertEqual(si.validate(dict(version=4)), dict(version=4))
+        self.assertRaises(S.Invalid, si.validate, dict(version=3))
+
 if __name__ == '__main__':
     main()
 
