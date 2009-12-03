@@ -4,6 +4,8 @@
 *.log
 *.pyc
 */.coverage
+.coverage
+/cover/
 *~
 pyforge/docs/_build/*
 mail/logs/*
