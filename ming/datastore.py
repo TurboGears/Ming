@@ -44,7 +44,7 @@ class DataStore(object):
         if len(self.master_args) > 1 and self.slave_args:
             log.warning(
                 'Master/slave is not supported with replica pairs')
-            self.slave_Args = []
+            self.slave_args = []
         self.database = (self.master_args+self.slave_args)[0]['path'][1:]
         for a in self.master_args + self.slave_args:
             assert a['path'] == '/' + self.database, \
@@ -66,23 +66,40 @@ class DataStore(object):
                 self._conn = Connection.paired(
                     (str(self.master_args[0]['host']), int(self.master_args[0]['port'])),
                     (str(self.master_args[1]['host']), int(self.master_args[1]['port'])),
-                    pool_size=16)
+                    pool_size=int(self.master_args[0]['query'].get('pool_size','16')))
             else:
-                assert self.master_args, 'You must specify a master connection'
-                try:
-                    master = Connection(str(self.master_args[0]['host']), int(self.master_args[0]['port']),
-                                        pool_size=8)
-                except:
-                    if self.slave_args:
-                        log.exception('Cannot connect to master: %s will use slave: %s' % (self.master_args, self.slave_args))
+                if self.master_args:
+                    try:
+                        network_timeout = self.master_args[0]['query'].get('network_timeout')
+                        if network_timeout is not None:
+                            network_timeout = float(network_timeout)
+                        master = Connection(str(self.master_args[0]['host']), int(self.master_args[0]['port']),
+                                            pool_size=int(self.master_args[0]['query'].get('pool_size','16')),
+                                            network_timeout=network_timeout)
+                    except:
+                        if self.slave_args:
+                            log.exception('Cannot connect to master: %s will use slave: %s' % (self.master_args, self.slave_args))
                             # and continue... to use the slave only
-                        master = None
-                    else:
-                        raise
+                            master = None
+                        else:
+                            raise
+                else:
+                    log.info('No master connection specified, using slaves only: %s' % self.slave_args)
+                    master = None
 
                 if self.slave_args:
-                    slave = [ Connection(str(a['host']), int(a['port']), pool_size=16, slave_okay=True)
-                               for a in self.slave_args ]
+                    slave = []
+                    for a in self.slave_args:
+                        network_timeout = a['query'].get('network_timeout')
+                        if network_timeout is not None:
+                            network_timeout = float(network_timeout)
+                        slave.append(
+                            Connection(str(a['host']), int(a['port']),
+                                       pool_size=int(a['query'].get('pool_size','16')),
+                                       slave_okay=True,
+                                       network_timeout=network_timeout,
+                                      )
+                        )
                     if master:
                         self._conn = MasterSlaveConnection(master, slave)
                     else:

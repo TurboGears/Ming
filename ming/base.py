@@ -196,6 +196,12 @@ class Manager(object):
         '''
         for m in self.find({}):
             m.m.save()
+    
+    def index_information(self):
+        return self.session.index_information(self.cls)
+    
+    def drop_indexes(self):
+        return self.session.drop_indexes(self.cls)
 
 class DocumentMeta(type):
     '''Metaclass for Documents providing several services:

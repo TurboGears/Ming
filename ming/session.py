@@ -150,3 +150,10 @@ class Session(object):
             {'$set': {key: value}},
             safe = True,
         )
+    
+    def index_information(self, cls):
+        return self._impl(cls).index_information()
+    
+    def drop_indexes(self, cls):
+        return self._impl(cls).drop_indexes()
+
