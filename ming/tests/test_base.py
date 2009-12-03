@@ -113,6 +113,18 @@ class TestDocument(TestCase):
         self.MockSession.delete.assert_called_with(doc)
         self.MockSession.set.assert_called_with(doc, dict(b=10))
         self.MockSession.increase_field.assert_called_with(doc, a=10)
+        
+        doc.m.insert()
+        self.MockSession.insert.assert_called_with(doc)
+        
+        doc.m.upsert('a')
+        self.MockSession.upsert.assert_called_with(doc, 'a')
+        
+        self.TestDoc.m.index_information()
+        self.MockSession.index_information.assert_called_with(self.TestDoc)
+        
+        self.TestDoc.m.drop_indexes()
+        self.MockSession.drop_indexes.assert_called_with(self.TestDoc)
 
     def test_migrate(self):
         doc = self.TestDoc.make(dict(a=5))
