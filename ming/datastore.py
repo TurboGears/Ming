@@ -32,8 +32,8 @@ class DataStore(object):
             master = [ master ]
         if isinstance(slave, basestring):
             slave = [ slave ]
+        if master is None: master = []
         if slave is None: slave = []
-        assert master, 'You MUST supply at least one master mongo connection'
         self.master_args = [ parse_uri(s) for s in master if s ]
         self.slave_args = [ parse_uri(s) for s in slave if s ]
         if len(self.master_args) > 2:

@@ -50,6 +50,27 @@ class TestDatastore(TestCase):
         ms_fail = DS.DataStore(master='mongo://localhost:23/test_db')
         self.assert_(ms_fail.conn is None)
         
+    def test_3masters(self):
+        ms = DS.DataStore(master=['mongo://localhost:23/test_db?pool_size=2',
+                                  'mongo://localhost:27017/test_db?pool_size=2',
+                                  'mongo://localhost:999/test_db?pool_size=2',
+                                  ])
+        self.assert_(ms.conn is not None)
+        self.assertEqual(len(ms.master_args), 2)
+        
+    def test_replica_pair_slaves(self):
+        ms = DS.DataStore(master=['mongo://localhost:23/test_db?pool_size=2',
+                                  'mongo://localhost:27017/test_db?pool_size=2'],
+                          slave='mongo://localhost:999/test_db?pool_size=2')
+        self.assert_(ms.conn is not None)
+        self.assertEqual(len(ms.slave_args), 0)
+        
+    def test_slave_only(self):
+        ms = DS.DataStore(master = None,
+                          slave = 'mongo://localhost:27017/test_db?pool_size=2')
+        self.assert_(ms.conn is not None)
+        self.assert_(ms.db is not None)
+        
 
 if __name__ == '__main__':
     main()
