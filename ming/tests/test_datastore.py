@@ -1,5 +1,7 @@
 from unittest import TestCase, main
 
+from mock import patch
+
 import ming
 from ming import Session, Field, Document
 from ming import datastore as DS
@@ -25,10 +27,26 @@ class TestDatastore(TestCase):
         self.session.bind.conn
 
     def test_master_slave(self):
+        ms = DS.DataStore(master='mongo://localhost:27017/test_db?network_timeout=5',
+                          slave='mongo://localhost:27017/test_db?network_timeout=5')
+        self.assert_(ms.conn is not None)
+        self.assert_(ms.db is not None)
+    
+    def test_master_slave_failover(self):
         ms = DS.DataStore(master='mongo://localhost:23/test_db',
                           slave='mongo://localhost:27017/test_db')
         ms.conn # should failover to slave-only
         ms.db 
+        ms_fail = DS.DataStore(master='mongo://localhost:23/test_db')
+        self.assert_(ms_fail.conn is None)
+    
+    @patch('pymongo.connection.Connection.paired')
+    def test_replica_pair(self, paired):
+        ms = DS.DataStore(master=['mongo://localhost:23/test_db?pool_size=2',
+                                  'mongo://localhost:27017/test_db?pool_size=2'])
+        self.assert_(ms.conn is not None)
+        paired.assert_called_with(('localhost',23), ('localhost',27017), pool_size=2)
+        self.assert_(ms.db is not None)
         ms_fail = DS.DataStore(master='mongo://localhost:23/test_db')
         self.assert_(ms_fail.conn is None)
         

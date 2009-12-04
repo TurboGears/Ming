@@ -113,6 +113,18 @@ class TestDocument(TestCase):
         self.MockSession.delete.assert_called_with(doc)
         self.MockSession.set.assert_called_with(doc, dict(b=10))
         self.MockSession.increase_field.assert_called_with(doc, a=10)
+        
+        doc.m.insert()
+        self.MockSession.insert.assert_called_with(doc)
+        
+        doc.m.upsert('a')
+        self.MockSession.upsert.assert_called_with(doc, 'a')
+        
+        self.TestDoc.m.index_information()
+        self.MockSession.index_information.assert_called_with(self.TestDoc)
+        
+        self.TestDoc.m.drop_indexes()
+        self.MockSession.drop_indexes.assert_called_with(self.TestDoc)
 
     def test_migrate(self):
         doc = self.TestDoc.make(dict(a=5))
@@ -242,6 +254,34 @@ class TestHooks(TestCase):
         d = self.Derived(dict(a=5, b=6))
         d.m.save()
         self.assertEqual(self.hooks_called['before_save'], [b, d])
+
+class TestMigration(TestCase):
+
+    def setUp(self):
+        self.MockSession = mock.Mock()
+
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+            version=Field(1)
+            a=Field(int)
+            
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+                version_of = TestDoc
+                def migrate(old_doc):
+                    return dict(old_doc, b=42, version=2)
+            version=Field(2)
+            a=Field(int)
+            b=Field(int, required=True)
+        self.TestDoc = TestDoc
+
+    def testMigration(self):
+        self.assertEqual(self.TestDoc.make(dict(version=1, a=5)),
+                         dict(version=2, a=5, b=42))
         
 
 if __name__ == '__main__':

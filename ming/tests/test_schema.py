@@ -63,6 +63,11 @@ class TestSchemaItem(TestCase):
         result = si.validate(dict())
         self.assertEqual(result, dict(a=None))
 
+    def test_exact_value(self):
+        si = S.SchemaItem.make(dict(version=4))
+        self.assertEqual(si.validate(dict(version=4)), dict(version=4))
+        self.assertRaises(S.Invalid, si.validate, dict(version=3))
+
 if __name__ == '__main__':
     main()
 

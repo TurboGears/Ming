@@ -28,6 +28,7 @@ class TestSession(TestCase):
                 name='test_doc'
                 session = self.session
                 indexes = [ ('b','c') ]
+                unique_indexes = [ ('cc'), ]
             _id=Field(S.ObjectId, if_missing=None)
             a=Field(S.Int, if_missing=None)
             b=Field(S.Object, dict(a=S.Int(if_missing=None)))
@@ -50,7 +51,7 @@ class TestSession(TestCase):
         TestDoc = self.TestDoc
         self.assertEqual(sess.get(TestDoc, a=5), dict(a=None, b=dict(a=None), _id=None))
         sess.find(TestDoc, dict(a=5))
-        sess.remove(TestDoc, dict(a=5), safe=True)
+        sess.remove(TestDoc, dict(a=5))
         sess.group(TestDoc, 'a')
         sess.update_partial(TestDoc, dict(a=5), dict(b=6), False)
         
@@ -93,10 +94,15 @@ class TestSession(TestCase):
         impl.find.assert_called_with(dict(a=5))
         impl.count.assert_called_with()
         impl.ensure_index.assert_called_with([ ('a', pymongo.ASCENDING) ])
+        impl.ensure_index.reset_mock()
         
         sess.ensure_indexes(self.TestDoc)
-        impl.ensure_index.assert_called_with([
-                ('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ])
+        print impl.ensure_index.call_args
+        print impl.ensure_index.call_args_list
+        self.assertEqual(impl.ensure_index.call_args_list, [
+            (([('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ],), {}),
+            (([('cc', pymongo.ASCENDING) ],), {'unique':True}),
+        ])
 
         doc = self.TestDocNoSchema(dict(_id=1, a=5))
         sess.set(doc, dict(b=5))
@@ -117,14 +123,11 @@ class TestSession(TestCase):
                                        safe=True)
         self.assertRaises(ValueError, sess.increase_field, doc, b=None)
         
-
+        sess.index_information(self.TestDoc)
+        impl.index_information.assert_called_with()
         
-        
-        
-        
-
-        
-
+        sess.drop_indexes(self.TestDoc)
+        impl.drop_indexes.assert_called_with()
 
 if __name__ == '__main__':
     main()

@@ -65,6 +65,8 @@ class SchemaItem(object):
             field = SHORTHAND[field]
         if isinstance(field, type):
             field = field(*args, **kwargs)
+        if not isinstance(field, SchemaItem):
+            field = Value(field)
         return field
 
 class Migrate(SchemaItem):
@@ -76,13 +78,13 @@ class Migrate(SchemaItem):
             SchemaItem.make(new),
             migration_function)
 
-    def validate(self, value):
+    def validate(self, value, **kw):
         try:
-            return self.new.validate(value)
+            return self.new.validate(value, **kw)
         except Invalid:
-            value = self.old.validate(value)
+            value = self.old.validate(value, **kw)
             value = self.migration_function(value)
-            return self.new.validate(value)
+            return self.new.validate(value, **kw)
 
     @classmethod
     def obj_to_list(cls, key_name, value_name=None):
@@ -326,6 +328,19 @@ class OneOf(ParticularScalar):
     def _validate(self, value):
         if value not in self.options:
             raise Invalid('%s is not in %r' % (value, self.options),
+                          value, None)
+        return value
+
+class Value(FancySchemaItem):
+    '''Validate that a value is NOT an array or dict'''
+    if_missing=None
+    def __init__(self, value, **kw):
+        self.value = value
+        FancySchemaItem.__init__(self, **kw)
+        
+    def _validate(self, value):
+        if value != self.value:
+            raise Invalid('%r != %r' % (value, self.value),
                           value, None)
         return value
 
