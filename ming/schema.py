@@ -167,13 +167,13 @@ class Object(FancySchemaItem):
     '''
 
     def __init__(self, fields=None, required=False, if_missing=NoDefault):
+        self._if_missing = NoDefault
         if fields is None: fields = {}
         FancySchemaItem.__init__(self, required, if_missing)
         self.fields = dict((name, SchemaItem.make(field))
                            for name, field in fields.iteritems())
         self.polymorphic_on = self.polymorphic_registry = None
         self.managed_class=None
-        self._if_missing = NoDefault
 
     def _get_if_missing(self):
         from . import base

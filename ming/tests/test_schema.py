@@ -56,6 +56,13 @@ class TestSchemaItem(TestCase):
         self.assertRaises(S.Invalid, si.validate, dict(a='as'))
         self.assertRaises(S.Invalid, si.validate, {5:5})
 
+    def test_nested_objects(self):
+        nested_object = S.Object(dict(a=int, b=int), if_missing=None)
+        si = S.SchemaItem.make(dict(
+                a=S.Object(dict(a=int, b=int), if_missing=None)))
+        result = si.validate(dict())
+        self.assertEqual(result, dict(a=None))
+
 if __name__ == '__main__':
     main()
 
