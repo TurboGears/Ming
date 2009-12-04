@@ -97,8 +97,6 @@ class TestSession(TestCase):
         impl.ensure_index.reset_mock()
         
         sess.ensure_indexes(self.TestDoc)
-        print impl.ensure_index.call_args
-        print impl.ensure_index.call_args_list
         self.assertEqual(impl.ensure_index.call_args_list, [
             (([('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ],), {}),
             (([('cc', pymongo.ASCENDING) ],), {'unique':True}),

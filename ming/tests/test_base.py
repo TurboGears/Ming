@@ -2,11 +2,13 @@ from datetime import datetime
 from decimal import Decimal
 from unittest import TestCase, main
 from collections import defaultdict
+import copy
 
 import mock
 
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
+from ming.session import Session
 from pymongo.bson import ObjectId
 
 def mock_datastore():
@@ -20,6 +22,14 @@ def mock_collection():
     return c
 
 class TestObject(TestCase):
+    
+    def test_object_copyable(self): 
+        "Object is pretty basic concept, so must be freely copyable."
+        obj = Object(foo=1, bar='str')
+        obj1 = copy.copy(obj)
+        obj2 = copy.deepcopy(obj)
+        self.assertEqual(obj, obj1)
+        self.assertEqual(obj, obj2)
 
     def test_get_set(self):
         d = dict(a=1, b=2)
@@ -132,6 +142,44 @@ class TestDocument(TestCase):
         self.TestDoc.m.migrate()
         self.MockSession.find.assert_called_with(self.TestDoc, {})
         self.MockSession.save.assert_called_with(doc)
+
+class TestIndexes(TestCase):
+    
+    def setUp(self):
+        class MyDoc(Document):
+            class __mongometa__:
+                session = Session()
+                name = 'test_some_indexes'
+                indexes = [
+                    ('test1', 'test2'),
+                ]
+                unique_indexes = [
+                    ('test1',),
+                ]
+                schema = dict(
+                    _id = S.ObjectId,
+                    test1 = str,
+                    test2 = str,
+                    test3 = int,
+                )
+        self.MyDoc = MyDoc
+    
+    @mock.patch('ming.session.Session.ensure_index')
+    def test_ensure_indexes(self, ensure_index):
+        # make sure the manager constructor calls ensure_index with the right stuff
+        doc = self.MyDoc.m
+        
+        args = ensure_index.call_args_list
+        self.assert_(
+            ((self.MyDoc, ('test1','test2')), {})
+            in args,
+            args
+        )
+        self.assert_(
+            ((self.MyDoc, ('test1',)), {'unique':True})
+            in args,
+            args
+        )
 
 class TestCursor(TestCase):
 
