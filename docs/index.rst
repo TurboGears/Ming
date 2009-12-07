@@ -10,8 +10,10 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   :glob:
    
    tour
+   api/*
    
 Indices and tables
 ==================

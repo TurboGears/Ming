@@ -20,6 +20,8 @@ setup(name='Ming',
       install_requires=[
           # -*- Extra requirements: -*-
         "mock >= 0.6.0",
+        "FormEncode >= 1.2.2",
+        "pymongo >= 1.1.2",
       ],
       entry_points="""
       # -*- Entry points: -*-

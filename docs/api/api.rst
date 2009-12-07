@@ -4,11 +4,11 @@ API Docs
 .. currentmodule:: ming
 
 .. autosummary::
-   :toctree: api
+   :toctree: 
     
-   schema
-   session
-   datastore
-   utils
-   base
+   ming.datastore
+   ming.base
+   ming.session
+   ming.schema
+   ming.utils
    
