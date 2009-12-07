@@ -146,7 +146,7 @@ class Session(object):
             {'_id': doc._id, key: {'$lt': value}},
             # failed attempt at doing it all in one operation
             #{'$where': "this._id == '%s' && (!(%s in this) || this.%s < '%s')"
-            #    % (doc._id.url_encode(), key, key, value)},
+            #    % (doc._id, key, key, value)},
             {'$set': {key: value}},
             safe = True,
         )
