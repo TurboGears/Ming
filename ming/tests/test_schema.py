@@ -35,6 +35,12 @@ class TestSchemaItem(TestCase):
         self.assertEqual(si.validate(dict(foo=1)),
                          [ dict(key='foo', value=1) ])
 
+    def test_none(self):
+        si = S.SchemaItem.make(None)
+        si.validate(1)
+        si.validate(None)
+        si.validate({'a':'b'})
+
     def test_deprecated(self):
         si = S.SchemaItem.make(dict(
                 a=S.Deprecated(),
@@ -55,7 +61,11 @@ class TestSchemaItem(TestCase):
         self.assertEqual(si.validate(dict(a=5)), dict(a=5))
         self.assertRaises(S.Invalid, si.validate, dict(a='as'))
         self.assertRaises(S.Invalid, si.validate, {5:5})
-
+    
+    def test_validate_base(self):
+        si = S.SchemaItem()
+        self.assertRaises(NotImplementedError, si.validate, None)
+    
     def test_nested_objects(self):
         nested_object = S.Object(dict(a=int, b=int), if_missing=None)
         si = S.SchemaItem.make(dict(
@@ -67,7 +77,13 @@ class TestSchemaItem(TestCase):
         si = S.SchemaItem.make(dict(version=4))
         self.assertEqual(si.validate(dict(version=4)), dict(version=4))
         self.assertRaises(S.Invalid, si.validate, dict(version=3))
+    
+    def test_missing(self):
+        self.assertEqual(repr(S.Missing), '<Missing>')
 
+    def test_nodefault(self):
+        self.assertEqual(repr(S.NoDefault), '<NoDefault>')
+    
 if __name__ == '__main__':
     main()
 

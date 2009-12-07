@@ -33,7 +33,7 @@ class SchemaItem(object):
 
     def validate(self, d):
         'convert/validate an object or raise an Invalid exception'
-        raise NotImplemented, 'validate'
+        raise NotImplementedError, 'validate'
 
     @classmethod
     def make(cls, field, *args, **kwargs):
