@@ -130,7 +130,7 @@ Now let's fire up the interpreter and start working.  The first thing we'll do i
 create a `WikiPage`::
 
     >>> import tutorial
-    >>> page = tutorial.WikiPage(dict(title='MyPage', text='')
+    >>> page = tutorial.WikiPage(dict(title='MyPage', text=''))
     >>> page
     {'text': '', 'title': 'MyPage'}
     >>> page.title
