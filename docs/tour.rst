@@ -44,9 +44,9 @@ command.  (We recommend using a virtualenv_ for development.)
 
 ::
 
-    $ virtualenv ming
-    $ source ming/bin/activate
-    (ming)$ easy_install -UZ Ming
+    $ virtualenv ming_env
+    $ source ming_env/bin/activate
+    (ming_env)$ easy_install -UZ Ming
 
 The Datastore and Session
 -------------------------
