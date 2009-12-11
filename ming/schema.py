@@ -357,6 +357,9 @@ class Bool(ParticularScalar):
 class ObjectId(ParticularScalar):
     if_missing=Missing
     type=pymongo.bson.ObjectId
+class Binary(ParticularScalar):
+    if_missing=Missing
+    type=pymongo.bson.Binary
 
 # Shorthand for various SchemaItems
 SHORTHAND={
