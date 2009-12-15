@@ -354,12 +354,19 @@ class DateTime(ParticularScalar):
     type=datetime
 class Bool(ParticularScalar):
     type=bool
-class ObjectId(ParticularScalar):
-    if_missing=Missing
-    type=pymongo.bson.ObjectId
 class Binary(ParticularScalar):
-    if_missing=Missing
     type=pymongo.bson.Binary
+class ObjectId(Scalar):
+    if_missing=Missing
+    def _validate(self, value):
+        value = Scalar._validate(self, value)
+        if value is None: return value
+        if isinstance(value, pymongo.bson.ObjectId):
+            return value
+        elif isinstance(value, basestring):
+            return pymongo.bson.ObjectId.url_decode(value)
+        else:
+            raise Invalid('%s is not a bson.ObjectId' % value, value, None)
 
 # Shorthand for various SchemaItems
 SHORTHAND={
