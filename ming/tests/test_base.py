@@ -9,6 +9,7 @@ import mock
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
 from ming.session import Session
+from ming.unit_of_work import UnitOfWork
 from pymongo.bson import ObjectId
 
 def mock_datastore():
@@ -73,6 +74,7 @@ class TestDocument(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.uow = UnitOfWork(self.MockSession, True)
         class TestDoc(Document):
             class __mongometa__:
                 name='test_doc'
@@ -284,6 +286,7 @@ class TestHooks(TestCase):
                 polymorphic_identity='base'
                 def before_save(instance):
                     tc.hooks_called['before_save'].append(instance)
+            _id=Field(int)
             type=Field(str)
             a=Field(int)
         class Derived(Base):
@@ -296,7 +299,7 @@ class TestHooks(TestCase):
         self.Derived = Derived
 
     def test_hook_base(self):
-        b = self.Base(dict(a=5))
+        b = self.Base(dict(_id=1, a=5))
         b.m.save()
         self.assertEqual(self.hooks_called['before_save'], [b])
         d = self.Derived(dict(a=5, b=6))

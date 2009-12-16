@@ -206,7 +206,8 @@ class Object(FancySchemaItem):
         if self.polymorphic_registry:
             disc = d.get(self.polymorphic_on, Missing)
             if disc is Missing:
-                disc = d[self.polymorphic_on] = self.managed_class.__name__
+                mm = self.managed_class.__mongometa__
+                disc = d[self.polymorphic_on] = mm.polymorphic_identity
             else:
                 cls = self.polymorphic_registry[disc]
         if cls is None:

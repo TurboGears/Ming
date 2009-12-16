@@ -12,4 +12,6 @@ mail/logs/*
 sandbox-env/*
 download/*
 install/*
-
+build/*
+dist/*
+docs/_build/*

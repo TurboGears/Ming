@@ -2,14 +2,19 @@ import pymongo
 from threading import local
 
 from base import Cursor, Object
+from unit_of_work import UnitOfWork
+from identity_map import IdentityMap
 
 
 class Session(object):
     _registry = {}
     _datastores = {}
 
-    def __init__(self, bind=None):
+    def __init__(self, bind=None, autoflush=True):
         self.bind = bind
+        self.autoflush = autoflush
+        self.uow = UnitOfWork(self, autoflush)
+        self.imap = IdentityMap()
 
     @classmethod
     def by_name(cls, name):
@@ -26,13 +31,31 @@ class Session(object):
             return None
 
     def get(self, cls, **kwargs):
-        bson = self._impl(cls).find_one(kwargs)
-        if bson is None: return None
-        return cls.make(bson)
+        result = None
+        if kwargs.keys() == ['_id']:
+            result = self.imap.get(cls, kwargs['_id'])
+        if result is None:
+            bson = self._impl(cls).find_one(kwargs)
+            if bson is None: return None
+            result = self.fresh_object(cls, bson)
+        return result
+
+    def fresh_object(self, cls, bson):
+        if '_id' in bson:
+            obj = self.imap.get(cls, bson['_id'])
+        else:
+            obj = None
+        if obj is None:
+            obj = cls.make(bson, allow_extra=False, strip_extra=True)
+        else:
+            obj.update(cls.make(bson))
+        self.imap.save(obj)
+        self.uow.save_clean(obj)
+        return obj
 
     def find(self, cls, *args, **kwargs):
         cursor = self._impl(cls).find(*args, **kwargs)
-        return Cursor(cls, cursor)
+        return Cursor(self, cls, cursor)
 
     def remove(self, cls, *args, **kwargs):
         if 'safe' not in kwargs:
@@ -63,6 +86,18 @@ class Session(object):
     def update_partial(self, cls, spec, fields, upsert):
         return self._impl(cls).update(spec, fields, upsert, safe=True)
 
+    def soil(self, doc):
+        if self.autoflush: return
+        self.uow.save_dirty(doc)
+
+    def join_new(self, doc):
+        self.uow.save_new(doc)
+        self.imap.save(doc)
+
+    def clear(self):
+        self.uow.clear()
+        self.imap.clear()
+
     def save(self, doc, *args):
         hook = getattr(doc.__mongometa__, 'before_save', None)
         if hook: hook.im_func(doc)
@@ -78,7 +113,7 @@ class Session(object):
                 dict(_id=doc._id), {'$set':values}, safe=True)
         else:
             result = self._impl(doc).save(data, safe=True)
-        if result:
+        if result and '_id' not in doc:
             doc._id = result
 
     def insert(self, doc):
@@ -122,7 +157,7 @@ class Session(object):
         sets a key/value pairs, and persists those changes to the datastore
         immediately 
         """
-        fields_values = Object.from_bson(fields_values)
+        fields_values = Object.from_bson(fields_values, doc._onchange)
         fields_values.make_safe()
         for k,v in fields_values.iteritems():
             self._set(doc, k.split('.'), v)
@@ -161,12 +196,6 @@ class Session(object):
     def drop_indexes(self, cls):
         return self._impl(cls).drop_indexes()
 
-def proxy(name):
-    def inner(self, *args, **kwargs):
-        method = getattr(self._get(), name)
-        return method(*args, **kwargs)
-    return inner
-
 class ThreadLocalSession(Session):
     _registry = local()
 
@@ -183,23 +212,9 @@ class ThreadLocalSession(Session):
             self._registry.session = result
         return result
 
-    get = proxy('get')
-    find = proxy('find')
-    remove = proxy('remove')
-    find_by = proxy('find_by')
-    count = proxy('count')
-    ensure_index = proxy('ensure_index')
-    ensure_indexes = proxy('ensure_indexes')
-    group = proxy('group')
-    update_partial = proxy('update_partial')
-    save = proxy('save')
-    insert = proxy('insert')
-    upsert = proxy('upsert')
-    delete = proxy('delete')
-    _impl = proxy('_impl')
-    _set = proxy('_set')
-    set = proxy('set')
-    increase_field = proxy('increase_field')
-    index_information = proxy('index_information')
-    drop_indexes = proxy('drop_indexes')
+    def __getattr__(self, name):
+        return getattr(self._get(), name)
 
+    def close(self):
+        # actually delete the tl session
+        del self._registry.session
