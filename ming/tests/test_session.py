@@ -6,7 +6,7 @@ import pymongo
 
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
-from ming.session import Session
+from ming.session import Session, ThreadLocalSession
 
 def mock_datastore():
     ds = mock.Mock()
@@ -17,6 +17,7 @@ def mock_collection():
     c = mock.Mock()
     c.find_one = mock.Mock(return_value={})
     return c
+
 
 class TestSession(TestCase):
 
@@ -127,6 +128,28 @@ class TestSession(TestCase):
         sess.drop_indexes(self.TestDoc)
         impl.drop_indexes.assert_called_with()
 
+class TestThreadLocalSession(TestSession):
+
+    def setUp(self):
+        self.bind = mock_datastore()
+        self.session = ThreadLocalSession(Session, self.bind)
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.session
+                indexes = [ ('b','c') ]
+                unique_indexes = [ ('cc'), ]
+            _id=Field(S.ObjectId, if_missing=None)
+            a=Field(S.Int, if_missing=None)
+            b=Field(S.Object, dict(a=S.Int(if_missing=None)))
+            cc=dict(dd=int, ee=int)
+        class TestDocNoSchema(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.session
+        self.TestDoc = TestDoc
+        self.TestDocNoSchema = TestDocNoSchema
+        
 if __name__ == '__main__':
     main()
 

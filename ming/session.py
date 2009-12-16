@@ -1,6 +1,8 @@
 import pymongo
+from threading import local
 
 from base import Cursor, Object
+
 
 class Session(object):
     _registry = {}
@@ -72,7 +74,8 @@ class Session(object):
         doc.update(data)
         if args:
             values = dict((arg, data[arg]) for arg in args)
-            result = self._impl(doc).update(dict(_id=doc._id), {'$set':values}, safe=True)
+            result = self._impl(doc).update(
+                dict(_id=doc._id), {'$set':values}, safe=True)
         else:
             result = self._impl(doc).save(data, safe=True)
         if result:
@@ -116,7 +119,8 @@ class Session(object):
 
     def set(self, doc, fields_values):
         """
-        sets a key/value pairs, and persists those changes to the datastore immediately
+        sets a key/value pairs, and persists those changes to the datastore
+        immediately 
         """
         fields_values = Object.from_bson(fields_values)
         fields_values.make_safe()
@@ -156,4 +160,46 @@ class Session(object):
     
     def drop_indexes(self, cls):
         return self._impl(cls).drop_indexes()
+
+def proxy(name):
+    def inner(self, *args, **kwargs):
+        method = getattr(self._get(), name)
+        return method(*args, **kwargs)
+    return inner
+
+class ThreadLocalSession(Session):
+    _registry = local()
+
+    def __init__(self, cls, *args, **kwargs):
+        self._cls = cls
+        self._args = args
+        self._kwargs = kwargs
+
+    def _get(self):
+        if hasattr(self._registry, 'session'):
+            result = self._registry.session
+        else:
+            result = self._cls(*self._args, **self._kwargs)
+            self._registry.session = result
+        return result
+
+    get = proxy('get')
+    find = proxy('find')
+    remove = proxy('remove')
+    find_by = proxy('find_by')
+    count = proxy('count')
+    ensure_index = proxy('ensure_index')
+    ensure_indexes = proxy('ensure_indexes')
+    group = proxy('group')
+    update_partial = proxy('update_partial')
+    save = proxy('save')
+    insert = proxy('insert')
+    upsert = proxy('upsert')
+    delete = proxy('delete')
+    _impl = proxy('_impl')
+    _set = proxy('_set')
+    set = proxy('set')
+    increase_field = proxy('increase_field')
+    index_information = proxy('index_information')
+    drop_indexes = proxy('drop_indexes')
 
