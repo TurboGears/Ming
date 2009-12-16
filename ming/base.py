@@ -335,13 +335,14 @@ class DocumentMeta(type):
                                            mm.migrate.im_func)
             else:
                 mm.schema = my_schema
+        cls._registry[cls.__name__] = cls
         
 class Document(Object):
     '''Base class for all mapped MongoDB objects (the Document class can be
     thought of as the "collection", where a Document instance is a "document".
     '''
     __metaclass__=DocumentMeta
-    _registry = defaultdict(list)
+    _registry = dict()
     m = ManagerDescriptor(Manager)
     class __mongometa__:
         '''Supply various information on how the class is mapped without
@@ -377,10 +378,21 @@ class Document(Object):
     def make(cls, data, allow_extra=False, strip_extra=True):
         'Kind of a virtual constructor'
         if cls.__mongometa__.schema:
-            return cls.__mongometa__.schema.validate(
+            result = cls.__mongometa__.schema.validate(
                 data, allow_extra=allow_extra, strip_extra=strip_extra)
+            cls.__mongometa__.session.join_new(result)
+            return result
         else:
             return cls(data)
+
+    @classmethod
+    def fixup_backrefs(cls):
+        for doc_type in cls._registry.itervalues():
+            schema = getattr(doc_type.__mongometa__, 'schema')
+            if not schema: continue
+            for fld in schema.fields.itervalues():
+                if hasattr(fld, 'fixup_backref'):
+                    fld.fixup_backref(doc_type)
 
 class Cursor(object):
     '''Python class proxying a MongoDB cursor, constructing and validating

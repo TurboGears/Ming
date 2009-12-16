@@ -12,3 +12,10 @@ class IdentityMap(object):
 
     def clear(self):
         self._objects = {}
+
+    def __repr__(self):
+        l = [ '<imap>' ]
+        for k,v in sorted(self._objects.iteritems()):
+            l.append('%s : %s => %r' % (
+                    k[0], k[1], v))
+        return '\n'.join(l)

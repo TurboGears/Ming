@@ -55,7 +55,7 @@ class Session(object):
 
     def find(self, cls, *args, **kwargs):
         cursor = self._impl(cls).find(*args, **kwargs)
-        return Cursor(self, cls, cursor)
+        return Cursor(cls, cursor, self)
 
     def remove(self, cls, *args, **kwargs):
         if 'safe' not in kwargs:

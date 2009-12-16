@@ -83,6 +83,8 @@ class UnitOfWork(object):
         self._new = set()
         self._dirty = set()
         self._deleted = set()
+        for obj in self.clean:
+            self.session.imap.save(obj)
 
     def __repr__(self):
         l = ['<UnitOfWork>']
