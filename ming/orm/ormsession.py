@@ -1,5 +1,5 @@
 from ming.session import Session
-from ming.utils import encode_keys
+from ming.utils import encode_keys, ThreadLocalProxy
 from .base import mapper, state, ObjectState
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
@@ -61,6 +61,26 @@ class ORMSession(object):
         for line in repr(self.imap).split('\n'):
             l.append('  ' + line)
         return '\n'.join(l)
+
+class ThreadLocalORMSession(ThreadLocalProxy):
+    _session_registry = ThreadLocalProxy(dict)
+
+    def __init__(self, *args, **kwargs):
+        ThreadLocalProxy.__init__(self, ORMSession, *args, **kwargs)
+
+    def _get(self):
+        result = super(ThreadLocalORMSession, self)._get()
+        self._session_registry[id(result)] = result
+        return result
+
+    def close(self):
+        self.clear()
+        super(ThreadLocalORMSession, self).close()
+
+    @classmethod
+    def close_all(cls):
+        for session in cls._session_registry.__iter__():
+            session.close()
 
 class ORMCursor(object):
 

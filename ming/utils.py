@@ -38,12 +38,12 @@ class LazyProperty(object):
         return result
 
 class ThreadLocalProxy(object):
-    _registry = local()
 
     def __init__(self, cls, *args, **kwargs):
         self._cls = cls
         self._args = args
         self._kwargs = kwargs
+        self._registry = local()
 
     def _get(self):
         if hasattr(self._registry, 'value'):
