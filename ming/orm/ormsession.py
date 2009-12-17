@@ -69,17 +69,17 @@ class ORMCursor(object):
         self.cls = cls
         self.ming_cursor = ming_cursor
 
-    def __getattr__(self, name):
-        return getattr(self.ming_cursor, name)
-
     def __iter__(self):
         return self
 
     def __len__(self):
         return self.count()
 
+    def count(self):
+        return self.ming_cursor.count()
+
     def next(self):
-        doc = self.cursor.next()
+        doc = self.ming_cursor.next()
         obj = self.session.imap.get(self.cls, doc['_id'])
         if obj is None:
             obj = self.cls(**encode_keys(doc))
@@ -103,3 +103,25 @@ class ORMCursor(object):
     def sort(self, *args, **kwargs):
         return ORMCursor(self.session, self.cls,
                          self.ming_cursor.sort(*args, **kwargs))
+
+    def one(self):
+        try:
+            result = self.next()
+        except StopIteration:
+            raise ValueError, 'Less than one result from .one()'
+        try:
+            self.next()
+        except StopIteration:
+            return result
+        raise ValueError, 'More than one result from .one()'
+
+    def first(self):
+        try:
+            return self.next()
+        except StopIteration:
+            return None
+
+    def all(self):
+        return list(self)
+
+    

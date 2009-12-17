@@ -1,15 +1,14 @@
 from ming.base import Document, DocumentMeta
 
 from .base import mapper
-from .property import ORMProperty, FieldProperty
+from .property import ORMProperty
 
 class Mapper(object):
 
     def __init__(self, mapped_class, dct):
         self._mapped_class = mapped_class
+        self._dct = dct
         self._compiled = False
-        # Setup underlying document
-        self.doc_cls = make_document_class(mapped_class, dct)
         # Setup properties
         self.property_index = dict(
             (k,v) for k,v in dct.iteritems()
@@ -26,6 +25,7 @@ class Mapper(object):
         if self._compiled: return
         for p in self.properties:
             p.compile()
+        self.doc_cls = make_document_class(self._mapped_class, self._dct)
         self._compiled = True
 
     def insert(self, session, obj, state):
@@ -67,7 +67,7 @@ def make_document_class(mapped_class, dct):
     doc_dct = dict(
         (k, v.field)
         for k,v in dct.iteritems()
-        if isinstance(v, FieldProperty))
+        if hasattr(v, 'field'))
     doc_dct['__mongometa__'] = dct['__mongometa__']
     return DocumentMeta(name, doc_bases, doc_dct)
 

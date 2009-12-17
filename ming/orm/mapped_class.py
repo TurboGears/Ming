@@ -9,6 +9,7 @@ class MappedClassMeta(type):
     def __init__(cls, name, bases, dct):
         cls.__ming__ = EmptyClass()
         cls.__ming__.mapper = Mapper(cls, dct)
+        cls._registry[cls.__name__] = cls
 
 class QueryDescriptor(object):
 
@@ -27,7 +28,6 @@ class MappedClass(object):
     def __init__(self, **kwargs):
         self.__ming__ = deco = Decoration(self, kwargs)
         session(self).save(self)
-        self._registry[self.__name__] = self
 
     def __repr__(self):
         properties = [ '%s=%s' % (prop.name, prop.repr(self))
@@ -50,7 +50,7 @@ class Query(object):
     def get(self, **kwargs):
         if kwargs.keys() == '_id':
             return self.session.get(self.cls, **kwargs)
-        return self.session.find(self.cls, **kwargs).first()
+        return self.session.find(self.cls, kwargs).first()
 
     def find(self, *args, **kwargs):
         return self.session.find(self.cls, *args, **kwargs)

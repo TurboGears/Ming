@@ -1,6 +1,6 @@
 from ming.base import Field
-from ming.utils import LazyProperty
 from .base import state, mapper, lookup_class
+from .icollection import InstrumentedList
 
 class ORMError(Exception): pass
 class AmbiguousJoin(ORMError): pass
@@ -17,7 +17,8 @@ class ORMProperty(object):
         raise NotImplementedError, '__get__'
 
     def __set__(self, instance, value):
-        raise NotImplementedError, '__set__'
+        raise TypeError, '%r is a read-only property on %r' % (
+            self.name, self.cls)
 
     def insert(self, mapper, session, instance, state):
         pass
@@ -26,6 +27,9 @@ class ORMProperty(object):
         pass
 
     def delete(self, mapper, session, instance, state):
+        pass
+
+    def compile(self):
         pass
 
     def __repr__(self):
@@ -48,6 +52,7 @@ class FieldProperty(ORMProperty):
             return '<Missing>'
 
     def __get__(self, instance, cls=None):
+        if instance is None: return self
         st = state(instance)
         return getattr(st.document, self.name)
 
@@ -83,6 +88,7 @@ class ForeignIdProperty(ORMProperty):
             return '<Missing>'
 
     def __get__(self, instance, cls=None):
+        if instance is None: return self
         st = state(instance)
         return getattr(st.document, self.name)
 
@@ -125,9 +131,9 @@ class RelationProperty(ORMProperty):
         if self.via:
             rel_props = [ p for p in rel_props if p.name == self.via ]
         if len(own_props) == 1:
-            return ManyToOneJoin(self, cls, rel, own_props[0])
+            return ManyToOneJoin(cls, rel, own_props[0])
         if len(rel_props) == 1:
-            return OneToManyJoin(self, cls, rel, rel_props[0])
+            return OneToManyJoin(cls, rel, rel_props[0])
         if own_props or rel_props:
             raise AmbiguousJoin, (
                 'Ambiguous join, satisfying keys are %r' %
@@ -143,14 +149,12 @@ class RelationProperty(ORMProperty):
             return '<Missing>'
 
     def __get__(self, instance, cls=None):
+        if instance is None: return self
         st = state(instance)
         result = st.extra_state.get(self, ())
-        if result is not ():
+        if result is ():
             result = st.extra_state[self] = self.join.load(instance)
         return result
-
-    def __set__(self, instance, value):
-        raise NotImplementedError, '__set__'
 
 class ManyToOneJoin(object):
 
@@ -159,7 +163,7 @@ class ManyToOneJoin(object):
 
     def load(self, instance):
         key_value = self.prop.__get__(instance, self.own_cls)
-        return self.rel_cls.query.get(key_value)
+        return self.rel_cls.query.get(_id=key_value)
 
 class OneToManyJoin(object):
 
@@ -168,6 +172,19 @@ class OneToManyJoin(object):
 
     def load(self, instance):
         key_value = instance._id
-        return self.rel_cls.query.find({self.prop.name:key_value}).all()
-
+        return InstrumentedList(
+            OneToManyTracker(state(instance)),
+            self.rel_cls.query.find({self.prop.name:key_value}))
         
+class OneToManyTracker(object):
+    __slots__ = ('state',)
+
+    def __init__(self, state):
+        self.state = state
+
+    def soil(self, value):
+        raise TypeError, 'read-only'
+    added_item = soil
+    removed_item = soil
+    cleared = soil
+
