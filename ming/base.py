@@ -7,75 +7,9 @@ from collections import defaultdict
 
 import pymongo
 
-class InstrumentedDict(dict):
-    _onchange=None
-
-    def __init__(self, *l, **kw):
-        if self._onchange: self._onchange(self)
-        dict.__init__(self, *l, **kw)
-
-    def __setitem__(self, name, value):
-        if self._onchange: self._onchange(self)
-        return dict.__setitem__(self, name, value)
-
-    def __delitem__(self, name):
-        if self._onchange: self._onchange(self)
-        return dict.__delitem__(self, name)
-
-    def clear(self):
-        if self._onchange: self._onchange(self)
-        return dict.clear(self)
-
-    def pop(self, k, *args):
-        if self._onchange: self._onchange(self)
-        return dict.pop(self, k, *args)
-
-    def popitem(self):
-        if self._onchange: self._onchange(self)
-        return dict.popitem(self)
-
-    def update(self, *args, **kwargs):
-        if self._onchange: self._onchange(self)
-        return dict.update(self, *args, **kwargs)
-
-class InstrumentedList(list):
-    _onchange=None
-
-    def __init__(self, *l, **kw):
-        if '_onchange' in kw:
-            self._onchange = kw.pop('_onchange')
-        if self._onchange: self._onchange(self)
-        list.__init__(self, *l, **kw)
-
-    def __setitem__(self, name, value):
-        if self._onchange: self._onchange(self)
-        return list.__setitem__(self, name, value)
-
-    def __setslice__(self, name, value):
-        if self._onchange: self._onchange(self)
-        return list.__setslice__(self, name, value)
-
-    def __delitem__(self, name):
-        if self._onchange: self._onchange(self)
-        return list.__delitem__(self, name)
-
-    def __delslice__(self, name):
-        if self._onchange: self._onchange(self)
-        return list.__delslice__(self, name)
-
-    def append(self, value):
-        if self._onchange: self._onchange(self)
-        return list.append(self, value)
-
-    def extend(self, k, *args):
-        if self._onchange: self._onchange(self)
-        return list.extend(self, k, *args)
-
-class Object(InstrumentedDict):
+class Object(dict):
     'Dict providing object-like attr access'
     def __init__(self, *l, **kw):
-        if '_onchange' in kw:
-            self.__dict__['_onchange'] = kw.pop('_onchange')
         super(Object, self).__init__(*l, **kw)
 
     def __getattr__(self, name):
@@ -91,21 +25,17 @@ class Object(InstrumentedDict):
             self.__setitem__(name, value)
 
     @classmethod
-    def from_bson(cls, bson, _onchange=None):
+    def from_bson(cls, bson):
         if isinstance(bson, dict):
-            return cls(
-                ((k, cls.from_bson(v, _onchange))
-                 for k,v in bson.iteritems()),
-                _onchange=_onchange)
+            return cls((k, cls.from_bson(v))
+                       for k,v in bson.iteritems())
         elif isinstance(bson, list):
-            return [
-                cls.from_bson(v, _onchange)
-                for v in bson ]
+            return [ cls.from_bson(v) for v in bson ]
         else:
             return bson
 
     def make_safe(self):
-        safe_self = _safe_bson(self, self._onchange)
+        safe_self = _safe_bson(self)
         self.update(safe_self)
 
 class Field(object):
@@ -155,9 +85,6 @@ class Manager(object):
         result = Manager(self.instance, self.cls)
         result.session = session
         return result
-
-    def soil(self):
-        self.session.soil(self.instance)
 
     def get(self, **kwargs):
         """
@@ -216,7 +143,6 @@ class Manager(object):
         with parameters, only sets specified fields
             cp.m.save('foo')
         """
-        self.session.uow.save_clean(self.instance)
         return self.session.save(self.instance, *args)
 
     def insert(self):
@@ -225,7 +151,6 @@ class Manager(object):
         e.g.
             model.CustomPage(...).m.insert()
         """
-        self.session.uow.save_clean(self.instance)
         return self.session.insert(self.instance)
 
     def upsert(self, spec_fields):
@@ -236,7 +161,6 @@ class Manager(object):
             model.CustomPage(...).m.upsert('my_key_field')
             model.CustomPage(...).m.upsert(['field1','field2'])
         """
-        self.session.uow.save_clean(self.instance)
         return self.session.upsert(self.instance, spec_fields)
 
     def delete(self):
@@ -245,7 +169,7 @@ class Manager(object):
         e.g.
             model.CustomPage(...).m.delete()
         """
-        self.session.uow.save_deleted(self.instance)
+        return self.session.delete(self.instance)
 
     def set(self, fields_values):
         """
@@ -253,7 +177,6 @@ class Manager(object):
         e.g.
             model.CustomPage(...).m.set({'foo':'bar'})
         """
-        self.session.uow.save_clean(self.instance)
         return self.session.set(self.instance, fields_values)
     
     def increase_field(self, **kwargs):
@@ -264,7 +187,6 @@ class Manager(object):
         e.g.
             model.GlobalSettings.instance().increase_field(key=value)
         """
-        self.session.uow.save_clean(self.instance)
         return self.session.increase_field(self.instance, **kwargs)
 
     def migrate(self):
@@ -368,41 +290,26 @@ class Document(Object):
 
     def __init__(self, data):
         session = self.__mongometa__.session
-        Object.__init__(
-            self, data, _onchange = lambda s:session.soil(self))
-        data = Object.from_bson(data, _onchange=lambda s:session.soil(self))
+        data = Object.from_bson(data)
         dict.update(self, data)
-        session.join_new(self)
 
     @classmethod
     def make(cls, data, allow_extra=False, strip_extra=True):
         'Kind of a virtual constructor'
         if cls.__mongometa__.schema:
-            result = cls.__mongometa__.schema.validate(
+            return cls.__mongometa__.schema.validate(
                 data, allow_extra=allow_extra, strip_extra=strip_extra)
-            cls.__mongometa__.session.join_new(result)
-            return result
         else:
             return cls(data)
-
-    @classmethod
-    def fixup_backrefs(cls):
-        for doc_type in cls._registry.itervalues():
-            schema = getattr(doc_type.__mongometa__, 'schema')
-            if not schema: continue
-            for fld in schema.fields.itervalues():
-                if hasattr(fld, 'fixup_backref'):
-                    fld.fixup_backref(doc_type)
 
 class Cursor(object):
     '''Python class proxying a MongoDB cursor, constructing and validating
     objects that it tracks
     '''
 
-    def __init__(self, cls, cursor, session=None):
+    def __init__(self, cls, cursor):
         self.cls = cls
         self.cursor = cursor
-        self.session = session
 
     def __iter__(self):
         return self
@@ -413,8 +320,6 @@ class Cursor(object):
     def next(self):
         bson = self.cursor.next()
         if bson is None: return None
-        if self.session:
-            return self.session.fresh_object(self.cls, bson)
         return self.cls.make(bson)
 
     def count(self):
@@ -456,18 +361,14 @@ class Cursor(object):
     def all(self):
         return list(self)
     
-def _safe_bson(obj, _onchange=None):
+def _safe_bson(obj):
     '''Verify that the obj is safe for bsonification (in particular, no tuples or
     Decimal objects
     '''
     if isinstance(obj, list):
-        return InstrumentedList(
-            (_safe_bson(o, _onchange) for o in obj),
-            _onchange=_onchange)
+        return [ _safe_bson(o) for o in obj ]
     elif isinstance(obj, dict):
-        return Object(
-            ((k, _safe_bson(v, _onchange)) for k,v in obj.iteritems()),
-            _onchange=_onchange)
+        return Object((k, _safe_bson(v)) for k,v in obj.iteritems())
     elif isinstance(obj, (basestring, int, long, float, datetime)):
         return obj
     elif isinstance(obj, decimal.Decimal):

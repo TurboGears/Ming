@@ -2,19 +2,13 @@ import pymongo
 from threading import local
 
 from base import Cursor, Object
-from unit_of_work import UnitOfWork
-from identity_map import IdentityMap
-
 
 class Session(object):
     _registry = {}
     _datastores = {}
 
-    def __init__(self, bind=None, autoflush=True):
+    def __init__(self, bind=None):
         self.bind = bind
-        self.autoflush = autoflush
-        self.uow = UnitOfWork(self, autoflush)
-        self.imap = IdentityMap()
 
     @classmethod
     def by_name(cls, name):
@@ -31,31 +25,13 @@ class Session(object):
             return None
 
     def get(self, cls, **kwargs):
-        result = None
-        if kwargs.keys() == ['_id']:
-            result = self.imap.get(cls, kwargs['_id'])
-        if result is None:
-            bson = self._impl(cls).find_one(kwargs)
-            if bson is None: return None
-            result = self.fresh_object(cls, bson)
-        return result
-
-    def fresh_object(self, cls, bson):
-        if '_id' in bson:
-            obj = self.imap.get(cls, bson['_id'])
-        else:
-            obj = None
-        if obj is None:
-            obj = cls.make(bson, allow_extra=False, strip_extra=True)
-        else:
-            obj.update(cls.make(bson))
-        self.imap.save(obj)
-        self.uow.save_clean(obj)
-        return obj
+        bson = self._impl(cls).find_one(kwargs)
+        if bson is None: return None
+        return cls.make(bson)
 
     def find(self, cls, *args, **kwargs):
         cursor = self._impl(cls).find(*args, **kwargs)
-        return Cursor(cls, cursor, self)
+        return Cursor(cls, cursor)
 
     def remove(self, cls, *args, **kwargs):
         if 'safe' not in kwargs:
@@ -86,18 +62,6 @@ class Session(object):
     def update_partial(self, cls, spec, fields, upsert):
         return self._impl(cls).update(spec, fields, upsert, safe=True)
 
-    def soil(self, doc):
-        if self.autoflush: return
-        self.uow.save_dirty(doc)
-
-    def join_new(self, doc):
-        self.uow.save_new(doc)
-        self.imap.save(doc)
-
-    def clear(self):
-        self.uow.clear()
-        self.imap.clear()
-
     def save(self, doc, *args):
         hook = getattr(doc.__mongometa__, 'before_save', None)
         if hook: hook.im_func(doc)
@@ -124,8 +88,8 @@ class Session(object):
             data = dict(doc)
         doc.update(data)
         bson = self._impl(doc).insert(data, safe=True)
-        if isinstance(bson, pymongo.objectid.ObjectId):
-            doc.update(_id=bson)
+        if bson and '_id' not in doc:
+            doc._id = bson
 
     def upsert(self, doc, spec_fields):
         doc.make_safe()
@@ -157,7 +121,7 @@ class Session(object):
         sets a key/value pairs, and persists those changes to the datastore
         immediately 
         """
-        fields_values = Object.from_bson(fields_values, doc._onchange)
+        fields_values = Object.from_bson(fields_values)
         fields_values.make_safe()
         for k,v in fields_values.iteritems():
             self._set(doc, k.split('.'), v)
@@ -196,25 +160,3 @@ class Session(object):
     def drop_indexes(self, cls):
         return self._impl(cls).drop_indexes()
 
-class ThreadLocalSession(Session):
-    _registry = local()
-
-    def __init__(self, cls, *args, **kwargs):
-        self._cls = cls
-        self._args = args
-        self._kwargs = kwargs
-
-    def _get(self):
-        if hasattr(self._registry, 'session'):
-            result = self._registry.session
-        else:
-            result = self._cls(*self._args, **self._kwargs)
-            self._registry.session = result
-        return result
-
-    def __getattr__(self, name):
-        return getattr(self._get(), name)
-
-    def close(self):
-        # actually delete the tl session
-        del self._registry.session

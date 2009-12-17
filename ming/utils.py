@@ -1,5 +1,6 @@
 import cgi
 import urllib
+from threading import local
 
 def parse_uri(uri, **kwargs):
     scheme, rest = urllib.splittype(uri)
@@ -34,3 +35,25 @@ class LazyProperty(object):
         result = obj.__dict__[self.__name__] = self._func(obj)
         return result
 
+class ThreadLocalProxy(object):
+    _registry = local()
+
+    def __init__(self, cls, *args, **kwargs):
+        self._cls = cls
+        self._args = args
+        self._kwargs = kwargs
+
+    def _get(self):
+        if hasattr(self._registry, 'value'):
+            result = self._registry.value
+        else:
+            result = self._cls(*self._args, **self._kwargs)
+            self._registry.value = result
+        return result
+
+    def __getattr__(self, name):
+        return getattr(self._get(), name)
+
+    def close(self):
+        # actually delete the tl session
+        del self._registry.value

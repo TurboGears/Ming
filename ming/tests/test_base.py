@@ -9,7 +9,6 @@ import mock
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
 from ming.session import Session
-from ming.unit_of_work import UnitOfWork
 from pymongo.bson import ObjectId
 
 def mock_datastore():
@@ -74,14 +73,18 @@ class TestDocument(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
-        self.MockSession.uow = UnitOfWork(self.MockSession, True)
         class TestDoc(Document):
             class __mongometa__:
                 name='test_doc'
                 session = self.MockSession
             a=Field(S.Int, if_missing=None)
             b=Field(S.Object, dict(a=S.Int(if_missing=None)))
+        class TestDocNoSchema(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
         self.TestDoc = TestDoc
+        self.TestDocNoSchema = TestDocNoSchema
 
     def test_field(self):
         doc = self.TestDoc(dict(a=1, b=dict(a=5)))
@@ -93,6 +96,11 @@ class TestDocument(TestCase):
         self.assertEqual(doc, dict(b=dict(a=5)))
         self.assertRaises(AttributeError, getattr, doc, 'c')
         self.assertRaises(AttributeError, getattr, doc, 'a')
+
+    def test_no_schema(self):
+        doc = self.TestDocNoSchema.make(dict(a=5, b=6))
+        self.assertEqual(doc.a, 5)
+        self.assertEqual(doc.b, 6)
 
     def test_manager(self):
         other_session = mock.Mock()
