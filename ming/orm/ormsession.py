@@ -8,8 +8,10 @@ class ORMSession(object):
 
     _registry = {}
 
-    def __init__(self, bind=None):
-        self.impl = Session(bind)
+    def __init__(self, doc_session=None, bind=None):
+        if doc_session is None:
+            doc_session = Session(bind)
+        self.impl = doc_session
         self.uow = UnitOfWork(self)
         self.imap = IdentityMap()
 
@@ -65,8 +67,8 @@ class ORMSession(object):
 class ThreadLocalORMSession(ThreadLocalProxy):
     _session_registry = ThreadLocalProxy(dict)
 
-    def __init__(self, *args, **kwargs):
-        ThreadLocalProxy.__init__(self, ORMSession, *args, **kwargs)
+    def __init__(self, bind):
+        ThreadLocalProxy.__init__(self, ORMSession, bind)
 
     def _get(self):
         result = super(ThreadLocalORMSession, self)._get()
