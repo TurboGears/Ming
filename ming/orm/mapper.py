@@ -7,6 +7,7 @@ class Mapper(object):
 
     def __init__(self, mapped_class, dct):
         self._mapped_class = mapped_class
+        self._compiled = False
         # Setup underlying document
         self.doc_cls = make_document_class(mapped_class, dct)
         # Setup properties
@@ -15,9 +16,17 @@ class Mapper(object):
             if isinstance(v, ORMProperty))
         for k,v in self.property_index.iteritems():
             v.name = k
+            v.cls = mapped_class
+
     @property
     def properties(self):
-        return self.property_index.values()
+        return self.property_index.itervalues()
+
+    def compile(self):
+        if self._compiled: return
+        for p in self.properties:
+            p.compile()
+        self._compiled = True
 
     def insert(self, session, obj, state):
         # Allow properties to do any insertion magic they want to

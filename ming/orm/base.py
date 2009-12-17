@@ -15,6 +15,10 @@ def session(v):
     else:
         return session(type(v))
 
+def lookup_class(name):
+    from .mapped_class import MappedClass
+    return MappedClass._registry[name]
+
 class Decoration(object):
 
     def __init__(self, obj, bson):

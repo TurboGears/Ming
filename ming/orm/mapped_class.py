@@ -22,10 +22,12 @@ class MappedClass(object):
     __metaclass__ = MappedClassMeta
     __mongometa__ = Document.__mongometa__
     query = QueryDescriptor()
+    _registry = {}
 
     def __init__(self, **kwargs):
         self.__ming__ = deco = Decoration(self, kwargs)
         session(self).save(self)
+        self._registry[self.__name__] = self
 
     def __repr__(self):
         properties = [ '%s=%s' % (prop.name, prop.repr(self))
@@ -33,6 +35,11 @@ class MappedClass(object):
                        if prop.include_in_repr ]
         return '<%s %s>' % (
             self.__class__.__name__, ' '.join(properties))
+
+    @classmethod
+    def compile_all(cls):
+        for mc in cls._registry.itervalues():
+            mapper(mc).compile()
 
 class Query(object):
 
