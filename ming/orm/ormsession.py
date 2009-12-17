@@ -1,68 +1,105 @@
 from ming.session import Session
+from ming.utils import encode_keys
+from .base import mapper, state, ObjectState
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
 
-class InstrumentedDict(dict):
-    _onchange=None
+class ORMSession(object):
 
-    def __init__(self, *l, **kw):
-        if self._onchange: self._onchange(self)
-        dict.__init__(self, *l, **kw)
+    _registry = {}
 
-    def __setitem__(self, name, value):
-        if self._onchange: self._onchange(self)
-        return dict.__setitem__(self, name, value)
+    def __init__(self, bind=None):
+        self.impl = Session(bind)
+        self.uow = UnitOfWork(self)
+        self.imap = IdentityMap()
 
-    def __delitem__(self, name):
-        if self._onchange: self._onchange(self)
-        return dict.__delitem__(self, name)
+    @classmethod
+    def by_name(cls, name):
+        if name in cls._registry:
+            result = cls._registry[name]
+        else:
+            result = cls._registry[name] = cls(Session._datastores.get(name))
+        return result
+    
+    def save(self, obj):
+        from .mapped_class import MappedClass
+        assert isinstance(obj, MappedClass)
+        self.uow.save(obj)
+        self.imap.save(obj)
 
+    def flush(self):
+        self.uow.flush()
+
+    def insert_now(self, obj, st):
+        mapper(obj).insert(self, obj, st)
+
+    def update_now(self, obj, st):
+        mapper(obj).update(self, obj, st)
+
+    def delete_now(self, obj, st):
+        mapper(obj).update(self, obj, st)
+        
     def clear(self):
-        if self._onchange: self._onchange(self)
-        return dict.clear(self)
+        self.uow.clear()
+        self.imap.clear()
 
-    def pop(self, k, *args):
-        if self._onchange: self._onchange(self)
-        return dict.pop(self, k, *args)
+    def get(self, cls, idvalue):
+        result = self.imap.get(cls, idvalue)
+        if result is None:
+            result = self.find(cls, dict(_id=idvalue)).first()
+        return result
 
-    def popitem(self):
-        if self._onchange: self._onchange(self)
-        return dict.popitem(self)
+    def find(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        ming_cursor = self.impl.find(m.doc_cls, *args, **kwargs)
+        return ORMCursor(self, cls, ming_cursor)
 
-    def update(self, *args, **kwargs):
-        if self._onchange: self._onchange(self)
-        return dict.update(self, *args, **kwargs)
+    def __repr__(self):
+        l = ['<session>']
+        for line in repr(self.uow).split('\n'):
+            l.append('  ' + line)
+        for line in repr(self.imap).split('\n'):
+            l.append('  ' + line)
+        return '\n'.join(l)
 
-class InstrumentedList(list):
-    _onchange=None
+class ORMCursor(object):
 
-    def __init__(self, *l, **kw):
-        if '_onchange' in kw:
-            self._onchange = kw.pop('_onchange')
-        if self._onchange: self._onchange(self)
-        list.__init__(self, *l, **kw)
+    def __init__(self, session, cls, ming_cursor):
+        self.session = session
+        self.cls = cls
+        self.ming_cursor = ming_cursor
 
-    def __setitem__(self, name, value):
-        if self._onchange: self._onchange(self)
-        return list.__setitem__(self, name, value)
+    def __getattr__(self, name):
+        return getattr(self.ming_cursor, name)
 
-    def __setslice__(self, name, value):
-        if self._onchange: self._onchange(self)
-        return list.__setslice__(self, name, value)
+    def __iter__(self):
+        return self
 
-    def __delitem__(self, name):
-        if self._onchange: self._onchange(self)
-        return list.__delitem__(self, name)
+    def __len__(self):
+        return self.count()
 
-    def __delslice__(self, name):
-        if self._onchange: self._onchange(self)
-        return list.__delslice__(self, name)
+    def next(self):
+        doc = self.cursor.next()
+        obj = self.session.imap.get(self.cls, doc['_id'])
+        if obj is None:
+            obj = self.cls(**encode_keys(doc))
+        else:
+            state(obj).document.update(doc)
+        state(obj).status = ObjectState.clean
+        return obj
 
-    def append(self, value):
-        if self._onchange: self._onchange(self)
-        return list.append(self, value)
+    def limit(self, limit):
+        return ORMCursor(self.session, self.cls,
+                         self.ming_cursor.limit(limit))
 
-    def extend(self, k, *args):
-        if self._onchange: self._onchange(self)
-        return list.extend(self, k, *args)
+    def skip(self, skip):
+        return ORMCursor(self.session, self.cls,
+                         self.ming_cursor.skip(skip))
 
+    def hint(self, index_or_name):
+        return ORMCursor(self.session, self.cls,
+                         self.ming_cursor.hint(index_or_name))
+
+    def sort(self, *args, **kwargs):
+        return ORMCursor(self.session, self.cls,
+                         self.ming_cursor.sort(*args, **kwargs))

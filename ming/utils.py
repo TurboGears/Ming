@@ -23,6 +23,8 @@ def parse_uri(uri, **kwargs):
         path=path,
         query=kwargs)
 
+class EmptyClass(object): pass
+
 class LazyProperty(object):
 
     def __init__(self, func):
@@ -57,3 +59,10 @@ class ThreadLocalProxy(object):
     def close(self):
         # actually delete the tl session
         del self._registry.value
+
+def encode_keys(d):
+    '''Encodes the unicode keys of d, making the result
+    a valid kwargs argument'''
+    return dict(
+        (k.encode('utf-8'), v)
+        for k,v in d.iteritems())

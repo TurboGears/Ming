@@ -286,20 +286,26 @@ class Array(FancySchemaItem):
         has_errors = False
         if d is None:
             d = []
-        for value in d:
-            try:
-                value = self.field_type.validate(value)
-                result.append(value)
-                error_list.append(None)
-            except Invalid, inv:
-                error_list.append(inv)
-                has_errors = True
-        if has_errors:
-            msg = '\n'.join(('[%s]:%s' % (i,v))
-                            for i,v in enumerate(error_list)
-                            if v)
-            raise Invalid(msg, d, None, error_list=error_list)
-        return result
+        try:
+            for value in d:
+                try:
+                    value = self.field_type.validate(value)
+                    result.append(value)
+                    error_list.append(None)
+                except Invalid, inv:
+                    error_list.append(inv)
+                    has_errors = True
+            if has_errors:
+                msg = '\n'.join(('[%s]:%s' % (i,v))
+                                for i,v in enumerate(error_list)
+                                if v)
+                raise Invalid(msg, d, None, error_list=error_list)
+            return result
+        except Invalid:
+            raise
+        except TypeError, ex:
+            raise Invalid(str(ex), d, None)
+        
 
 class Scalar(FancySchemaItem):
     '''Validate that a value is NOT an array or dict'''
