@@ -21,6 +21,10 @@ class ORMProperty(object):
     def delete(self, mapper, session, instance, state):
         pass
 
+    def __repr__(self):
+        return '<%s %s>' % (
+            self.__class__.__name__, self.name)
+
 class FieldProperty(ORMProperty):
 
     def __init__(self, field_type, *args, **kwargs):
@@ -43,6 +47,5 @@ class FieldProperty(ORMProperty):
 
     def __set__(self, instance, value):
         st = state(instance)
+        st.soil()
         st.document[self.name] = value
-
-

@@ -37,6 +37,9 @@ class TestBasicMapping(TestCase):
         assert state(doc).status == 'dirty'
         self.session.flush()
         assert state(doc).status == 'clean'
+        c = doc.c
+        c.e = 5
+        assert state(doc).status == 'dirty'
 
     def test_query(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))

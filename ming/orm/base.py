@@ -33,16 +33,22 @@ class ObjectState(object):
         self.document = None
         self.extra_state = {}
 
+    def soil(self):
+        if self.status == self.clean:
+            self.status = self.dirty
+
+    def __repr__(self):
+        return '<ObjectState status=%s>' % self.status
+
 class DocumentTracker(object):
     __slots__ = ('state',)
 
     def __init__(self, state):
         self.state = state
 
-    def mark_dirty(self, value):
-        if self.state.status == ObjectState.clean:
-            self.state.status = self.state.dirty
-    added_item = mark_dirty
-    removed_item = mark_dirty
-    cleared = mark_dirty
+    def soil(self, value):
+        self.state.soil()
+    added_item = soil
+    removed_item = soil
+    cleared = soil
 

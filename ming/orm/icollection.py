@@ -13,7 +13,7 @@ def instrument(obj, tracker):
 class InstrumentedCollection(object):
 
     def __init__(self, tracker):
-        self._tracker = tracker
+        self.__dict__['_tracker'] = tracker
 
 class InstrumentedObj(InstrumentedCollection, dict):
 
@@ -38,6 +38,12 @@ class InstrumentedObj(InstrumentedCollection, dict):
             return self[name]
         except KeyError:
             raise AttributeError, name
+
+    def __setattr__(self, name, value):
+        if name in self.__class__.__dict__:
+            super(InstrumentedObj, self).__setattr__(name, value)
+        else:
+            self.__setitem__(name, value)
 
     def clear(self):
         dict.clear(self)
