@@ -57,8 +57,10 @@ class ThreadLocalProxy(object):
         return getattr(self._get(), name)
 
     def close(self):
-        # actually delete the tl session
-        del self._registry.value
+        try:
+            del self._registry.value
+        except AttributeError:
+            pass
 
 def encode_keys(d):
     '''Encodes the unicode keys of d, making the result
