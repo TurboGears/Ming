@@ -72,7 +72,7 @@ class ThreadLocalORMSession(ThreadLocalProxy):
 
     def _get(self):
         result = super(ThreadLocalORMSession, self)._get()
-        self._session_registry[id(result)] = result
+        self._session_registry.__setitem__(id(self), self)
         return result
 
     def close(self):
@@ -81,7 +81,7 @@ class ThreadLocalORMSession(ThreadLocalProxy):
 
     @classmethod
     def close_all(cls):
-        for session in cls._session_registry.__iter__():
+        for session in cls._session_registry.itervalues():
             session.close()
 
 class ORMCursor(object):
