@@ -22,11 +22,12 @@ class Mapper(object):
         return self.property_index.itervalues()
 
     def compile(self):
-        if self._compiled: return
+        if self._compiled: return self
         for p in self.properties:
             p.compile()
         self.doc_cls = make_document_class(self._mapped_class, self._dct)
         self._compiled = True
+        return self
 
     def insert(self, session, obj, state):
         # Allow properties to do any insertion magic they want to
@@ -59,7 +60,7 @@ class Mapper(object):
 def make_document_class(mapped_class, dct):
     name = '_ming_document_' + mapped_class.__name__
     bases = mapped_class.__bases__
-    doc_bases = tuple( mapper(base).doc_cls
+    doc_bases = tuple( mapper(base).compile().doc_cls
                        for base in bases
                        if hasattr(base, '__ming__') )
     if not doc_bases:
