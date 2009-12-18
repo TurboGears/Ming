@@ -1,5 +1,5 @@
 from ming.base import Field
-from .base import state, mapper, lookup_class
+from .base import session, state, mapper, lookup_class
 from .icollection import InstrumentedList
 
 class ORMError(Exception): pass
@@ -54,7 +54,15 @@ class FieldProperty(ORMProperty):
     def __get__(self, instance, cls=None):
         if instance is None: return self
         st = state(instance)
-        return getattr(st.document, self.name)
+        try:
+            return getattr(st.document, self.name)
+        except AttributeError, ae:
+            # Special case for _id -- flush first to see if the document's _id
+            #   is populated then
+            if self.name == '_id':
+                session(instance).flush(instance)
+                return getattr(st.document, self.name)
+            raise
 
     def __set__(self, instance, value):
         st = state(instance)
@@ -98,6 +106,7 @@ class ForeignIdProperty(ORMProperty):
         st.document[self.name] = value
 
 class RelationProperty(ORMProperty): 
+    include_in_repr = False
 
     def __init__(self, related, via=None):
         ORMProperty.__init__(self)

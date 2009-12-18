@@ -1,14 +1,14 @@
 from ming.base import Document
-from ming.utils import EmptyClass
+from ming.utils import EmptyClass, wordwrap
 
-from .base import Decoration, mapper, session
+from .base import Decoration, mapper, session, state
 from .mapper import Mapper
 
 class MappedClassMeta(type):
 
     def __init__(cls, name, bases, dct):
         cls.__ming__ = EmptyClass()
-        cls.__ming__.mapper = Mapper(cls, dct)
+        cls.__ming__.mapper = Mapper(cls)
         cls._registry[cls.__name__] = cls
 
 class QueryDescriptor(object):
@@ -33,13 +33,22 @@ class MappedClass(object):
         properties = [ '%s=%s' % (prop.name, prop.repr(self))
                        for prop in mapper(self).properties
                        if prop.include_in_repr ]
-        return '<%s %s>' % (
-            self.__class__.__name__, ' '.join(properties))
+        return wordwrap(
+            '<%s %s>' % 
+            (self.__class__.__name__, ' '.join(properties)),
+            60,
+            indent_subsequent=2)
+             
+                        
 
     @classmethod
     def compile_all(cls):
         for mc in cls._registry.itervalues():
             mapper(mc).compile()
+
+    def delete(self):
+        st = state(self)
+        st.status = st.deleted
 
 class Query(object):
 
@@ -48,9 +57,13 @@ class Query(object):
         self.session = cls.__mongometa__.session
 
     def get(self, **kwargs):
-        if kwargs.keys() == '_id':
-            return self.session.get(self.cls, **kwargs)
+        if kwargs.keys() == ['_id']:
+            return self.session.get(self.cls, kwargs['_id'])
         return self.session.find(self.cls, kwargs).first()
 
     def find(self, *args, **kwargs):
         return self.session.find(self.cls, *args, **kwargs)
+
+    def remove(self, *args, **kwargs):
+        return self.session.remove(self.cls, *args, **kwargs)
+    

@@ -1,19 +1,45 @@
 from ming.session import Session
-from ming.utils import encode_keys, ThreadLocalProxy
+from ming.utils import encode_keys, ThreadLocalProxy, indent
 from .base import mapper, state, ObjectState
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
+
+class with_hooks(object):
+    'Decorator to use for Session extensions'
+
+    def __init__(self, hook_name):
+        self.hook_name = hook_name
+
+    def __call__(self, func):
+        before_meth = 'before_' + self.hook_name
+        after_meth = 'after_' + self.hook_name
+        def before(session, *args, **kwargs):
+            for e in session.extensions:
+                getattr(e, before_meth)(*args, **kwargs)
+        def after(session, *args, **kwargs):
+            for e in session.extensions:
+                getattr(e, after_meth)(*args, **kwargs)
+        def inner(session, *args, **kwargs):
+            before(session, *args, **kwargs)
+            result = func(session, *args, **kwargs)
+            after(session, *args, **kwargs)
+            return result
+        inner.__name__ = func.__name__
+        inner.__doc__ = 'Hook wraper around\n' + repr(func.__doc__)
+        return inner
 
 class ORMSession(object):
 
     _registry = {}
 
-    def __init__(self, doc_session=None, bind=None):
+    def __init__(self, doc_session=None, bind=None, extensions=None):
         if doc_session is None:
             doc_session = Session(bind)
+        if extensions is None: extensions = []
         self.impl = doc_session
         self.uow = UnitOfWork(self)
         self.imap = IdentityMap()
+        self.extensions = [ e(self) for e in extensions ]
 
     @classmethod
     def by_name(cls, name):
@@ -29,17 +55,35 @@ class ORMSession(object):
         self.uow.save(obj)
         self.imap.save(obj)
 
-    def flush(self):
-        self.uow.flush()
+    def expunge(self, obj):
+        self.uow.expunge(obj)
+        self.imap.expunge(obj)
 
+    def flush(self, obj=None):
+        if obj is None:
+            self.uow.flush()
+        else:
+            st = state(obj)
+            if st.status == st.new:
+                self.insert_now(obj, st)
+            elif st.status == st.dirty:
+                self.update_now(obj, st)
+            elif st.status == st.deleted:
+                self.update_now(obj, st)
+
+    @with_hooks('insert')
     def insert_now(self, obj, st):
         mapper(obj).insert(self, obj, st)
+        self.imap.save(obj)
 
+    @with_hooks('update')
     def update_now(self, obj, st):
         mapper(obj).update(self, obj, st)
+        self.imap.save(obj)
 
+    @with_hooks('delete')
     def delete_now(self, obj, st):
-        mapper(obj).update(self, obj, st)
+        mapper(obj).delete(self, obj, st)
         
     def clear(self):
         self.uow.clear()
@@ -52,23 +96,40 @@ class ORMSession(object):
         return result
 
     def find(self, cls, *args, **kwargs):
+        self.flush()
         m = mapper(cls)
         ming_cursor = self.impl.find(m.doc_cls, *args, **kwargs)
         return ORMCursor(self, cls, ming_cursor)
 
+    @with_hooks('remove')
+    def remove(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        self.impl.remove(m.doc_cls, *args, **kwargs)
+
     def __repr__(self):
         l = ['<session>']
-        for line in repr(self.uow).split('\n'):
-            l.append('  ' + line)
-        for line in repr(self.imap).split('\n'):
-            l.append('  ' + line)
+        l.append('  ' + indent(repr(self.uow), 2))
+        l.append('  ' + indent(repr(self.imap), 2))
         return '\n'.join(l)
+
+class SessionExtension(object):
+
+    def __init__(self, session):
+        self.session = session
+    def before_insert(self, obj, st): pass
+    def after_insert(self, obj, st): pass
+    def before_update(self, obj, st): pass
+    def after_update(self, obj, st): pass
+    def before_delete(self, obj, st): pass
+    def after_delete(self, obj, st): pass
+    def before_remove(self, cls, *args, **kwargs): pass
+    def after_remove(self, cls, *args, **kwargs): pass
 
 class ThreadLocalORMSession(ThreadLocalProxy):
     _session_registry = ThreadLocalProxy(dict)
 
-    def __init__(self, bind):
-        ThreadLocalProxy.__init__(self, ORMSession, bind)
+    def __init__(self, *args, **kwargs):
+        ThreadLocalProxy.__init__(self, ORMSession, *args, **kwargs)
 
     def _get(self):
         result = super(ThreadLocalORMSession, self)._get()
@@ -78,6 +139,11 @@ class ThreadLocalORMSession(ThreadLocalProxy):
     def close(self):
         self.clear()
         super(ThreadLocalORMSession, self).close()
+
+    @classmethod
+    def flush_all(cls):
+        for session in cls._session_registry.itervalues():
+            session.flush()
 
     @classmethod
     def close_all(cls):
@@ -105,9 +171,13 @@ class ORMCursor(object):
         obj = self.session.imap.get(self.cls, doc['_id'])
         if obj is None:
             obj = self.cls(**encode_keys(doc))
+            state(obj).status = ObjectState.clean
+        elif state(obj).status == ObjectState.clean:
+            # No changes, OK to freshen
+            state(obj).document.update(doc) 
         else:
-            state(obj).document.update(doc)
-        state(obj).status = ObjectState.clean
+            # Changes, NOT OK to overwrite them
+            pass
         return obj
 
     def limit(self, limit):

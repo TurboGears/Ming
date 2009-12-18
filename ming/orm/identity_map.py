@@ -1,3 +1,5 @@
+from ming.utils import indent
+
 class IdentityMap(object):
 
     def __init__(self):
@@ -14,9 +16,16 @@ class IdentityMap(object):
     def clear(self):
         self._objects = {}
 
+    def expunge(self, obj):
+        try:
+            del self._objects[id(obj)]
+        except KeyError:
+            pass
+
     def __repr__(self):
         l = [ '<imap>' ]
         for k,v in sorted(self._objects.iteritems()):
-            l.append('%s : %s => %r' % (
-                    k[0].__name__, k[1], v))
+            l.append(indent('  %s : %s => %r'
+                            % (k[0].__name__, k[1], v),
+                            4))
         return '\n'.join(l)

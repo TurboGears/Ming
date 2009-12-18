@@ -33,13 +33,19 @@ class ObjectState(object):
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 
     def __init__(self):
-        self.status = self.new
+        self._status = self.new
         self.document = None
         self.extra_state = {}
 
     def soil(self):
         if self.status == self.clean:
             self.status = self.dirty
+
+    def _get_status(self):
+        return self._status
+    def _set_status(self, value):
+        self._status = value
+    status = property(_get_status, _set_status)
 
     def __repr__(self):
         return '<ObjectState status=%s>' % self.status

@@ -56,6 +56,9 @@ class ThreadLocalProxy(object):
     def __getattr__(self, name):
         return getattr(self._get(), name)
 
+    def __repr__(self):
+        return 'TLProxy of %r' % self._get()
+
     def close(self):
         try:
             del self._registry.value
@@ -68,3 +71,35 @@ def encode_keys(d):
     return dict(
         (k.encode('utf-8'), v)
         for k,v in d.iteritems())
+
+def all_class_properties(cls):
+    'Find all properties of the class, including those inherited'
+    found_names = set()
+    for base in cls.__mro__:
+        for k,v in base.__dict__.iteritems():
+            if k in found_names: continue
+            yield k,v
+            found_names.add(k)
+
+def wordwrap(s, width=80, indent_first=0, indent_subsequent=0):
+    lines = []
+    curline = [ ]
+    indent = indent_first
+    nchar = indent
+    for word in s.split(' '):
+        chars_to_add = len(word) if not curline else len(word) + 1
+        if nchar + chars_to_add > width and curline:
+            # wrap!
+            lines.append(indent * ' ' + ' '.join(curline))
+            indent = indent_subsequent
+            curline = [ word ]
+            nchar = indent + len(word)
+        else:
+            curline.append(word)
+            nchar += chars_to_add
+    lines.append(indent * ' ' + ' '.join(curline))
+    return '\n'.join(lines)
+
+def indent(s, level=2):
+    prefix = ' ' * level
+    return s.replace('\n', '\n' + prefix)

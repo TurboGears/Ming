@@ -1,3 +1,4 @@
+from ming.utils import indent
 from .base import state, ObjectState
 
 class UnitOfWork(object):
@@ -55,15 +56,21 @@ class UnitOfWork(object):
     def __repr__(self):
         l = ['<UnitOfWork>']
         l.append('  <new>')
-        l += [ '    %r' % x for x in self.new ]
+        l += [ '    %s' % indent(repr(x), 6) for x in self.new ]
         l.append('  <clean>')
-        l += [ '    %r' % x for x in self.clean ]
+        l += [ '    %s' % indent(repr(x), 6) for x in self.clean ]
         l.append('  <dirty>')
-        l += [ '    %r' % x for x in self.dirty ]
+        l += [ '    %s' % indent(repr(x), 6) for x in self.dirty ]
         l.append('  <deleted>')
-        l += [ '    %r' % x for x in self.deleted ]
+        l += [ '    %s' % indent(repr(x), 6) for x in self.deleted ]
         return '\n'.join(l)
 
     def clear(self):
         self._objects = {} # dict[id(obj)] = obj
+
+    def expunge(self, obj):
+        try:
+            del self._objects[id(obj)]
+        except KeyError:
+            pass
 
