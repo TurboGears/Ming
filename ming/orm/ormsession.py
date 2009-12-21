@@ -133,6 +133,8 @@ class SessionExtension(object):
     def after_delete(self, obj, st): pass
     def before_remove(self, cls, *args, **kwargs): pass
     def after_remove(self, cls, *args, **kwargs): pass
+    def before_flush(self, obj=None): pass
+    def after_flush(self, obj=None): pass
 
 class ThreadLocalORMSession(ThreadLocalProxy):
     _session_registry = ThreadLocalProxy(dict)
