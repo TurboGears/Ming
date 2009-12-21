@@ -364,7 +364,8 @@ class Bool(ParticularScalar):
 class Binary(ParticularScalar):
     type=pymongo.bson.Binary
 class ObjectId(Scalar):
-    if_missing=Missing
+    def if_missing(self):
+        return pymongo.bson.ObjectId()
     def _validate(self, value):
         value = Scalar._validate(self, value)
         if value is None: return value
