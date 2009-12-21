@@ -40,6 +40,7 @@ class ORMSession(object):
         self.uow = UnitOfWork(self)
         self.imap = IdentityMap()
         self.extensions = [ e(self) for e in extensions ]
+        self.autoflush = False
 
     @classmethod
     def by_name(cls, name):
@@ -59,6 +60,7 @@ class ORMSession(object):
         self.uow.expunge(obj)
         self.imap.expunge(obj)
 
+    @with_hooks('flush')
     def flush(self, obj=None):
         if obj is None:
             self.uow.flush()
@@ -96,7 +98,8 @@ class ORMSession(object):
         return result
 
     def find(self, cls, *args, **kwargs):
-        self.flush()
+        if self.autoflush:
+            self.flush()
         m = mapper(cls)
         ming_cursor = self.impl.find(m.doc_cls, *args, **kwargs)
         return ORMCursor(self, cls, ming_cursor)
@@ -111,6 +114,12 @@ class ORMSession(object):
         l.append('  ' + indent(repr(self.uow), 2))
         l.append('  ' + indent(repr(self.imap), 2))
         return '\n'.join(l)
+
+    def ensure_index(self, cls, fields, **kwargs):
+        return self.impl.ensure_index(cls, fields, **kwargs)
+
+    def ensure_indexes(self, cls):
+        return self.impl.ensure_indexes(cls)
 
 class SessionExtension(object):
 
