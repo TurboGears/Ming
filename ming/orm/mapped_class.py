@@ -39,7 +39,17 @@ class MappedClass(object):
             60,
             indent_subsequent=2)
              
-                        
+    def __getitem__(self, name):
+        try:
+            return getattr(self, name)
+        except AttributeError:
+            raise KeyError, name
+
+    def __setitem__(self, name, value):
+        return setattr(self, name, value)
+
+    def __contains__(self, name):
+        return hasattr(self, name)
 
     @classmethod
     def compile_all(cls):
