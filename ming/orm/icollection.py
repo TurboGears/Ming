@@ -10,6 +10,16 @@ def instrument(obj, tracker):
     else:
         return obj
 
+def deinstrument(obj):
+    if isinstance(obj, dict):
+        return dict(
+            ((k, deinstrument(v)) for k,v in obj.iteritems()))
+    elif isinstance(obj, list):
+        return list(
+            (deinstrument(v) for v in obj))
+    else:
+        return obj
+
 class InstrumentedCollection(object):
 
     def __init__(self, tracker):
@@ -44,6 +54,9 @@ class InstrumentedObj(InstrumentedCollection, dict):
             super(InstrumentedObj, self).__setattr__(name, value)
         else:
             self.__setitem__(name, value)
+
+    def deinstrumented_clone(self):
+        return deinstrument(self)
 
     def clear(self):
         dict.clear(self)
