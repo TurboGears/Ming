@@ -108,10 +108,11 @@ class ForeignIdProperty(ORMProperty):
 class RelationProperty(ORMProperty): 
     include_in_repr = False
 
-    def __init__(self, related, via=None):
+    def __init__(self, related, via=None, fetch=True):
         ORMProperty.__init__(self)
         self.via = via
         self.via_property = None
+        self.fetch = fetch
         self.related = None
         self.join = None
         if isinstance(related, type):
@@ -159,11 +160,14 @@ class RelationProperty(ORMProperty):
 
     def __get__(self, instance, cls=None):
         if instance is None: return self
-        st = state(instance)
-        result = st.extra_state.get(self, ())
-        if result is ():
-            result = st.extra_state[self] = self.join.load(instance)
-        return result
+        if self.fetch:
+            st = state(instance)
+            result = st.extra_state.get(self, ())
+            if result is ():
+                result = st.extra_state[self] = self.join.load(instance)
+            return result
+        else:
+            return self.join.iterator(instance)
 
 class ManyToOneJoin(object):
 
@@ -174,17 +178,24 @@ class ManyToOneJoin(object):
         key_value = self.prop.__get__(instance, self.own_cls)
         return self.rel_cls.query.get(_id=key_value)
 
+    def iterator(self, instance):
+        return [ self.load(instance) ]
+
 class OneToManyJoin(object):
 
     def __init__(self, own_cls, rel_cls, prop):
         self.own_cls, self.rel_cls, self.prop = own_cls, rel_cls, prop
 
     def load(self, instance):
-        key_value = instance._id
         return InstrumentedList(
             OneToManyTracker(state(instance)),
-            self.rel_cls.query.find({self.prop.name:key_value}))
+            self.iterator(instance))
         
+    def iterator(self, instance):
+        key_value = instance._id
+        return self.rel_cls.query.find({self.prop.name:key_value})
+        return [ self.load(instance) ]
+
 class OneToManyTracker(object):
     __slots__ = ('state',)
 
