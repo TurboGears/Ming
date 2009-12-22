@@ -111,6 +111,7 @@ class TestBasicMapping(TestCase):
         self.session.flush()
         q = self.Basic.query.find(dict(a=1))
         self.assertEqual(q.count(), 0)
+        self.assertEqual(doc.query.find(dict(a=1)).count() == 0)
 
     def test_imap(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
