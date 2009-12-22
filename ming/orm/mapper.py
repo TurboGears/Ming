@@ -70,18 +70,6 @@ class Mapper(object):
     def remove(self, *args, **kwargs):
         session(self._mapped_class).remove(self._mapped_class, *args, **kwargs)
 
-    def refresh(self, obj, states_to_refresh=None):
-        st = state(obj)
-        if states_to_refresh is None:
-            states_to_refresh = (st.new, st.dirty, st.deleted)
-        sess = obj.__mongometa__.session
-        if st.status == st.new:
-            self.insert(sess, obj, st)
-        elif st.status == st.dirty:
-            self.update(sess, obj, st)
-        elif st.status == st.deleted:
-            self.delete(sess, obj, st)
-
 def make_document_class(mapped_class, dct):
     name = '_ming_document_' + mapped_class.__name__
     bases = mapped_class.__bases__

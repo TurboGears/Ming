@@ -7,7 +7,7 @@ from ming import datastore as DS
 from ming.orm.ormsession import ORMSession
 from ming.orm.property import FieldProperty, RelationProperty, ForeignIdProperty
 from ming.orm.mapped_class import MappedClass
-from ming.orm.base import state
+from ming.orm.base import state, mapper
 from ming.orm.icollection import instrument, deinstrument, InstrumentedObj
 
 class TestRelation(TestCase):
@@ -86,6 +86,7 @@ class TestBasicMapping(TestCase):
         self.session.impl.remove(self.Basic, {})
 
     def test_repr(self):
+        doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         repr(self.session)
 
     def test_create(self):
@@ -102,6 +103,28 @@ class TestBasicMapping(TestCase):
         assert state(doc).status == 'dirty'
         assert repr(state(doc)).startswith('<ObjectState')
 
+    def test_mapped_object(self):
+        doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
+        self.assertEqual(doc.a, doc['a'])
+        self.assertRaises(AttributeError, getattr, doc, 'foo')
+        self.assertRaises(KeyError, doc.__getitem__, 'foo')
+        doc['a'] = 5
+        self.assertEqual(doc.a, doc['a'])
+        self.assertEqual(doc.a, 5)
+        self.assert_('a' in doc)
+        doc.delete()
+
+    def test_mapper(self):
+        m = mapper(self.Basic)
+        self.assert_(repr(m).startswith('<Mapper for '))
+        doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
+        self.session.flush()
+        q = self.Basic.query.find()
+        self.assertEqual(q.count(), 1)
+        m.remove({})
+        q = self.Basic.query.find()
+        self.assertEqual(q.count(), 0)
+
     def test_query(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.session.flush()
@@ -111,8 +134,28 @@ class TestBasicMapping(TestCase):
         self.session.flush()
         q = self.Basic.query.find(dict(a=1))
         self.assertEqual(q.count(), 0)
-        self.assertEqual(doc.query.find(dict(a=1)).count() == 0)
+        self.assertEqual(doc.query.find(dict(a=1)).count(), 0)
+        doc = self.Basic.query.get(a=5)
+        self.assert_(doc is not None)
+        self.Basic.query.remove({})
+        self.assertEqual(self.Basic.query.find().count(), 0)
 
+    def test_delete(self):
+        doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
+        self.session.flush()
+        q = self.Basic.query.find()
+        self.assertEqual(q.count(), 1)
+        doc.delete()
+        q = self.Basic.query.find()
+        self.assertEqual(q.count(), 1)
+        self.session.flush()
+        q = self.Basic.query.find()
+        self.assertEqual(q.count(), 0)
+        doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
+        self.session.flush()
+        q = self.Basic.query.find()
+        self.assertEqual(q.count(), 1)
+        
     def test_imap(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.session.flush()
