@@ -64,7 +64,7 @@ class InstrumentedObj(InstrumentedCollection, dict):
 
     def pop(self, k, *args):
         result = dict.pop(self, k, *args)
-        self._remoed_item(result)
+        self._tracker.removed_item(result)
         return result
 
     def popitem(self):
@@ -79,10 +79,14 @@ class InstrumentedObj(InstrumentedCollection, dict):
             if isinstance(arg, dict): arg = arg.iteritems()
             for k,v in arg:
                 if k in self: del self[k]
-                self[k] = v
+                self[k] = instrument(v, self._tracker)
         for k,v in kwargs.iteritems():
             if k in self: del self[k]
-            self[k] = v
+            self[k] = instrument(v, self._tracker)
+
+    def replace(self, other):
+        self.clear()
+        self.update(other)
 
 class InstrumentedList(InstrumentedCollection, list):
 
@@ -91,8 +95,9 @@ class InstrumentedList(InstrumentedCollection, list):
         list.__init__(self, *args, **kwargs)
 
     def __setitem__(self, i, value):
+        oldvalue = self[i]
         list.__setitem__(self, i, value)
-        self._tracker.removed_item(self[i])
+        self._tracker.removed_item(oldvalue)
         self._tracker.added_item(value)
 
     def __setslice__(self, i, j, y):
@@ -114,8 +119,8 @@ class InstrumentedList(InstrumentedCollection, list):
         list.__delslice__(self, i, j)
 
     def __iadd__(self, y):
-        for x in y:
-            self.append(x)
+        self.extend(y)
+        return self
 
     def __imul__(self, y):
         if y <= 0:
@@ -124,6 +129,7 @@ class InstrumentedList(InstrumentedCollection, list):
             orig = self[:]
             for i in range(1,y):
                 self += orig
+        return self
 
     def append(self, value):
         list.append(self, value)
@@ -138,10 +144,10 @@ class InstrumentedList(InstrumentedCollection, list):
         self._tracker.added_item(value)
 
     def pop(self, index=()):
-        if index is not ():
-            result = list.pop()
+        if index is ():
+            result = list.pop(self)
         else:
-            result = list.pop(index)
+            result = list.pop(self, index)
         self._tracker.removed_item(result)
         return result
            
@@ -152,3 +158,8 @@ class InstrumentedList(InstrumentedCollection, list):
             raise ValueError, 'InstrumentedList.remove(x): x not in list'
         del self[index]
         
+    def replace(self, other):
+        while self:
+            self.pop()
+        self.extend(other)
+

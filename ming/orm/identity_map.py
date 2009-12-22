@@ -17,8 +17,10 @@ class IdentityMap(object):
         self._objects = {}
 
     def expunge(self, obj):
+        vid = getattr(obj, '_id', ())
+        if vid is (): return
         try:
-            del self._objects[id(obj)]
+            del self._objects[(obj.__class__, vid)]
         except KeyError:
             pass
 
