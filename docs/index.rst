@@ -13,6 +13,7 @@ Contents:
    :glob:
    
    tour
+   orm
    api/*
    
 Indices and tables

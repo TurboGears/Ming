@@ -31,6 +31,8 @@ clean:
 	-rm -rf $(BUILDDIR)/*
 
 html:
+	pwd
+	cog.py -I src -r $$(find . -name \*.rst)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
