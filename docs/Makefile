@@ -28,10 +28,10 @@ help:
 	@echo "  doctest   to run all doctests embedded in the documentation (if enabled)"
 
 clean:
+	cog.py -I src -r -x $$(find . -name \*.rst)
 	-rm -rf $(BUILDDIR)/*
 
 html:
-	pwd
 	cog.py -I src -r $$(find . -name \*.rst)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
