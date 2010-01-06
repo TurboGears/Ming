@@ -45,6 +45,7 @@ MappedClass.compile_all()
 #}        assert False
 
 WikiPage.query.remove({})
+WikiComment.query.remove({})
 
 
 def snippet1():
