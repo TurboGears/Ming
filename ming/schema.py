@@ -367,14 +367,19 @@ class ObjectId(Scalar):
     def if_missing(self):
         return pymongo.bson.ObjectId()
     def _validate(self, value):
-        value = Scalar._validate(self, value)
-        if value is None: return value
-        if isinstance(value, pymongo.bson.ObjectId):
-            return value
-        elif isinstance(value, basestring):
-            return pymongo.bson.ObjectId.url_decode(value)
-        else:
-            raise Invalid('%s is not a bson.ObjectId' % value, value, None)
+        try:
+            value = Scalar._validate(self, value)
+            if value is None: return value
+            if isinstance(value, pymongo.bson.ObjectId):
+                return value
+            elif isinstance(value, basestring):
+                return pymongo.bson.ObjectId.url_decode(value)
+            else:
+                raise Invalid('%s is not a bson.ObjectId' % value, value, None)
+        except Invalid:
+            raise
+        except Exception, ex:
+            raise Invalid(str(ex), value, None)
 
 # Shorthand for various SchemaItems
 SHORTHAND={
