@@ -20,9 +20,13 @@ class Session(object):
 
     def _impl(self, cls):
         try:
-            return self.bind.db[cls.__mongometa__.name]
+            return self.db[cls.__mongometa__.name]
         except TypeError:
             return None
+
+    @property
+    def db(self):
+        return self.bind.db
 
     def get(self, cls, **kwargs):
         bson = self._impl(cls).find_one(kwargs)

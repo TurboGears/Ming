@@ -7,6 +7,17 @@ from collections import defaultdict
 
 import pymongo
 
+def build_mongometa(bases, dct):
+    mm_bases = []
+    for base in bases:
+        mm = getattr(base, '__mongometa__', None)
+        if mm is None: continue
+        mm_bases.append(mm)
+    mm_dict = {}
+    if '__mongometa__' in dct:
+        mm_dict.update(dct['__mongometa__'].__dict__)
+    return type('__mongometa__', tuple(mm_bases), mm_dict)
+
 class Object(dict):
     'Dict providing object-like attr access'
     def __init__(self, *l, **kw):
@@ -218,21 +229,14 @@ class DocumentMeta(type):
     def __init__(cls, name, bases, dct):
         from . import schema
         # Build mongometa (make it inherit from base classes' mongometas
-        mm_bases = []
-        for base in bases:
-            mm = getattr(base, '__mongometa__', None)
-            if mm is None: continue
-            mm_bases.append(mm)
-        mm_dict = {}
-        if hasattr(cls, '__mongometa__'):
-            mm_dict.update(cls.__mongometa__.__dict__)
-        mm = cls.__mongometa__ = type('__mongometa__', tuple(mm_bases), mm_dict)
+        mm = cls.__mongometa__ = build_mongometa(bases, dct)
+
         if not hasattr(mm, 'polymorphic_on'):
             mm.polymorphic_on = None
             mm.polymorphic_registry = None
         # Make sure mongometa's schema incorporates base schemas
         my_schema = schema.Object()
-        for base in mm_bases:
+        for base in mm.__bases__:
             if hasattr(base, 'schema'):
                 if base.schema:
                     my_schema.extend(schema.SchemaItem.make(base.schema))
@@ -247,7 +251,8 @@ class DocumentMeta(type):
         if not my_schema.fields:
             mm.schema = None
         else:
-            polymorphic_identity = mm_dict.get('polymorphic_identity', cls.__name__)
+            polymorphic_identity = getattr(mm, 'polymorphic_identity',
+                                           cls.__name__)
             prev_version = getattr(mm, 'version_of', None)
             my_schema.managed_class = cls
             my_schema.set_polymorphic(

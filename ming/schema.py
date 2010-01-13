@@ -149,6 +149,8 @@ class FancySchemaItem(SchemaItem):
                 return value
         except Invalid:
             pass
+        except:
+            pass
         return self._validate(value, **kw)
 
     def _validate(self, value, **kw): return value
