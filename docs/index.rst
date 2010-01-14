@@ -15,6 +15,12 @@ Contents:
    tour
    orm
    api/*
+
+Miscellaneous Links of Interest
+===============================
+
+`Ming Presentation at PyAtl January 2010 <http://files.meetup.com/127119/MingPresentation.pdf>`_
+    Presentation given at Python Atlanta User Group by Rick Copeland in January 2010.
    
 Indices and tables
 ==================
