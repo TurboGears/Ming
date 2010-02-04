@@ -1,7 +1,9 @@
+from __future__ import absolute_import
 import pymongo
 from threading import local
 
-from base import Cursor, Object
+from .base import Cursor, Object
+from . import exc
 
 class Session(object):
     _registry = {}
@@ -22,7 +24,7 @@ class Session(object):
         try:
             return self.db[cls.__mongometa__.name]
         except TypeError:
-            return None
+            raise exc.MongoGone, 'MongoDB is not connected'
 
     @property
     def db(self):
