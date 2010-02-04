@@ -375,7 +375,7 @@ class ObjectId(Scalar):
             if isinstance(value, pymongo.bson.ObjectId):
                 return value
             elif isinstance(value, basestring):
-                return pymongo.bson.ObjectId.url_decode(value)
+                return pymongo.bson.ObjectId(str(value))
             else:
                 raise Invalid('%s is not a bson.ObjectId' % value, value, None)
         except Invalid:

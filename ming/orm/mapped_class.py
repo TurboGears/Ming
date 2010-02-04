@@ -76,4 +76,7 @@ class Query(object):
 
     def remove(self, *args, **kwargs):
         return self.session.remove(self.cls, *args, **kwargs)
+
+    def update(self, *args, **kwargs):
+        return self.session.update(self.cls, *args, **kwargs)
     

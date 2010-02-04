@@ -62,6 +62,7 @@ class ORMSession(object):
 
     @with_hooks('flush')
     def flush(self, obj=None):
+        if self.impl.db is None: return
         if obj is None:
             self.uow.flush()
         else:
@@ -108,6 +109,10 @@ class ORMSession(object):
     def remove(self, cls, *args, **kwargs):
         m = mapper(cls)
         self.impl.remove(m.doc_cls, *args, **kwargs)
+
+    def update(self, cls, spec, fields, upsert=False):
+        m = mapper(cls)
+        self.impl.update_partial(m.doc_cls, spec, fields, upsert)
 
     def __repr__(self):
         l = ['<session>']

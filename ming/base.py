@@ -384,5 +384,6 @@ def _safe_bson(obj):
     elif isinstance(obj, pymongo.objectid.ObjectId):
         return obj
     else:
-        assert False, '%s is not safe for bsonification' % type(obj)
+        assert False, '%s is not safe for bsonification: %r' % (
+            type(obj), obj)
 

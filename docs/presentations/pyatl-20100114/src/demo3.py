@@ -14,7 +14,7 @@ from ming.orm.property import FieldProperty, ForeignIdProperty, RelationProperty
 class WikiPage(MappedClass):
     class __mongometa__:
         session = session
-        name = 'wiki_page'
+        name = 'pages'
     _id = FieldProperty(schema.ObjectId)
     author = FieldProperty(str)
     title = FieldProperty(str)
