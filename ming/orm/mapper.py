@@ -2,7 +2,7 @@ from ming.utils import all_class_properties
 from ming.base import Document, DocumentMeta
 
 from .base import mapper, state, session
-from .property import ORMProperty
+from .property import ORMProperty, ForeignIdProperty
 
 class Mapper(object):
 
@@ -29,7 +29,11 @@ class Mapper(object):
     def compile(self):
         if self._compiled: return self
         for p in self.properties:
-            p.compile()
+            if isinstance(p, ForeignIdProperty):
+                p.compile()
+        for p in self.properties:
+            if not isinstance(p, ForeignIdProperty):
+                p.compile()
         self.doc_cls = make_document_class(self._mapped_class, self._dct)
         self._compiled = True
         self._mapped_class.__mongometa__ = self.doc_cls.__mongometa__
