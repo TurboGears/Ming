@@ -123,6 +123,7 @@ class MappedClass(object):
             mapper(mc).compile()
 
     def delete(self):
+        '''Schedule the instance for deletion'''
         st = state(self)
         st.status = st.deleted
 

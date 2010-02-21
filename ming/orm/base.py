@@ -1,15 +1,18 @@
 from .icollection import instrument
 
 def state(obj):
+    '''The state of a mapped object'''
     return obj.__ming__.state
 
 def mapper(v):
+    '''The mapper object for either a class or an instance'''
     if isinstance(v, type):
         return v.__ming__.mapper
     else:
         return mapper(type(v))
 
 def session(v):
+    '''The ORMSession object managing either a class or an instance'''
     if isinstance(v, type):
         return v.__mongometa__.session
     else:

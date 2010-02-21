@@ -1,7 +1,7 @@
 #{initial-imports
-from ming.datastore import DataStore
 from ming import Session
-from ming.orm.ormsession import ThreadLocalORMSession
+from ming.datastore import DataStore
+from ming.orm import ThreadLocalORMSession
 
 bind = DataStore('mongodb://localhost:27017/orm_tutorial')
 doc_session = Session(bind)
@@ -10,8 +10,8 @@ session = ThreadLocalORMSession(doc_session=doc_session)
 
 #{orm-imports
 from ming import schema
-from ming.orm.mapped_class import MappedClass
-from ming.orm.property import FieldProperty, ForeignIdProperty, RelationProperty
+from ming.orm import MappedClass
+from ming.orm import FieldProperty, ForeignIdProperty, RelationProperty
 #}
 
 class WikiPage(MappedClass):

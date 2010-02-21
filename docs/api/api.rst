@@ -11,4 +11,4 @@ API Docs
    ming.session
    ming.schema
    ming.utils
-   
+   ming.orm
