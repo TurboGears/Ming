@@ -4,10 +4,10 @@ from mock import Mock
 
 from ming import schema as S
 from ming import datastore as DS
-from ming.orm.ormsession import ORMSession
-from ming.orm.property import FieldProperty, RelationProperty, ForeignIdProperty
-from ming.orm.mapped_class import MappedClass
-from ming.orm.base import state, mapper
+from ming.orm import ORMSession
+from ming.orm import FieldProperty, RelationProperty, ForeignIdProperty
+from ming.orm import MappedClass
+from ming.orm import state, mapper
 from ming.orm.icollection import instrument, deinstrument, InstrumentedObj
 
 class TestRelation(TestCase):
