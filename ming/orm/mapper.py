@@ -29,11 +29,7 @@ class Mapper(object):
     def compile(self):
         if self._compiled: return self
         for p in self.properties:
-            if isinstance(p, ForeignIdProperty):
-                p.compile()
-        for p in self.properties:
-            if not isinstance(p, ForeignIdProperty):
-                p.compile()
+            p.compile()
         self.doc_cls = make_document_class(self._mapped_class, self._dct)
         self._compiled = True
         self._mapped_class.__mongometa__ = self.doc_cls.__mongometa__

@@ -1,4 +1,5 @@
 from ming.base import Field
+from ming.utils import LazyProperty
 from .base import session, state, mapper, lookup_class
 from .icollection import InstrumentedList
 
@@ -75,7 +76,6 @@ class ForeignIdProperty(ORMProperty):
         ORMProperty.__init__(self)
         self.args = args
         self.kwargs = kwargs
-        self.related = None
         self.field_type = None
         self.field = None
         if isinstance(related, type):
@@ -83,9 +83,11 @@ class ForeignIdProperty(ORMProperty):
         else:
             self._related_classname = related
 
+    @LazyProperty
+    def related(self):
+        return lookup_class(self._related_classname)
+
     def compile(self):
-        if self.related is None:
-            self.related = lookup_class(self._related_classname)
         self.field_type = self.related._id.field_type
         self.field = Field(self.field_type, *self.args, **self.kwargs)
         
@@ -113,16 +115,17 @@ class RelationProperty(ORMProperty):
         self.via = via
         self.via_property = None
         self.fetch = fetch
-        self.related = None
         self.join = None
         if isinstance(related, type):
             self.related = related
         else:
             self._related_classname = related
 
+    @LazyProperty
+    def related(self):
+        return lookup_class(self._related_classname)
+
     def compile(self):
-        if self.related is None:
-            self.related = lookup_class(self._related_classname)
         self.join = self._infer_join()
         
     def _infer_join(self):
