@@ -33,6 +33,8 @@ setup(name='Ming',
       ],
       entry_points="""
       # -*- Entry points: -*-
+      [paste.filter_factory]
+      ming_autoflush=ming.orm.middleware:make_ming_autoflush_middleware
       """,
       test_suite='ming.tests',
       )
