@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import pymongo
+from pymongo.son import SON
 from threading import local
 
 from .base import Cursor, Object
@@ -67,6 +68,19 @@ class Session(object):
 
     def update_partial(self, cls, spec, fields, upsert):
         return self._impl(cls).update(spec, fields, upsert, safe=True)
+
+    def find_and_modify(self, cls, query=None, sort=None, new=False, **kw):
+        if query is None: query = {}
+        if sort is None: sort = {}
+        options = dict(kw, query=query, sort=sort)
+        db = self._impl(cls).database
+        cmd = SON(
+                [('findandmodify', cls.__mongometa__.name)]
+                + options.items())
+        print options
+        bson = db.command(cmd)
+        print bson
+        return cls.make(bson['value'])
 
     def save(self, doc, *args):
         hook = getattr(doc.__mongometa__, 'before_save', None)

@@ -141,6 +141,9 @@ class Query(object):
     def find(self, *args, **kwargs):
         return self.session.find(self.cls, *args, **kwargs)
 
+    def find_and_modify(self, *args, **kwargs):
+        return self.session.find_and_modify(self.cls, *args, **kwargs)
+
     def find_by(self, **kwargs):
         return self.session.find(self.cls, kwargs)
 

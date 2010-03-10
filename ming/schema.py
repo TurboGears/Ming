@@ -357,6 +357,10 @@ class String(ParticularScalar):
     type=basestring
 class Int(ParticularScalar):
     type=(int,long)
+    def _validate(self, value):
+        if isinstance(value, float) and round(value) == value:
+            value = int(value)
+        return super(Int, self)._validate(value)
 class Float(ParticularScalar):
     type=(float,int,long)
 class DateTime(ParticularScalar):

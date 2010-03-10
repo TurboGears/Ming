@@ -105,6 +105,16 @@ class ORMSession(object):
         ming_cursor = self.impl.find(m.doc_cls, *args, **kwargs)
         return ORMCursor(self, cls, ming_cursor)
 
+    def find_and_modify(self, cls, *args, **kwargs):
+        if self.autoflush:
+            self.flush()
+        m = mapper(cls)
+        obj = self.impl.find_and_modify(m.doc_cls, *args, **kwargs)
+        cursor = ORMCursor(self, cls, iter([ obj ]), refresh=True)
+        result = cursor.first()
+        state(result).status = ObjectState.clean
+        return result
+
     @with_hooks('remove')
     def remove(self, cls, *args, **kwargs):
         m = mapper(cls)
@@ -168,10 +178,11 @@ class ThreadLocalORMSession(ThreadLocalProxy):
 
 class ORMCursor(object):
 
-    def __init__(self, session, cls, ming_cursor):
+    def __init__(self, session, cls, ming_cursor, refresh=False):
         self.session = session
         self.cls = cls
         self.ming_cursor = ming_cursor
+        self.refresh = refresh
 
     def __iter__(self):
         return self
@@ -188,7 +199,7 @@ class ORMCursor(object):
         if obj is None:
             obj = self.cls(**encode_keys(doc))
             state(obj).status = ObjectState.clean
-        elif state(obj).status == ObjectState.clean:
+        elif state(obj).status == ObjectState.clean or self.refresh:
             # No changes, OK to freshen
             state(obj).document.update(doc) 
         else:
