@@ -82,7 +82,7 @@ class QueryDescriptor(object):
     def __get__(self, instance, cls):
         if instance is not None:
             cls = instance.__class__
-        return Query(cls)
+        return Query(cls, instance)
 
 class MappedClass(object):
 
@@ -129,8 +129,9 @@ class MappedClass(object):
 
 class Query(object):
 
-    def __init__(self, cls):
+    def __init__(self, cls, instance):
         self.cls = cls
+        self.instance = instance
         self.session = cls.__mongometa__.session
 
     def get(self, **kwargs):
@@ -143,6 +144,9 @@ class Query(object):
 
     def find_and_modify(self, *args, **kwargs):
         return self.session.find_and_modify(self.cls, *args, **kwargs)
+
+    def update_if_not_modified(self, *args, **kwargs):
+        return self.session.update_if_not_modified(self.instance, *args, **kwargs)
 
     def find_by(self, **kwargs):
         return self.session.find(self.cls, kwargs)

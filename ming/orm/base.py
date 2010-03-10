@@ -31,12 +31,14 @@ class Decoration(object):
         doc = instrument(doc_cls.make(bson),
                          DocumentTracker(self.state))
         self.state.document = doc
+        self.state.original_document = bson
 
 class ObjectState(object):
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 
     def __init__(self):
         self._status = self.new
+        self.original_document = None
         self.document = None
         self.extra_state = {}
 

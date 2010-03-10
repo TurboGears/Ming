@@ -124,6 +124,12 @@ class ORMSession(object):
         m = mapper(cls)
         self.impl.update_partial(m.doc_cls, spec, fields, upsert)
 
+    def update_if_not_modified(self, obj, fields, upsert=False):
+        self.update(obj.__class__, state(obj).original_document, fields, upsert)
+        err = self.impl.db.command(dict(getlasterror=1))
+        if err['n'] and err['updatedExisting']: return True
+        return False
+
     def __repr__(self):
         l = ['<session>']
         l.append('  ' + indent(repr(self.uow), 2))
