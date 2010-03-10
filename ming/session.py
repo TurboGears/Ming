@@ -77,9 +77,7 @@ class Session(object):
         cmd = SON(
                 [('findandmodify', cls.__mongometa__.name)]
                 + options.items())
-        print options
         bson = db.command(cmd)
-        print bson
         return cls.make(bson['value'])
 
     def save(self, doc, *args):
