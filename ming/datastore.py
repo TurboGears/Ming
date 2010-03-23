@@ -65,8 +65,7 @@ class DataStore(object):
             if len(self.master_args) == 2:
                 self._conn = Connection.paired(
                     (str(self.master_args[0]['host']), int(self.master_args[0]['port'])),
-                    (str(self.master_args[1]['host']), int(self.master_args[1]['port'])),
-                    pool_size=int(self.master_args[0]['query'].get('pool_size','16')))
+                    (str(self.master_args[1]['host']), int(self.master_args[1]['port'])))
             else:
                 if self.master_args:
                     try:
@@ -74,7 +73,6 @@ class DataStore(object):
                         if network_timeout is not None:
                             network_timeout = float(network_timeout)
                         master = Connection(str(self.master_args[0]['host']), int(self.master_args[0]['port']),
-                                            pool_size=int(self.master_args[0]['query'].get('pool_size','16')),
                                             network_timeout=network_timeout)
                     except:
                         if self.slave_args:
@@ -95,7 +93,6 @@ class DataStore(object):
                             network_timeout = float(network_timeout)
                         slave.append(
                             Connection(str(a['host']), int(a['port']),
-                                       pool_size=int(a['query'].get('pool_size','16')),
                                        slave_okay=True,
                                        network_timeout=network_timeout,
                                       )
