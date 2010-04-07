@@ -207,7 +207,8 @@ class ORMCursor(object):
             state(obj).status = ObjectState.clean
         elif state(obj).status == ObjectState.clean or self.refresh:
             # No changes, OK to freshen
-            state(obj).document.update(doc) 
+            state(obj).document.update(doc)
+            state(obj).status = ObjectState.clean
         else:
             # Changes, NOT OK to overwrite them
             pass
