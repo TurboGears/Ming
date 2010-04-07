@@ -1,6 +1,6 @@
 from ming.session import Session
 from ming.utils import encode_keys, ThreadLocalProxy, indent
-from .base import mapper, state, ObjectState
+from .base import mapper, state, ObjectState, session
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
 
@@ -211,6 +211,10 @@ class ORMCursor(object):
         else:
             # Changes, NOT OK to overwrite them
             pass
+        other_session = session(obj)
+        if other_session != self:
+            other_session.expunge(obj)
+            self.session.save(obj)
         return obj
 
     def limit(self, limit):
