@@ -62,8 +62,11 @@ class Database(database.Database):
             return dict(md5='42') # completely bogus value; will it work?
         elif 'findandmodify' in command:
             coll = self._collections[command['findandmodify']]
+            before = coll.find_one(command['query'])
             coll.update(command['query'], command['update'])
-            return coll.find_one(command['query'])
+            if command.get('new', False):
+                return dict(value=coll.find_one(command['query']))
+            return dict(value=before)
         else:
             raise NotImplementedError, repr(command.items()[0])
 
