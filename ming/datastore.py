@@ -8,6 +8,7 @@ from pymongo.connection import Connection
 from pymongo.master_slave_connection import MasterSlaveConnection
 
 from .utils import parse_uri
+from . import mim
 
 log = logging.getLogger(__name__)
 
@@ -45,8 +46,13 @@ class DataStore(object):
             log.warning(
                 'Master/slave is not supported with replica pairs')
             self.slave_args = []
-        self.database = (self.master_args+self.slave_args)[0]['path'][1:]
+        one_url = (self.master_args+self.slave_args)[0]
+        self.database = one_url['path'][1:]
+        self.scheme = one_url['scheme']
+        if one_url['scheme'] == 'mim':
+            self._conn = mim.Connection.get()
         for a in self.master_args + self.slave_args:
+            assert a['scheme'] == self.scheme
             assert a['path'] == '/' + self.database, \
                 "All connections MUST use the same database"
 
