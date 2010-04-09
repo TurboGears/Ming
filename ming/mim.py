@@ -217,7 +217,6 @@ class Cursor(object):
         self._iterator = itertools.islice(self._iterator, limit)
         return self
 
-
 def cursor_comparator(keys):
     def comparator(a, b):
         for k,d in keys:
@@ -227,28 +226,75 @@ def cursor_comparator(keys):
     return comparator
 
 def match(spec, doc):
+    '''TODO:
+    currently this should match, but it doesn't:
+    match({'tags.tag':'test'}, {'tags':[{'tag':'test'}]})
+    '''
     try:
         for k,v in spec.iteritems():
-            if k.startswith('$'):
-                raise NotImplementedError, k
-            ns = doc
-            for part in k.split('.'):
-                ns = ns[part]
-            if ns != v:
-                return False
+            op, value = _parse_query(v)
+            if not _part_match(op, _lookup(doc, k), value): return False
         return True
     except (AttributeError, KeyError), ex:
         return False
+
+def _parse_query(v):
+    if isinstance(v, dict) and len(v) == 1 and v.keys()[0].startswith('$'):
+        return v.keys()[0], v.values()[0]
+    else:
+        return '$eq', v
+
+def _part_match(op, document, value):
+    if compare(op, document, value): return True
+    if isinstance(document, list):
+        for item in document:
+            if compare(op, item, value): return True
+        else:
+            return False
+
+def _lookup(doc, k):
+    for part in k.split('.'):
+        doc = doc[part]
+    return doc
+
+def compare(op, a, b):
+    if op == '$gt': return a > b
+    if op == '$gte': return a >= b
+    if op == '$lt': return a < b
+    if op == '$lte': return a <= b
+    if op == '$eq': return a == b
+    if op == '$ne': return a != b
+    if op == '$in': return a in b
+    if op == '$nin': return a not in b
+    raise NotImplementedError, op
         
 def update(doc, updates):
+    newdoc = {}
     for k, v in updates.iteritems():
         if k.startswith('$'): continue
-        doc[k] = deepcopy(v)
+        newdoc[k] = deepcopy(v)
+    if newdoc:
+        doc.clear()
+        doc.update(newdoc)
     for k, v in updates.iteritems():
         if k == '$inc':
             for kk, vv in v.iteritems():
                 doc[kk] += vv
+        elif k == '$push':
+            for kk, vv in v.iteritems():
+                doc[kk].append(vv)
+        elif k == '$set':
+            doc.update(v)
         elif k.startswith('$'):
             import pdb; pdb.set_trace()
             raise NotImplementedError, k
+    validate(doc)
                 
+def validate(doc):
+    for k,v in doc.iteritems():
+        assert '$' not in k
+        assert '.' not in k
+        if hasattr(v, 'iteritems'):
+            validate(v)
+            
+        
