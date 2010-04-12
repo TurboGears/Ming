@@ -5,9 +5,11 @@ import sys
 import itertools
 from copy import deepcopy
 
+from ming.utils import LazyProperty
+
 from pymongo.errors import OperationFailure
 from pymongo.bson import ObjectId
-from pymongo import database, collection, ASCENDING
+from pymongo import database, ASCENDING
 
 class Connection(object):
     _singleton = None
@@ -117,7 +119,7 @@ class Collection(object):
     def find(self, spec=None):
         if spec is None:
             spec = {}
-        return Cursor(self._find(spec))
+        return Cursor(lambda:self._find(spec))
 
     def find_one(self, spec):
         for x in self.find(spec):
@@ -172,27 +174,32 @@ class Collection(object):
 
 class Cursor(object):
 
-    def __init__(self, it):
-        self._iterator = it
-        self._count = None
-        self._count_lb = 0
+    def __init__(self, iterator_gen, sort=None, skip=None, limit=None):
+        self._iterator_gen = iterator_gen
+        self._sort = sort
+        self._skip = skip
+        self._limit = limit
+
+    @LazyProperty
+    def iterator(self):
+        result = self._iterator_gen()
+        if self._sort is not None:
+            result = sorted(result, cmp=cursor_comparator(self._sort))
+        if self._skip is not None:
+            result = itertools.islice(result, self._skip, sys.maxint)
+        if self._limit is not None:
+            result = itertools.islice(result, self._limit)
+        return iter(result)
 
     def count(self):
-        if self._count is None:
-            self._iterator, local_iter = itertools.tee(self._iterator)
-            for x in local_iter:
-                self._count_lb += 1
-            self._count = self._count_lb
-        return self._count
+        return sum(1 for x in self._iterator_gen())
 
     def __iter__(self):
         return self
 
     def next(self):
-        nextval = self._iterator.next()
-        if self._count is None:
-            self._count_lb += 1
-        return deepcopy(nextval)
+        value = self.iterator.next()
+        return deepcopy(value)
 
     def sort(self, key_or_list, direction=ASCENDING):
         if not isinstance(key_or_list, list):
@@ -202,20 +209,29 @@ class Cursor(object):
             if isinstance(t, tuple):
                 keys.append(t)
             else:
-                keys.append(t, pymongo.ASCENDING)
+                keys.append(t, ASCENDING)
         return Cursor(
-            iter(sorted(self._iterator, cmp=cursor_comparator(keys))))
+            self._iterator_gen,
+            sort=keys,
+            skip=self._skip,
+            limit=self._limit)
 
     def all(self):
-        return list(self)
+        return list(self._iterator_gen())
 
     def skip(self, skip):
-        self._iterator = itertools.islice(self._iterator, skip, sys.maxint)
-        return self
+        return Cursor(
+            self._iterator_gen,
+            sort=self._sort,
+            skip=skip,
+            limit=self._limit)
 
     def limit(self, limit):
-        self._iterator = itertools.islice(self._iterator, limit)
-        return self
+        return Cursor(
+            self._iterator_gen,
+            sort=self._sort,
+            skip=self._skip,
+            limit=limit)
 
 def cursor_comparator(keys):
     def comparator(a, b):
@@ -233,7 +249,7 @@ def match(spec, doc):
     try:
         for k,v in spec.iteritems():
             op, value = _parse_query(v)
-            if not _part_match(op, _lookup(doc, k), value): return False
+            if not _part_match(op, value, k.split('.'), doc): return False
         return True
     except (AttributeError, KeyError), ex:
         return False
@@ -244,13 +260,17 @@ def _parse_query(v):
     else:
         return '$eq', v
 
-def _part_match(op, document, value):
-    if compare(op, document, value): return True
-    if isinstance(document, list):
-        for item in document:
-            if compare(op, item, value): return True
+def _part_match(op, value, key_parts, doc, allow_list_compare=True):
+    if not key_parts:
+        return compare(op, doc, value)
+    elif isinstance(doc, list) and allow_list_compare:
+        for v in doc:
+            if _part_match(op, value, key_parts, v, allow_list_compare=False):
+                return True
         else:
             return False
+    else:
+        return _part_match(op, value, key_parts[1:], doc[key_parts[0]])
 
 def _lookup(doc, k):
     for part in k.split('.'):
