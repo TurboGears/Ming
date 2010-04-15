@@ -98,6 +98,18 @@ class Manager(object):
         result.session = session
         return result
 
+    def class_only(method):
+        """
+        Decorator for methods that should only be run with a class-manager not an instance-manager
+        """
+        def ensure_not_instance(self, *args, **kw):
+            if self.instance:
+                raise TypeError("%s() may not be called on an instance's manager, only a class' manager"
+                                % method.__name__)
+            else:
+                method(self, *args, **kw)
+        return ensure_not_instance
+    
     def get(self, **kwargs):
         """
         Returns one matching record, or None
@@ -116,6 +128,7 @@ class Manager(object):
         """
         return self.session.find(self.cls, *args, **kwargs)
 
+    @class_only
     def remove(self, *args, **kwargs):
         """
         remove(spec_or_object_id)

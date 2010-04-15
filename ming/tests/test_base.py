@@ -145,6 +145,16 @@ class TestDocument(TestCase):
         
         self.TestDoc.m.drop_indexes()
         self.MockSession.drop_indexes.assert_called_with(self.TestDoc)
+    
+    def test_instance_remove(self):
+        # remove operates on a whole collection
+        
+        self.TestDoc.m.remove()
+        self.MockSession.remove.assert_called_with(self.TestDoc)
+        
+        doc = self.TestDoc.make(dict(a=5))
+        self.assertRaises(TypeError, doc.m.remove)
+
 
     def test_migrate(self):
         doc = self.TestDoc.make(dict(a=5))
