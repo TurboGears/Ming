@@ -161,7 +161,8 @@ class Collection(object):
             self._data[_id] = deepcopy(doc)
             return _id
 
-    def remove(self, spec, **kwargs):
+    def remove(self, spec=None, **kwargs):
+        if spec is None: spec = {}
         self._data = dict(
             (k, doc) for k,doc in self._data.iteritems()
             if not match(spec, doc))
