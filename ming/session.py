@@ -112,6 +112,8 @@ class Session(object):
             doc._id = bson
 
     def upsert(self, doc, spec_fields):
+        hook = getattr(doc.__mongometa__, 'before_save', None)
+        if hook: hook.im_func(doc)
         doc.make_safe()
         if doc.__mongometa__.schema is not None:
             data = doc.__mongometa__.schema.validate(doc)
