@@ -283,7 +283,11 @@ def compare(op, a, b):
     if op == '$gte': return a >= b
     if op == '$lt': return a < b
     if op == '$lte': return a <= b
-    if op == '$eq': return a == b
+    if op == '$eq':
+        if hasattr(b, 'match'):
+            return b.match(a)
+        else:
+            return a == b
     if op == '$ne': return a != b
     if op == '$in': return a in b
     if op == '$nin': return a not in b
