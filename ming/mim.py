@@ -7,7 +7,7 @@ from copy import deepcopy
 
 from ming.utils import LazyProperty
 
-from pymongo.errors import OperationFailure
+from pymongo.errors import OperationFailure, DuplicateKeyError
 from pymongo.bson import ObjectId
 from pymongo import database, ASCENDING
 
@@ -100,6 +100,7 @@ class Collection(object):
         self._name = name
         self._database = database
         self._data = {}
+        self._unique_indexes = {}
 
     @property
     def name(self):
@@ -135,6 +136,7 @@ class Collection(object):
             if _id in self._data:
                 if safe: raise OperationFailure('duplicate ID on insert')
                 continue
+            self._index(doc)
             self._data[_id] = deepcopy(doc)
         return _id
 
@@ -149,7 +151,9 @@ class Collection(object):
     def update(self, spec, document, upsert=False, safe=False):
         updated = False
         for doc in self._find(spec):
+            self._deindex(doc) 
             update(doc, document)
+            self._index(doc) 
             updated = True
         if updated: return
         if upsert:
@@ -158,21 +162,48 @@ class Collection(object):
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = ObjectId()
+            self._index(doc) 
             self._data[_id] = deepcopy(doc)
             return _id
 
     def remove(self, spec=None, **kwargs):
         if spec is None: spec = {}
-        self._data = dict(
-            (k, doc) for k,doc in self._data.iteritems()
-            if not match(spec, doc))
+        new_data = {}
+        for id, doc in self._data.iteritems():
+            if match(spec, doc):
+                self._deindex(doc)
+            else:
+                new_data[id] = doc
+        self._data = new_data
 
-    def ensure_index(self, *args, **kwargs):
-        pass
+    def ensure_index(self, key_or_list, unique=False, ttl=300, name=None):
+        if not unique: return
+        if isinstance(key_or_list, list):
+            keys = tuple(k[0] for k in key_or_list)
+        else:
+            keys = (key_or_list,)
+        self._unique_indexes[keys] = index = {}
+        for id, doc in self._data.iteritems():
+            key_values = tuple(doc.get(key, None) for key in keys)
+            index[key_values] =id 
 
     def __repr__(self):
         return 'mim.Collection(%r, %s)' % (self._database, self.name)
 
+    def _index(self, doc):
+        for keys, index in self._unique_indexes.iteritems():
+            key_values = tuple(doc.get(key, None) for key in keys)
+            old_id = index.get(key_values, ())
+            if old_id == doc['_id']: continue
+            if old_id in self._data:
+                raise DuplicateKeyError, '%r: %s' % (self, keys)
+            index[key_values] = doc['_id']
+
+    def _deindex(self, doc):
+        for keys, index in self._unique_indexes.iteritems():
+            key_values = tuple(doc.get(key, None) for key in keys)
+            index.pop(key_values, None)
+            
 class Cursor(object):
 
     def __init__(self, iterator_gen, sort=None, skip=None, limit=None):
