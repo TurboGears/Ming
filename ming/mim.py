@@ -191,6 +191,7 @@ class Collection(object):
         return 'mim.Collection(%r, %s)' % (self._database, self.name)
 
     def _index(self, doc):
+        if '_id' not in doc: return
         for keys, index in self._unique_indexes.iteritems():
             key_values = tuple(doc.get(key, None) for key in keys)
             old_id = index.get(key_values, ())
@@ -203,7 +204,7 @@ class Collection(object):
         for keys, index in self._unique_indexes.iteritems():
             key_values = tuple(doc.get(key, None) for key in keys)
             index.pop(key_values, None)
-            
+
 class Cursor(object):
 
     def __init__(self, iterator_gen, sort=None, skip=None, limit=None):
