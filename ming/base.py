@@ -20,8 +20,7 @@ def build_mongometa(bases, dct):
 
 class Object(dict):
     'Dict providing object-like attr access'
-    def __init__(self, *l, **kw):
-        super(Object, self).__init__(*l, **kw)
+    __slots__ = ()
 
     def __getattr__(self, name):
         try:
@@ -379,7 +378,8 @@ class Cursor(object):
 
     def all(self):
         return list(self)
-    
+
+NoneType = type(None)
 def _safe_bson(obj):
     '''Verify that the obj is safe for bsonification (in particular, no tuples or
     Decimal objects
@@ -388,14 +388,12 @@ def _safe_bson(obj):
         return [ _safe_bson(o) for o in obj ]
     elif isinstance(obj, dict):
         return Object((k, _safe_bson(v)) for k,v in obj.iteritems())
-    elif isinstance(obj, (basestring, int, long, float, datetime)):
+    elif isinstance(obj, (
+            basestring, int, long, float, datetime, NoneType,
+            pymongo.objectid.ObjectId)):
         return obj
     elif isinstance(obj, decimal.Decimal):
         return float(obj)
-    elif obj is None:
-        return obj
-    elif isinstance(obj, pymongo.objectid.ObjectId):
-        return obj
     else:
         assert False, '%s is not safe for bsonification: %r' % (
             type(obj), obj)

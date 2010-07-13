@@ -174,13 +174,13 @@ class ThreadLocalORMSession(ThreadLocalProxy):
 
     @classmethod
     def flush_all(cls):
-        for session in cls._session_registry.itervalues():
-            session.flush()
+        for sess in cls._session_registry.itervalues():
+            sess.flush()
 
     @classmethod
     def close_all(cls):
-        for session in cls._session_registry.itervalues():
-            session.close()
+        for sess in cls._session_registry.itervalues():
+            sess.close()
 
 class ORMCursor(object):
 

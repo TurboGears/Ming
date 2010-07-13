@@ -42,6 +42,9 @@ class Connection(object):
     def database_names(self):
         return self._databases.keys()
 
+    def drop_database(self, name):
+        del self._databases[name]
+
     def __repr__(self):
         return 'mim.Connection()'
 

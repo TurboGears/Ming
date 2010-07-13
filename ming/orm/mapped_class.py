@@ -41,7 +41,7 @@ class Mapper(object):
             prop.insert(self, session, obj, state)
         # Actually insert the document
         doc = self.doc_cls(state.document)
-        result = session.impl.insert(doc)
+        session.impl.insert(doc)
         if '_id' in doc:
             state.document['_id'] = doc._id
         session.save(obj)
@@ -53,7 +53,7 @@ class Mapper(object):
             prop.update(self, session, obj, state)
         # Actually insert the document
         doc = self.doc_cls(state.document)
-        result = session.impl.save(doc)
+        session.impl.save(doc)
         if '_id' in doc:
             state.document['_id'] = doc._id
         state.status = state.clean
@@ -64,7 +64,7 @@ class Mapper(object):
             prop.delete(self, session, obj, state)
         # Actually insert the document
         doc = self.doc_cls(state.document)
-        result = session.impl.delete(doc)
+        session.impl.delete(doc)
         session.expunge(obj)
 
     def remove(self, *args, **kwargs):
@@ -92,7 +92,7 @@ class MappedClass(object):
     _registry = {}
 
     def __init__(self, **kwargs):
-        self.__ming__ = deco = Decoration(self, kwargs)
+        self.__ming__ = Decoration(self, kwargs)
         session(self).save(self)
 
     def __repr__(self):

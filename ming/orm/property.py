@@ -45,6 +45,8 @@ class FieldProperty(ORMProperty):
         self.args = args
         self.kwargs = kwargs
         self.field = Field(field_type, *args, **kwargs)
+        if self.name == '_id':
+            self.__get__ = self._get_id
 
     def repr(self, doc):
         try:
@@ -55,15 +57,16 @@ class FieldProperty(ORMProperty):
     def __get__(self, instance, cls=None):
         if instance is None: return self
         st = state(instance)
+        return getattr(st.document, self.name)
+
+    def _get_id(self, instance, cls=None):
+        if instance is None: return self
+        st = state(instance)
         try:
             return getattr(st.document, self.name)
-        except AttributeError, ae:
-            # Special case for _id -- flush first to see if the document's _id
-            #   is populated then
-            if self.name == '_id':
-                session(instance).flush(instance)
-                return getattr(st.document, self.name)
-            raise
+        except AttributeError:
+            session(instance).flush(instance)
+            return getattr(st.document, self.name)
 
     def __set__(self, instance, value):
         st = state(instance)

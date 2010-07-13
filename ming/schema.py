@@ -151,6 +151,12 @@ class FancySchemaItem(SchemaItem):
             pass
         except:
             pass
+        if hasattr(self, '_fast_validate'):
+            try:
+                return self._fast_validate(value, **kw)
+            except Invalid:
+                # must use 'slow' validation path
+                pass
         return self._validate(value, **kw)
 
     def _validate(self, value, **kw): return value
@@ -193,8 +199,7 @@ class Object(FancySchemaItem):
 
     def validate(self, value, **kw):
         try:
-            result = FancySchemaItem.validate(self, value, **kw)
-            return result
+            return super(Object, self).validate(value, **kw)
         except Invalid, inv:
             if self.managed_class:
                 inv.msg = '%s:\n    %s' % (
@@ -252,6 +257,42 @@ class Object(FancySchemaItem):
             raise Invalid(str(ae), d, None)
         if extra_keys and not allow_extra:
             raise Invalid('Extra keys: %r' % extra_keys, d, None)
+        if extra_keys and not strip_extra:
+            for ek in extra_keys:
+                result[ek] = d[ek]
+        return result
+
+    def _fast_validate(self, d, allow_extra=False, strip_extra=False):
+        '''Make the common case fast - valid, non-polymorphic.  Raise ValueError
+        when fast path cannot complete'''
+        cls = self.managed_class
+        if self.polymorphic_registry: raise Invalid('polymorphic', d, None)
+        if cls is None:
+            from . import base
+            result = base.Object()
+        else:
+            result = cls.__new__(cls)
+        if not isinstance(d, dict): raise Invalid('notdict', d, None)
+        to_set = []
+        for name, field in self.fields.iteritems():
+            if isinstance(name, basestring):
+                to_set.append((
+                        name,
+                        field.validate(d.get(name, Missing))))
+            else:
+                # Validate all items in d against this field
+                allow_extra=True
+                name_validator = SchemaItem.make(name)
+                to_set.extend([
+                    (name_validator.validate(name),
+                     field.validate(value))
+                    for name, value in d.iteritems() ])
+        for name, value in to_set:
+            if value is Missing: continue
+            result[name] = value
+        extra_keys = set(d.iterkeys()) - set(self.fields.iterkeys())
+        if extra_keys and not allow_extra:
+            raise Invalid('extrakeys', d, None)
         if extra_keys and not strip_extra:
             for ek in extra_keys:
                 result[ek] = d[ek]

@@ -32,18 +32,21 @@ class UnitOfWork(object):
 
     def flush(self):
         new_objs = {}
+        inow = self.session.insert_now
+        unow = self.session.update_now
+        dnow = self.session.delete_now
         for i, obj in self._objects.items():
             st = state(obj)
             if st.status == ObjectState.new:
-                self.session.insert_now(obj, st)
+                inow(obj, st)
                 st.status = ObjectState.clean
                 new_objs[i] = obj
             elif st.status == ObjectState.dirty:
-                self.session.update_now(obj, st)
+                unow(obj, st)
                 st.status = ObjectState.clean
                 new_objs[i] = obj
             elif st.status == ObjectState.deleted:
-                self.session.delete_now(obj, st)
+                dnow(obj, st)
             elif st.status == ObjectState.clean:
                 new_objs[i] = obj
             else:
