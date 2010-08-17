@@ -142,6 +142,12 @@ class ORMSession(object):
     def ensure_indexes(self, cls):
         return self.impl.ensure_indexes(cls)
 
+    def drop_indexes(self, cls):
+        return self.impl.drop_indexes(cls)
+
+    def update_indexes(self, cls):
+        return self.impl.update_indexes(cls)
+
 class SessionExtension(object):
 
     def __init__(self, session):

@@ -180,5 +180,18 @@ class Session(object):
         return self._impl(cls).index_information()
     
     def drop_indexes(self, cls):
-        return self._impl(cls).drop_indexes()
+        try:
+            return self._impl(cls).drop_indexes()
+        except:
+            pass
+
+    def update_indexes(self, cls):
+        indexes = set()
+        for idx in getattr(cls.__mongometa__, 'indexes', []):
+            indexes.add(self.ensure_index(cls, idx))
+        for idx in getattr(cls.__mongometa__, 'unique_indexes', []):
+            indexes.add(self.ensure_index(cls, idx, unique=True))
+        for iname in self.index_information(cls):
+            if iname not in indexes and iname != '_id_':
+                self._impl(cls).drop_index(iname)
 
