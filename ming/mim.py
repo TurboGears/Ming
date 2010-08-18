@@ -104,6 +104,7 @@ class Collection(object):
         self._database = database
         self._data = {}
         self._unique_indexes = {}
+        self._indexes = {}
 
     @property
     def name(self):
@@ -180,15 +181,25 @@ class Collection(object):
         self._data = new_data
 
     def ensure_index(self, key_or_list, unique=False, ttl=300, name=None):
-        if not unique: return
         if isinstance(key_or_list, list):
             keys = tuple(k[0] for k in key_or_list)
         else:
             keys = (key_or_list,)
+        self._indexes['_'.join(keys)] = [ (k, 0) for k in keys ]
+        if not unique: return
         self._unique_indexes[keys] = index = {}
         for id, doc in self._data.iteritems():
             key_values = tuple(doc.get(key, None) for key in keys)
-            index[key_values] =id 
+            index[key_values] =id
+
+    def index_information(self):
+        return dict(self._indexes)
+
+    def drop_index(self, iname):
+        index = self._indexes.pop(iname, None)
+        if index is None: return
+        keys = tuple(i[0] for i in index)
+        self._unique_indexes.pop(keys, None)
 
     def __repr__(self):
         return 'mim.Collection(%r, %s)' % (self._database, self.name)
