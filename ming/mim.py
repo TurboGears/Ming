@@ -185,12 +185,14 @@ class Collection(object):
             keys = tuple(k[0] for k in key_or_list)
         else:
             keys = (key_or_list,)
-        self._indexes['_'.join(keys)] = [ (k, 0) for k in keys ]
+        index_name = '_'.join(keys)
+        self._indexes[index_name] =[ (k, 0) for k in keys ]
         if not unique: return
         self._unique_indexes[keys] = index = {}
         for id, doc in self._data.iteritems():
             key_values = tuple(doc.get(key, None) for key in keys)
             index[key_values] =id
+        return index_name
 
     def index_information(self):
         return dict(self._indexes)
