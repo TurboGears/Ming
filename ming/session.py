@@ -1,10 +1,14 @@
 from __future__ import absolute_import
+import logging
+
 import pymongo
 from pymongo.son import SON
 from threading import local
 
 from .base import Cursor, Object
 from . import exc
+
+log = logging.getLogger(__name__)
 
 class Session(object):
     _registry = {}
@@ -55,7 +59,7 @@ class Session(object):
         if not isinstance(fields, (list, tuple)):
             fields = [ fields ]
         index_fields = [(f, pymongo.ASCENDING) for f in fields]
-        return self._impl(cls).ensure_index(index_fields, **kwargs)
+        return self._impl(cls).ensure_index(index_fields, **kwargs), fields
 
     def ensure_indexes(self, cls):
         for idx in getattr(cls.__mongometa__, 'indexes', []):
@@ -185,13 +189,18 @@ class Session(object):
         except:
             pass
 
-    def update_indexes(self, cls):
+    def update_indexes(self, cls, **kwargs):
         indexes = set()
         for idx in getattr(cls.__mongometa__, 'indexes', []):
-            indexes.add(self.ensure_index(cls, idx))
+            _, keys = self.ensure_index(cls, idx, **kwargs)
+            indexes.add(frozenset(keys))
         for idx in getattr(cls.__mongometa__, 'unique_indexes', []):
-            indexes.add(self.ensure_index(cls, idx, unique=True))
-        for iname in self.index_information(cls):
-            if iname not in indexes and iname != '_id_':
+            _, keys = self.ensure_index(cls, idx, unique=True, **kwargs)
+            indexes.add(frozenset(keys))
+        for iname,fields  in self.index_information(cls).iteritems():
+            keys = frozenset(i[0] for i in fields)
+            if keys not in indexes and iname != '_id_':
+                log.info('Dropping index %s', iname)
+                import pdb; pdb.set_trace()
                 self._impl(cls).drop_index(iname)
 
