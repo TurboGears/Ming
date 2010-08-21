@@ -359,7 +359,6 @@ def update(doc, updates):
         elif k == '$set':
             doc.update(v)
         elif k.startswith('$'):
-            import pdb; pdb.set_trace()
             raise NotImplementedError, k
     validate(doc)
                 

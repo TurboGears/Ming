@@ -201,6 +201,5 @@ class Session(object):
             keys = frozenset(i[0] for i in fields)
             if keys not in indexes and iname != '_id_':
                 log.info('Dropping index %s', iname)
-                import pdb; pdb.set_trace()
                 self._impl(cls).drop_index(iname)
 
