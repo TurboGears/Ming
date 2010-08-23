@@ -180,7 +180,7 @@ class Collection(object):
                 new_data[id] = doc
         self._data = new_data
 
-    def ensure_index(self, key_or_list, unique=False, ttl=300, name=None):
+    def ensure_index(self, key_or_list, unique=False, ttl=300, name=None, background=None):
         if isinstance(key_or_list, list):
             keys = tuple(k[0] for k in key_or_list)
         else:
