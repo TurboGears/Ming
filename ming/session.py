@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 import logging
+from functools import update_wrapper
 
 import pymongo
+import pymongo.errors
 from pymongo.son import SON
 from threading import local
 
@@ -9,6 +11,14 @@ from .base import Cursor, Object
 from . import exc
 
 log = logging.getLogger(__name__)
+
+def annotate_doc_failure(func):
+    def wrapper(self, doc, *args, **kwargs):
+        try:
+            return func(self, doc, *args, **kwargs)
+        except pymongo.errors.OperationFailure, opf:
+            opf.args = opf.args + (('doc:  ' + str(doc)),)
+    return update_wrapper(wrapper, func)
 
 class Session(object):
     _registry = {}
@@ -84,6 +94,7 @@ class Session(object):
         bson = db.command(cmd)
         return cls.make(bson['value'])
 
+    @annotate_doc_failure
     def save(self, doc, *args):
         hook = getattr(doc.__mongometa__, 'before_save', None)
         if hook: hook.im_func(doc)
@@ -102,6 +113,7 @@ class Session(object):
         if result and '_id' not in doc:
             doc._id = result
 
+    @annotate_doc_failure
     def insert(self, doc):
         hook = getattr(doc.__mongometa__, 'before_save', None)
         if hook: hook.im_func(doc)
@@ -115,6 +127,7 @@ class Session(object):
         if bson and '_id' not in doc:
             doc._id = bson
 
+    @annotate_doc_failure
     def upsert(self, doc, spec_fields):
         hook = getattr(doc.__mongometa__, 'before_save', None)
         if hook: hook.im_func(doc)
@@ -131,6 +144,7 @@ class Session(object):
                                upsert=True,
                                safe=True)
 
+    @annotate_doc_failure
     def delete(self, doc):
         self._impl(doc).remove({'_id':doc._id}, safe=True)
 
@@ -142,6 +156,7 @@ class Session(object):
         else:
             self._set(doc[key_parts[0]], key_parts[1:], value)
 
+    @annotate_doc_failure
     def set(self, doc, fields_values):
         """
         sets a key/value pairs, and persists those changes to the datastore
@@ -154,6 +169,7 @@ class Session(object):
         impl = self._impl(doc)
         impl.update({'_id':doc._id}, {'$set':fields_values}, safe=True)
         
+    @annotate_doc_failure
     def increase_field(self, doc, **kwargs):
         """
         usage: increase_field(key=value)
