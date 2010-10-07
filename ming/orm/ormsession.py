@@ -211,12 +211,12 @@ class ORMCursor(object):
         if obj is None:
             obj = self.cls(**encode_keys(doc))
             state(obj).status = ObjectState.clean
-        elif state(obj).status == ObjectState.clean or self.refresh:
-            # No changes, OK to freshen
+        elif self.refresh:
+            # Refresh object
             state(obj).document.update(doc)
             state(obj).status = ObjectState.clean
         else:
-            # Changes, NOT OK to overwrite them
+            # Never refresh objects from the DB unless explicitly requested
             pass
         other_session = session(obj)
         if other_session != self:
