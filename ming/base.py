@@ -267,6 +267,8 @@ class DocumentMeta(type):
                                            cls.__name__)
             prev_version = getattr(mm, 'version_of', None)
             my_schema.managed_class = cls
+            if mm.polymorphic_registry is None:
+                mm.polymorphic_registry = {}
             my_schema.set_polymorphic(
                 mm.polymorphic_on, mm.polymorphic_registry, polymorphic_identity)
             if prev_version:

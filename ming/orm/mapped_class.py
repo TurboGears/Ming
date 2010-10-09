@@ -1,5 +1,5 @@
 from ming.base import Document, DocumentMeta
-from ming.utils import EmptyClass, wordwrap, all_class_properties
+from ming.utils import EmptyClass, wordwrap, all_class_properties, encode_keys
 
 from .base import Decoration, mapper, session, state
 from .property import ORMProperty
@@ -32,7 +32,13 @@ class Mapper(object):
             p.compile()
         self.doc_cls = make_document_class(self._mapped_class, self._dct)
         self._compiled = True
-        self._mapped_class.__mongometa__ = self.doc_cls.__mongometa__
+        mm = self._mapped_class.__mongometa__ = self.doc_cls.__mongometa__
+        if mm.polymorphic_registry is not None:
+            if not hasattr(mm, 'orm_polymorphic_registry'):
+                mm.orm_polymorphic_registry = {}
+            for name, value in mm.polymorphic_registry.iteritems():
+                if value is self.doc_cls:
+                    mm.orm_polymorphic_registry[name] = self._mapped_class
         return self
 
     def insert(self, session, obj, state):
@@ -69,6 +75,16 @@ class Mapper(object):
 
     def remove(self, *args, **kwargs):
         session(self._mapped_class).remove(self._mapped_class, *args, **kwargs)
+
+    def create(self, doc):
+        mm = self._mapped_class.__mongometa__
+        opr = getattr(mm, 'orm_polymorphic_registry', None)
+        if opr:
+            discriminator = doc[mm.polymorphic_on]
+            cls = opr[discriminator]
+        else:
+            cls = self._mapped_class
+        return cls(**encode_keys(doc))
 
 class MappedClassMeta(type):
 

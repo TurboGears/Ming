@@ -4,6 +4,7 @@ from mock import Mock
 
 from ming import schema as S
 from ming import datastore as DS
+from ming import Session
 from ming.orm import ORMSession
 from ming.orm import FieldProperty, RelationProperty, ForeignIdProperty
 from ming.orm import MappedClass
@@ -263,3 +264,37 @@ class TestICollection(TestCase):
         self.tracker.removed_item.assert_called_with(1)
         
         
+class TestPolymorphic(TestCase):
+
+    def setUp(self):
+        self.bind = DS.DataStore(master='mim:///')
+        self.doc_session = Session(self.bind)
+        self.orm_session = ORMSession(self.doc_session)
+        class Base(MappedClass):
+            class __mongometa__:
+                name='test_doc'
+                session = self.orm_session
+                polymorphic_on='type'
+                polymorphic_identity='base'
+            _id = FieldProperty(S.ObjectId)
+            type=FieldProperty(str, if_missing='base')
+            a=FieldProperty(int)
+        class Derived(Base):
+            class __mongometa__:
+                polymorphic_identity='derived'
+            type=FieldProperty(str, if_missing='derived')
+            b=FieldProperty(int)
+        MappedClass.compile_all()
+        self.Base = Base
+        self.Derived = Derived
+
+    def test_polymorphic(self):
+        self.Base(a=1)
+        self.Derived(a=2,b=2)
+        self.orm_session.flush()
+        self.orm_session.clear()
+        q = self.Base.query.find()
+        r = sorted(q.all())
+        assert r[0].__class__ is self.Base
+        assert r[1].__class__ is self.Derived
+

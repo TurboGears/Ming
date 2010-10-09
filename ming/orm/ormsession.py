@@ -1,5 +1,5 @@
 from ming.session import Session
-from ming.utils import encode_keys, ThreadLocalProxy, indent
+from ming.utils import ThreadLocalProxy, indent
 from .base import mapper, state, ObjectState, session
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
@@ -193,6 +193,7 @@ class ORMCursor(object):
     def __init__(self, session, cls, ming_cursor, refresh=False):
         self.session = session
         self.cls = cls
+        self.mapper = mapper(cls)
         self.ming_cursor = ming_cursor
         self.refresh = refresh
 
@@ -209,7 +210,7 @@ class ORMCursor(object):
         doc = self.ming_cursor.next()
         obj = self.session.imap.get(self.cls, doc['_id'])
         if obj is None:
-            obj = self.cls(**encode_keys(doc))
+            obj = self.mapper.create(doc)
             state(obj).status = ObjectState.clean
         elif self.refresh:
             # Refresh object
