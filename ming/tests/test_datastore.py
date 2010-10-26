@@ -70,6 +70,27 @@ class TestDatastore(TestCase):
                           slave = 'mongo://localhost:27017/test_db')
         self.assert_(ms.conn is not None)
         self.assert_(ms.db is not None)
+
+
+class TestReplicaSetDataStore(TestCase):
+
+    def test_members(self):
+        ms = DS.ReplicaSetDataStore([
+            'mongo://localhost:27017/test_db?network_timeout=5',
+            'mongo://localhost:27017/test_db?network_timeout=5'
+        ])
+        self.assert_(ms.conn is not None)
+        self.assert_(ms.db is not None)
+
+    def test_members_failover(self):
+        ms = DS.ReplicaSetDataStore([
+            'mongo://localhost:23/test_db?network_timeout=5',
+            'mongo://localhost:27017/test_db?network_timeout=5'
+        ])
+        ms.conn # should failover to slave-only
+        ms.db
+        ms_fail = DS.DataStore(['mongo://localhost:23/test_db'])
+        self.assert_(ms_fail.conn is None)
         
 
 if __name__ == '__main__':

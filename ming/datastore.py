@@ -59,17 +59,18 @@ class Engine(object):
 
     def _connect(self):
         self._conn = None
+        network_timeout = self.master_args[0]['query'].get('network_timeout')
+        if network_timeout is not None:
+            network_timeout = float(network_timeout)
         try:
-            if len(self.master_args) == 2:
-                self._conn = Connection.paired(
-                    (str(self.master_args[0]['host']), int(self.master_args[0]['port'])),
-                    (str(self.master_args[1]['host']), int(self.master_args[1]['port'])))
+            if len(self.master_args) > 1:
+                self._conn = Connection(
+                    [ '%s:%s' % (ma.get('host'), ma.get('port'))
+                      for ma in self.master_args ],
+                    network_timeout=network_timeout)
             else:
                 if self.master_args:
                     try:
-                        network_timeout = self.master_args[0]['query'].get('network_timeout')
-                        if network_timeout is not None:
-                            network_timeout = float(network_timeout)
                         master = Connection(str(self.master_args[0]['host']), int(self.master_args[0]['port']),
                                             network_timeout=network_timeout)
                     except:
@@ -143,3 +144,4 @@ class ShardedDataStore(object):
             if not engine:
                 engine = cls._engines[key] = Engine(uri)
             return DataStore(engine=engine, database=args['path'][1:])
+
