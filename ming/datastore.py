@@ -64,10 +64,16 @@ class Engine(object):
             network_timeout = float(network_timeout)
         try:
             if len(self.master_args) > 1:
-                self._conn = Connection(
-                    [ '%s:%s' % (ma.get('host'), ma.get('port'))
-                      for ma in self.master_args ],
-                    network_timeout=network_timeout)
+                try:
+                    self._conn = Connection(
+                        [ '%s:%s' % (ma.get('host'), ma.get('port'))
+                          for ma in self.master_args ],
+                        network_timeout=network_timeout)
+                except TypeError:
+                    self._conn = Connection.paired(
+                        *[ (ma.get('host'), ma.get('port'))
+                           for ma in self.master_args],
+                         network_timeout=network_timeout)
             else:
                 if self.master_args:
                     try:

@@ -45,7 +45,7 @@ class TestDatastore(TestCase):
         ms = DS.DataStore(master=['mongo://localhost:23/test_db',
                                   'mongo://localhost:27017/test_db'])
         self.assert_(ms.conn is not None)
-        paired.assert_called_with(('localhost',23), ('localhost',27017))
+        paired.assert_called_with(('localhost',23), ('localhost',27017), network_timeout=None)
         self.assert_(ms.db is not None)
         ms_fail = DS.DataStore(master='mongo://localhost:23/test_db')
         self.assert_(ms_fail.conn is None)
@@ -75,7 +75,7 @@ class TestDatastore(TestCase):
 class TestReplicaSetDataStore(TestCase):
 
     def test_members(self):
-        ms = DS.ReplicaSetDataStore([
+        ms = DS.DataStore([
             'mongo://localhost:27017/test_db?network_timeout=5',
             'mongo://localhost:27017/test_db?network_timeout=5'
         ])
@@ -83,7 +83,7 @@ class TestReplicaSetDataStore(TestCase):
         self.assert_(ms.db is not None)
 
     def test_members_failover(self):
-        ms = DS.ReplicaSetDataStore([
+        ms = DS.DataStore([
             'mongo://localhost:23/test_db?network_timeout=5',
             'mongo://localhost:27017/test_db?network_timeout=5'
         ])
