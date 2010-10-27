@@ -110,25 +110,25 @@ class DataStore(object):
     '''Engine bound to a particular database'''
 
     def __init__(self, master=None, slave=None, connect_retry=3,
-                 engine=None, database=None):
-        if engine is None:
+                 bind=None, database=None):
+        if bind is None:
             master=master or 'mongo://localhost:27017/gutenberg'
-            engine = Engine(master, slave, connect_retry)
-            one_url = (engine.master_args+engine.slave_args)[0]
+            bind = Engine(master, slave, connect_retry)
+            one_url = (bind.master_args+bind.slave_args)[0]
             database = one_url['path'][1:]
-        self._engine = engine
+        self.bind = bind
         self.database = database
 
     def __repr__(self):
-        return 'DataStore(%r, %s)' % (self._engine, self.database)
+        return 'DataStore(%r, %s)' % (self.bind, self.database)
 
     @property
     def conn(self):
-        return self._engine.conn
+        return self.bind.conn
 
     @property
     def db(self):
-        return getattr(self._engine.conn, self.database, None)
+        return getattr(self.bind.conn, self.database, None)
 
 class ShardedDataStore(object):
     _lock = Lock()

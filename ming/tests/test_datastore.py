@@ -56,14 +56,14 @@ class TestDatastore(TestCase):
                                   'mongo://localhost:999/test_db',
                                   ])
         self.assert_(ms.conn is not None)
-        self.assertEqual(len(ms.master_args), 2)
+        self.assertEqual(len(ms.bind.master_args), 2)
         
     def test_replica_pair_slaves(self):
         ms = DS.DataStore(master=['mongo://localhost:23/test_db',
                                   'mongo://localhost:27017/test_db'],
                           slave='mongo://localhost:999/test_db')
         self.assert_(ms.conn is not None)
-        self.assertEqual(len(ms.slave_args), 0)
+        self.assertEqual(len(ms.bind.slave_args), 0)
         
     def test_slave_only(self):
         ms = DS.DataStore(master = None,
