@@ -42,9 +42,6 @@ class Mapper(object):
         return self
 
     def insert(self, session, obj, state):
-        # Allow properties to do any insertion magic they want to
-        for prop in self.property_index.itervalues():
-            prop.insert(self, session, obj, state)
         # Actually insert the document
         doc = self.doc_cls(state.document)
         session.impl.insert(doc)
@@ -54,9 +51,6 @@ class Mapper(object):
         state.status = state.clean
 
     def update(self, session, obj, state):
-        # Allow properties to do any insertion magic they want to
-        for prop in self.property_index.itervalues():
-            prop.update(self, session, obj, state)
         # Actually insert the document
         doc = self.doc_cls(state.document)
         session.impl.save(doc)
@@ -65,9 +59,6 @@ class Mapper(object):
         state.status = state.clean
 
     def delete(self, session, obj, state):
-        # Allow properties to do any insertion magic they want to
-        for prop in self.property_index.itervalues():
-            prop.delete(self, session, obj, state)
         # Actually insert the document
         doc = self.doc_cls(state.document)
         session.impl.delete(doc)

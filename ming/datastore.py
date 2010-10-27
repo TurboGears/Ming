@@ -12,20 +12,15 @@ from . import mim
 
 log = logging.getLogger(__name__)
 
-class DataStore(object):
-    """Manages a connections to Mongo, with seprate connections per thread."""
+class Engine(object):
+    '''Proxy for a pymongo connection, providing some url parsing'''
 
-    def __init__(self, master='mongo://localhost:27017/gutenberg', slave=None,
+    def __init__(self, master='mongo://localhost:27017/', slave=None,
                  connect_retry=3):
-        # self._tl_value = ThreadLocal()
         self._conn = None
         self._lock = Lock()
         self._connect_retry = connect_retry
         self.configure(master, slave)
-
-    def __repr__(self):
-        return 'DataStore(master=%r, slave=%r)' % (
-            self.master_args, self.slave_args)
 
     def configure(self, master='mongo://localhost:27017/gutenberg', slave=None):
         log.disabled = 0 # @%#$@ logging fileconfig disables our logger
@@ -47,14 +42,11 @@ class DataStore(object):
                 'Master/slave is not supported with replica pairs')
             self.slave_args = []
         one_url = (self.master_args+self.slave_args)[0]
-        self.database = one_url['path'][1:]
         self.scheme = one_url['scheme']
         if one_url['scheme'] == 'mim':
             self._conn = mim.Connection.get()
         for a in self.master_args + self.slave_args:
             assert a['scheme'] == self.scheme
-            assert a['path'] == '/' + self.database, \
-                "All connections MUST use the same database"
 
     @property
     def conn(self):
@@ -112,11 +104,42 @@ class DataStore(object):
                     self._conn = master
         except:
             log.exception('Cannot connect to %s %s' % (self.master_args, self.slave_args))
-        else:
-            #log.info('Connected to %s %s' % (self.master_args, self.slave_args))
-            pass
         return self._conn
+
+class DataStore(object):
+    '''Engine bound to a particular database'''
+
+    def __init__(self, master=None, slave=None, connect_retry=3,
+                 engine=None, database=None):
+        if engine is None:
+            master=master or 'mongo://localhost:27017/gutenberg'
+            engine = Engine(master, slave, connect_retry)
+            one_url = (engine.master_args+engine.slave_args)[0]
+            database = one_url['path'][1:]
+        self._engine = engine
+        self.database = database
+
+    def __repr__(self):
+        return 'DataStore(%r, %s)' % (self._engine, self.database)
+
+    @property
+    def conn(self):
+        return self._engine.conn
 
     @property
     def db(self):
-        return getattr(self.conn, self.database, None)
+        return getattr(self._engine.conn, self.database, None)
+
+class ShardedDataStore(object):
+    _lock = Lock()
+    _engines = {}
+
+    @classmethod
+    def get(cls, uri):
+        args = parse_uri(uri)
+        key = (args['scheme'], args['host'], args['port'])
+        with cls._lock:
+            engine = cls._engines.get(key)
+            if not engine:
+                engine = cls._engines[key] = Engine(uri)
+            return DataStore(engine=engine, database=args['path'][1:])

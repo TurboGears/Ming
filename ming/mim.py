@@ -334,6 +334,9 @@ def compare(op, a, b):
     if op == '$eq':
         if hasattr(b, 'match'):
             return b.match(a)
+        elif isinstance(a, list):
+            if a == b: return True
+            return b in a
         else:
             return a == b
     if op == '$ne': return a != b

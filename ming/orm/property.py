@@ -21,15 +21,6 @@ class ORMProperty(object):
         raise TypeError, '%r is a read-only property on %r' % (
             self.name, self.cls)
 
-    def insert(self, mapper, session, instance, state):
-        pass
-
-    def update(self, mapper, session, instance, state):
-        pass
-
-    def delete(self, mapper, session, instance, state):
-        pass
-
     def compile(self):
         pass
 
