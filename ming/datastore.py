@@ -149,5 +149,5 @@ class ShardedDataStore(object):
             engine = cls._engines.get(key)
             if not engine:
                 engine = cls._engines[key] = Engine(uri)
-            return DataStore(engine=engine, database=args['path'][1:])
+            return DataStore(bind=engine, database=args['path'][1:])
 
