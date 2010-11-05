@@ -154,8 +154,12 @@ class Manager(object):
     def group(self, *args, **kwargs):
         return self.session.group(self.cls, *args, **kwargs)
 
-    def update_partial(self, spec, fields, upsert=False):
-        return self.session.update_partial(self.cls, spec, fields, upsert)
+    def update_partial(self, spec, fields, upsert=False, multi=False, **kw):
+        return self.session.update_partial(
+            self.cls, spec, fields,
+            upsert=upsert,
+            multi=multi,
+            **kw)
 
     def save(self, *args):
         """

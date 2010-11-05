@@ -80,8 +80,8 @@ class Session(object):
     def group(self, cls, *args, **kwargs):
         return self._impl(cls).group(*args, **kwargs)
 
-    def update_partial(self, cls, spec, fields, upsert):
-        return self._impl(cls).update(spec, fields, upsert, safe=True)
+    def update_partial(self, cls, spec, fields, upsert=False, **kw):
+        return self._impl(cls).update(spec, fields, upsert, safe=True, **kw)
 
     def find_and_modify(self, cls, query=None, sort=None, new=False, **kw):
         if query is None: query = {}

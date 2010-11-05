@@ -120,9 +120,9 @@ class ORMSession(object):
         m = mapper(cls)
         self.impl.remove(m.doc_cls, *args, **kwargs)
 
-    def update(self, cls, spec, fields, upsert=False):
+    def update(self, cls, spec, fields, **kw):
         m = mapper(cls)
-        self.impl.update_partial(m.doc_cls, spec, fields, upsert)
+        self.impl.update_partial(m.doc_cls, spec, fields, **kw)
 
     def update_if_not_modified(self, obj, fields, upsert=False):
         self.update(obj.__class__, state(obj).original_document, fields, upsert)

@@ -121,10 +121,10 @@ class Collection(object):
         for doc in self._data.itervalues():
             if match(spec, doc): yield doc
 
-    def find(self, spec=None):
+    def find(self, spec=None, fields=None):
         if spec is None:
             spec = {}
-        return Cursor(lambda:self._find(spec))
+        return Cursor(lambda:self._find(spec), fields=fields)
 
     def find_one(self, spec):
         for x in self.find(spec):
@@ -152,13 +152,14 @@ class Collection(object):
             self.update({'_id':_id}, doc, upsert=True, safe=safe)
             return _id
 
-    def update(self, spec, document, upsert=False, safe=False):
+    def update(self, spec, document, upsert=False, safe=False, multi=False):
         updated = False
         for doc in self._find(spec):
             self._deindex(doc) 
             update(doc, document)
             self._index(doc) 
             updated = True
+            if not multi: break
         if updated: return
         if upsert:
             doc = dict(spec)
@@ -223,11 +224,12 @@ class Collection(object):
 
 class Cursor(object):
 
-    def __init__(self, iterator_gen, sort=None, skip=None, limit=None):
+    def __init__(self, iterator_gen, sort=None, skip=None, limit=None, fields=None):
         self._iterator_gen = iterator_gen
         self._sort = sort
         self._skip = skip
         self._limit = limit
+        self._fields = fields
 
     @LazyProperty
     def iterator(self):
@@ -248,7 +250,10 @@ class Cursor(object):
 
     def next(self):
         value = self.iterator.next()
-        return deepcopy(value)
+        value = deepcopy(value)
+        if self._fields:
+            value = dict((k, value[k]) for k in self._fields)
+        return value
 
     def sort(self, key_or_list, direction=ASCENDING):
         if not isinstance(key_or_list, list):
