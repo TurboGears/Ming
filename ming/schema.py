@@ -6,6 +6,10 @@ from datetime import datetime
 from formencode.validators import Invalid
 
 import pymongo
+try:
+    from pymongo import bson
+except ImportError:
+    import bson
 
 from .utils import LazyProperty
 
@@ -409,7 +413,7 @@ class DateTime(ParticularScalar):
 class Bool(ParticularScalar):
     type=bool
 class Binary(ParticularScalar):
-    type=pymongo.bson.Binary
+    type=bson.Binary
 class ObjectId(Scalar):
     def if_missing(self):
         return pymongo.bson.ObjectId()

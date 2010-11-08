@@ -8,7 +8,10 @@ from copy import deepcopy
 from ming.utils import LazyProperty
 
 from pymongo.errors import OperationFailure, DuplicateKeyError
-from pymongo.bson import ObjectId
+try:
+    from pymongo import bson
+except ImportError:
+    import bson
 from pymongo import database, ASCENDING
 
 class Connection(object):
@@ -136,7 +139,7 @@ class Collection(object):
         for doc in doc_or_docs:
             _id = doc.get('_id', ())
             if _id == ():
-                _id = doc['_id'] = ObjectId()
+                _id = doc['_id'] = bson.ObjectId()
             if _id in self._data:
                 if safe: raise OperationFailure('duplicate ID on insert')
                 continue
@@ -166,7 +169,7 @@ class Collection(object):
             doc.update(document)
             _id = doc.get('_id', ())
             if _id == ():
-                _id = doc['_id'] = ObjectId()
+                _id = doc['_id'] = bson.ObjectId()
             self._index(doc) 
             self._data[_id] = deepcopy(doc)
             return _id
