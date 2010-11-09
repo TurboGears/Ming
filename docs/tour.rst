@@ -193,7 +193,7 @@ limit(limit)
   Restricts the cursor to only return `limit` results
 skip(skip)
   Skips ahead `skip` results in the cursor (similar to a SQL OFFSET clause)
-sort(*args, **kwargs)
+sort(\*args, \*\*kwargs)
   Sorts the underlying pymongo cursor using the same semantics as the
   `pymongo.Cursor.sort()` method
 
