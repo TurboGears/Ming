@@ -52,7 +52,7 @@ The Datastore and Session
 -------------------------
 
 Ming manages your connection to the MongoBD database using an object known as a
-DataStore.  The DataStore is actually just a thin wrapper around a pymongo_
+:class:`Datastore <ming.datastore.DataStore>`.  The DataStore is actually just a thin wrapper around a pymongo_
 Database object.  (The actual Database object can always be accessed via the `db`
 property of the DataStore instance.  For this tutorial, we will be using a
 single, global DataStore::
@@ -87,7 +87,7 @@ model classes.  We will start with a model representing a WikiPage::
         title = Field(str)
         text = Field(str)
 
-The first thing you'll notice about the code is the `Document` import -- all Ming
+The first thing you'll notice about the code is the :class:`Document <ming.base.Document>` import -- all Ming
 models are descendants of the `Document` class.  The next thing you'll notice is
 the `__mongometa__` inner class.  This is where you'll give Ming information on
 how to map the class.  (We group all the collection-oriented information under 
@@ -97,7 +97,7 @@ session that we're using) as well as the name of the collection in which to stor
 instances of this class (in this case, `'wiki_page'`).
 
 The next part of the `WikiPage` declaration is the actual schema information.
-Ming provides a class `Field` which you use to define the schema for this
+Ming provides a class :class:`Field <ming.base.Field>` which you use to define the schema for this
 object.  In this case, we are declaring that a `WikiPage` has exactly three
 properties.  `title` and `text` are both strings (unicode, technically), and
 `_id` is a pymongo_ ObjectId.
@@ -138,13 +138,13 @@ create a `WikiPage`::
     >>> page['title']
     'MyPage'
 
-As you can see, Ming documents can be accessed either using dictionary-style
+As you can see, Ming :class:`documents <ming.base.Document>` can be accessed either using dictionary-style
 lookups (`page['title']`) or attribute-style lookups (`page.title`).  In fact,
 all Ming documents are `dict` subclasses, so all the standard methods on
 Python `dict` objects  are available.
 
 In order to actually interact with the database, Ming provides a standard
-attribute `.m`, short for "manager", on each mapped class.  In order to save the
+attribute `.m`, short for :class:`Manager <ming.base.Manager>`, on each mapped class.  In order to save the
 document we just created to the database, for instance, we would simply type::
 
     >>> page.m.save()
@@ -173,11 +173,11 @@ in the next section.
 Querying the Database
 ---------------------
 
-Ming provides an `.m.find()` method on class managers that works just like the
+Ming provides an `.m.find()` method on class :class:`managers <ming.base.Manager>` that works just like the
 `.find()` method on collection objects in pymongo_ and is used for performing
 queries.  The result of a query is a Python iterator that wraps a pymongo cursor,
-converting each result to a `ming.Document` before yielding it.  Like
-SQLAlchemy_, we provide several convenice methods on query results: 
+converting each result to a :class:`ming.Document <ming.base.Document>` before yielding it.  Like
+SQLAlchemy_, we provide several convenice methods on query results (:class:`Cursor <ming.base.Cursor>`): 
 
 one()
   Retrieve a single result from a query.  Raises an exception if the query
@@ -226,7 +226,7 @@ defined in the object::
         Extra keys: set(['fooBar'])
 
 OK, that's nice and all, but wouldn't it be nicer if we could be warned at
-creation time?  Ming provides a convenice method `.make()` on the `Document` with
+creation time?  Ming provides a convenice method :meth:`make() <ming.base.Document.make>` on the :class:`ming.Document <ming.base.Document>` with
 just such behavior::
 
     >>> page = tutorial.WikiPage.make(dict(title='MyPage', text='', fooBar=''))
@@ -236,7 +236,7 @@ just such behavior::
         Extra keys: set(['fooBar'])
 
 We can also provide default values for properties via the `if_missing`
-parameter.  Change the definition of the `text` property in `tutorial.py` to
+parameter on a :class:`Field <ming.base.Field>`.  Change the definition of the `text` property in `tutorial.py` to
 read::
 
     text = Field(str, if_missing='')
@@ -373,4 +373,4 @@ do the following::
 .. _MongoDB: http://www.mongodb.org/
 .. _virtualenv: http://pypi.python.org/pypi/virtualenv
 .. _SQLAlchemy: http://www.sqlalchemy.org/
-.. _pymongo: http://github.com/mongodb/mongo-python-driver
+.. _pymongo: http://api.mongodb.org/python/current/api/
