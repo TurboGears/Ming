@@ -8,8 +8,6 @@
 Functions
 ----------
 
-.. autofunction:: deepcopy
-
 
 
 
@@ -133,14 +131,6 @@ Classes
    :members:
    :inherited-members:
    :undoc-members:
-   
-
-.. autoclass:: datetime
-   :show-inheritance:
-   :members:
-   :inherited-members:
-   :undoc-members:
-   
 
 
 

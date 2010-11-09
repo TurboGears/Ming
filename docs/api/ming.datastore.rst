@@ -8,20 +8,10 @@
 Functions
 ----------
 
-.. autofunction:: parse_uri
-
-
 
 
 Classes
 --------
-
-.. autoclass:: Connection
-   :show-inheritance:
-   :members:
-   :inherited-members:
-   :undoc-members:
-   
 
 .. autoclass:: DataStore
    :show-inheritance:
@@ -29,13 +19,5 @@ Classes
    :inherited-members:
    :undoc-members:
    
-
-.. autoclass:: MasterSlaveConnection
-   :show-inheritance:
-   :members:
-   :inherited-members:
-   :undoc-members:
-   
-
 
 

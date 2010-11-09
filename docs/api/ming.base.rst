@@ -24,7 +24,6 @@ Classes
 .. autoclass:: Document
    :show-inheritance:
    :members:
-   :inherited-members:
    :undoc-members:
    
 
@@ -59,23 +58,6 @@ Classes
 .. autoclass:: Object
    :show-inheritance:
    :members:
-   :inherited-members:
    :undoc-members:
-   
-
-.. autoclass:: datetime
-   :show-inheritance:
-   :members:
-   :inherited-members:
-   :undoc-members:
-   
-
-.. autoclass:: defaultdict
-   :show-inheritance:
-   :members:
-   :inherited-members:
-   :undoc-members:
-   
-
 
 
