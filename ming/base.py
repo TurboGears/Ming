@@ -92,7 +92,7 @@ class Manager(object):
             self.ensure_indexes()
 
     def __call__(self, session):
-        '''In order to use an alternate session, just use Class.mgr(other_session)'''
+        '''In order to use an alternate session, just use Class.m(other_session)'''
         result = Manager(self.instance, self.cls)
         result.session = session
         return result

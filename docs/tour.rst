@@ -220,6 +220,23 @@ sort(\*args, \*\*kwargs)
 Ming also provides a convenience method `.m.get(**kwargs)` which is equivalent to
 `.m.find(kwargs).first()` for simple queries that are expected to return one result.
 
+Other Sessions
+--------------
+
+If we have a special case where we want to use a different database session for a model,
+other than the one specified in `__mongometa__`, we can do::
+
+    foobar = Session.by_name('foobar')
+    foobar.save(my_model_instance)
+
+or::
+
+    foobar = Session.by_name('foobar')
+    my_model_instance.m(foobar).save()
+
+This could be useful if you have a database session that is connected to a master server,
+and another one that is used for the slave (readonly).
+
 Bad Data
 --------
 
