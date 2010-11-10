@@ -72,7 +72,15 @@ this tutorial, we will be using a single global Session::
 We can also :class:`configure() <ming.configure>` ming with a set of urls, using a config dict of "ming.*" keys.
 The first part must be 'ming', the second part is a session name, and the third
 parts are used as parameters to construct a :class:`Datastore <ming.datastore.DataStore>` object.
-If they end with "-N", they will be split into a list.::
+If they end with "-N", they will be split into a list.
+
+.. sidebar:: Mongo-in-Memory
+
+    Ming also provides a "mongo in memory" implementation, which is non-persistent,
+    in python, and possibly much faster than mongo.  To use it, just change the
+    connection url to `mim://database`
+
+::
 
     config = {'ming.example.master-1': 'mongodb://localhost:27017/tutorial',
               'ming.example.slave-1': None,
