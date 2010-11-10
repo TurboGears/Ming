@@ -116,6 +116,11 @@ how to map the class.  (We group all the collection-oriented information under
 session that we're using) as well as the name of the collection in which to store
 instances of this class (in this case, `'wiki_page'`).
 
+.. sidebar:: Methods
+
+    We can add our own methods to the WikiPage class, too.  However, the `make()`
+    method is reserved for object construction and validation  See the `Bad Data`_ section.
+
 The next part of the `WikiPage` declaration is the actual schema information.
 Ming provides a class :class:`Field <ming.base.Field>` which you use to define the schema for this
 object.  In this case, we are declaring that a `WikiPage` has exactly three
