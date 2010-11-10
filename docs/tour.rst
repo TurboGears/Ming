@@ -69,6 +69,18 @@ this tutorial, we will be using a single global Session::
     from ming import Session
     session = Session(bind)
 
+We can also :class:`configure() <ming.configure>` ming with a set of urls, using a config dict of "ming.*" keys.
+The first part must be 'ming', the second part is a session name, and the third
+parts are used as parameters to construct a :class:`Datastore <ming.datastore.DataStore>` object.
+If they end with "-N", they will be split into a list.::
+
+    config = {'ming.example.master-1': 'mongodb://localhost:27017/tutorial',
+              'ming.example.slave-1': None,
+             }
+    ming.configure(**config)
+    # and later access the named session with:
+    Session.by_name('example')
+
 Mapping Classes
 ---------------
 

@@ -118,6 +118,16 @@ class DataStore(object):
 
     def __init__(self, master=None, slave=None, connect_retry=3,
                  bind=None, database=None):
+        '''
+        :param master: mongodb connection URL(s)
+        :type master: string, or list of strings
+        :param slave: like master, but slave(s)
+        :type slave: string, or list of strings
+        :param connect_retry: retry this many times (with 1-second sleep) when a Connection cannot be established
+        :type connect_retry: int
+        :param bind: instead of master and slave params, use an existing ming.datastore.Engine ...
+        :param database: ... and database name
+        '''
         if bind is None:
             master=master or 'mongo://localhost:27017/gutenberg'
             bind = Engine(master, slave, connect_retry)

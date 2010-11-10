@@ -9,6 +9,9 @@ ASCENDING = pymongo.ASCENDING
 DESCENDING = pymongo.DESCENDING
 
 def configure(**kwargs):
+    """
+    Given a dictionary of config values, creates DataStores and saves them by name
+    """
     from datastore import DataStore
     config = variable_decode(kwargs)
     datastores = dict(

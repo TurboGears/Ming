@@ -5,7 +5,8 @@ API Docs
 
 .. autosummary::
    :toctree: 
-    
+
+   ming
    ming.datastore
    ming.base
    ming.schema
