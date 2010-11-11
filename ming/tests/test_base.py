@@ -128,7 +128,7 @@ class TestDocument(TestCase):
         self.MockSession.ensure_indexes.assert_called_with(self.TestDoc)
         self.MockSession.group.assert_called_with(self.TestDoc, dict(a=5))
         self.MockSession.update_partial.assert_called_with(
-            self.TestDoc, dict(a=5), dict(b=6), False)
+            self.TestDoc, dict(a=5), dict(b=6), multi=False, upsert=False)
         self.MockSession.save.assert_called_with(doc)
         self.MockSession.delete.assert_called_with(doc)
         self.MockSession.set.assert_called_with(doc, dict(b=10))
@@ -215,7 +215,7 @@ class TestCursor(TestCase):
         base_iter = iter([ {}, {}, {} ])
         mongo_cursor = mock.Mock()
         mongo_cursor.count = mock.Mock(return_value=3)
-        mongo_cursor.__iter__ = base_iter
+        mongo_cursor.__iter__ = lambda self:base_iter
         mongo_cursor.next = base_iter.next
         mongo_cursor.limit = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.hint = mock.Mock(return_value=mongo_cursor)
