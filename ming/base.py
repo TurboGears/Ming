@@ -111,17 +111,16 @@ class Manager(object):
     
     def get(self, **kwargs):
         """
-        Returns one matching record, or None
-        e.g.
+        Returns one matching record, or None::
+        
             get(source='sf.net',shortname='foo')
         """
         return self.session.get(self.cls, **kwargs)
 
     def find(self, *args, **kwargs):
         """
-        spec=None, fields=None, ...
-        http://api.mongodb.org/python/0.15.1/pymongo.collection.Collection-class.html#find
-        e.g.
+        See pymongo collectin.find().  Examples::
+        
             find({"source": "sf.net"})
             find({"source": "sf.net"},['shortname'])  # only return shortname fields
         """
@@ -130,14 +129,14 @@ class Manager(object):
     @class_only
     def remove(self, *args, **kwargs):
         """
-        remove(spec_or_object_id)
+        Removes multiple objects from mongo. See pymongo collection.remove(). First argument should be a search criteria dict, or an ObjectId
         """
         return self.session.remove(self.cls, *args, **kwargs)
 
     def find_by(self, **kwargs):
         """
-        same as find(spec=kwargs)
-        e.g.
+        same as `find(spec=kwargs)`::
+        
             find_by(source='sf.net', foo='bar')
         """
         return self.session.find_by(self.cls, **kwargs)
@@ -163,56 +162,57 @@ class Manager(object):
 
     def save(self, *args):
         """
-        Acts on object instance
-        e.g.
+        Saves an object::
+        
             cp = model.CustomPage(...)
             cp['foo'] = 3
             cp.m.save()
-        with parameters, only sets specified fields
+            # with parameters, only sets specified fields
             cp.m.save('foo')
         """
         return self.session.save(self.instance, *args)
 
     def insert(self):
         """
-        Acts on object instance
-        e.g.
+        Inserts an object::
+        
             model.CustomPage(...).m.insert()
         """
         return self.session.insert(self.instance)
 
     def upsert(self, spec_fields):
         """
-        Acts on object instance.
-        spec_fields is a field or list of fields used to see if the record already exists
-        e.g.
+        Saves or updates an object::
+        
             model.CustomPage(...).m.upsert('my_key_field')
             model.CustomPage(...).m.upsert(['field1','field2'])
+        
+        :param spec_fields: used to see if the record already exists
+        :type spec_fields: a field or list of fields
         """
         return self.session.upsert(self.instance, spec_fields)
 
     def delete(self):
         """
-        Acts on object instance
-        e.g.
+        Deletes on object::
+        
             model.CustomPage(...).m.delete()
         """
         return self.session.delete(self.instance)
 
     def set(self, fields_values):
         """
-        Acts on object instance
-        e.g.
+        Sets only specific fields on an object::
+        
             model.CustomPage(...).m.set({'foo':'bar'})
         """
         return self.session.set(self.instance, fields_values)
     
     def increase_field(self, **kwargs):
         """
-        Acts on object instance
-        Sets a field to value, only if value is greater than the current value
-        Does not change it locally
-        e.g.
+        Sets a field to value, only if value is greater than the current value.
+        Does not change the model object (only the mongo record)::
+        
             model.GlobalSettings.instance().increase_field(key=value)
         """
         return self.session.increase_field(self.instance, **kwargs)
