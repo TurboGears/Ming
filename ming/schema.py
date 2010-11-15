@@ -41,18 +41,21 @@ class SchemaItem(object):
 
     @classmethod
     def make(cls, field, *args, **kwargs):
-        '''Build a SchemaItem from a "shorthand" schema (summarized below)
-
-        int - int or long
-        str - string or unicode
-        float - float, int, or long
-        bool - boolean value
-        datetime - datetime.datetime object
-        None - Anything
+        '''Build a SchemaItem from a "shorthand" schema.  The `field` param:
         
-        [] - Array of Anything objects
-        [type] - array of objects of type "type"
-        { fld: type... } - dict-like object with fields of type "type"
+        * int - int or long
+        * str - string or unicode
+        * float - float, int, or long
+        * bool - boolean value
+        * datetime - datetime.datetime object
+        * None - Anything
+        * [] - Array of Anything objects
+        * [type] - array of objects of type "type"
+        * { fld: type... } - dict-like object with field "fld" of type "type"
+        * { type: type... } - dict-like object with fields of type "type"
+        * anything else (e.g. literal values), must match exactly
+        
+        ``*args`` and ``**kwargs`` are passed on to the specific class of ``SchemaItem`` created.
         '''
         if isinstance(field, list):
             if len(field) == 0:
@@ -92,10 +95,10 @@ class Migrate(SchemaItem):
 
     @classmethod
     def obj_to_list(cls, key_name, value_name=None):
-        '''Migration function to go from object { key: value } to
-        list [ { key_name: key, value_name: value} ].  If value_name is None,
+        '''Migration function to go from object ``{ key: value }`` to
+        list ``[ { key_name: key, value_name: value} ]``.  If value_name is ``None``,
         then value must be an object and the result will be a list
-        [ { key_name: key, **value } ].
+        ``[ { key_name: key, **value } ]``.
         '''
         from . import base
         def migrate_scalars(value):
@@ -129,6 +132,11 @@ class FancySchemaItem(SchemaItem):
     if_missing=Missing
 
     def __init__(self, required=NoDefault, if_missing=NoDefault):
+        '''
+        :param bool required: if ``True`` and this field is missing, an ``Invalid`` exception will be raised
+        :param if_missing: provides a default value for this field if the field is missing
+        :type if_missing: value or callable
+        '''
         if required is not NoDefault:
             self.required = required
         if if_missing is not NoDefault:
@@ -386,7 +394,7 @@ class OneOf(ParticularScalar):
         return value
 
 class Value(FancySchemaItem):
-    '''Validate that a value is NOT an array or dict'''
+    '''Validate that a value is equal'''
     if_missing=None
     def __init__(self, value, **kw):
         self.value = value
@@ -416,6 +424,7 @@ class Binary(ParticularScalar):
     type=bson.Binary
 class ObjectId(Scalar):
     def if_missing(self):
+        '''Provides a pymongo.bson.ObjectId as default'''
         return pymongo.bson.ObjectId()
     def _validate(self, value):
         try:

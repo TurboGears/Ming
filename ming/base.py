@@ -49,6 +49,9 @@ class Object(dict):
         self.update(safe_self)
 
 class Field(object):
+    '''Represents a mongo field.  All Field objects in a Document are made in to SchemaItems,
+    so see :meth:`SchemaItem.make() <ming.schema.SchemaItem.make>` and the various SchemaItem classes
+    for argument documentation.'''
 
     def __init__(self, field_type, *args, **kwargs):
         self.type = field_type
