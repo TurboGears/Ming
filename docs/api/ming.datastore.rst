@@ -1,5 +1,5 @@
-:mod:`ming.datastore`
-=====================
+:mod:`ming.datastore` module
+============================
 
 
 .. automodule:: ming.datastore

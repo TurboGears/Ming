@@ -1,5 +1,5 @@
-:mod:`ming.orm`
-=================
+:mod:`ming.orm` module
+======================
 
 
 .. automodule:: ming.orm

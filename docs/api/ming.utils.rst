@@ -1,5 +1,5 @@
-:mod:`ming.utils`
-=================
+:mod:`ming.utils` module
+========================
 
 
 .. automodule:: ming.utils

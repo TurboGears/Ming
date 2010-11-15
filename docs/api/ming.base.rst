@@ -1,5 +1,5 @@
-:mod:`ming.base`
-================
+:mod:`ming.base` module
+=======================
 
 
 .. automodule:: ming.base
