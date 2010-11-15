@@ -4,6 +4,7 @@ import decimal
 import hashlib
 from datetime import datetime
 from collections import defaultdict
+from functools import update_wrapper
 
 import pymongo
 
@@ -100,7 +101,7 @@ class Manager(object):
         result.session = session
         return result
 
-    def class_only(method):
+    def _class_only(method):
         """
         Decorator for methods that should only be run with a class-manager not an instance-manager
         """
@@ -110,7 +111,7 @@ class Manager(object):
                                 % method.__name__)
             else:
                 method(self, *args, **kw)
-        return ensure_not_instance
+        return update_wrapper(ensure_not_instance, method)
     
     def get(self, **kwargs):
         """
@@ -129,7 +130,7 @@ class Manager(object):
         """
         return self.session.find(self.cls, *args, **kwargs)
 
-    @class_only
+    @_class_only
     def remove(self, *args, **kwargs):
         """
         Removes multiple objects from mongo.  Do not use on an object instance.  See pymongo collection.remove().
