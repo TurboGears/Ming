@@ -32,11 +32,6 @@ class Engine(object):
         if slave is None: slave = []
         self.master_args = [ parse_uri(s) for s in master if s ]
         self.slave_args = [ parse_uri(s) for s in slave if s ]
-        if len(self.master_args) > 2:
-            log.warning(
-                'Only two masters are supported at present, you specified %r',
-                master)
-            self.master_args = self.master_args[:2]
         if len(self.master_args) > 1 and self.slave_args:
             log.warning(
                 'Master/slave is not supported with replica pairs')
@@ -71,9 +66,9 @@ class Engine(object):
                         network_timeout=network_timeout)
                 except TypeError:
                     self._conn = Connection.paired(
+                        network_timeout=network_timeout,
                         *[ (ma.get('host'), ma.get('port'))
-                           for ma in self.master_args],
-                         network_timeout=network_timeout)
+                           for ma in self.master_args])
             else:
                 if self.master_args:
                     try:

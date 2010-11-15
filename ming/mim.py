@@ -327,7 +327,7 @@ def _part_match(op, value, key_parts, doc, allow_list_compare=True):
         else:
             return False
     else:
-        return _part_match(op, value, key_parts[1:], doc[key_parts[0]])
+        return _part_match(op, value, key_parts[1:], doc.get(key_parts[0], ()))
 
 def _lookup(doc, k):
     for part in k.split('.'):
@@ -350,6 +350,8 @@ def compare(op, a, b):
     if op == '$ne': return a != b
     if op == '$in': return a in b
     if op == '$nin': return a not in b
+    if op == '$exists':
+        return a != () if b else a == ()
     raise NotImplementedError, op
         
 def update(doc, updates):
