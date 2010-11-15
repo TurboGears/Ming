@@ -129,7 +129,10 @@ class Manager(object):
     @class_only
     def remove(self, *args, **kwargs):
         """
-        Removes multiple objects from mongo. See pymongo collection.remove(). First argument should be a search criteria dict, or an ObjectId
+        Removes multiple objects from mongo.  Do not use on an object instance.  See pymongo collection.remove().
+        First argument should be a search criteria dict, or an ObjectId.::
+        
+            model.CustomPage.m.remove({'foo': 3})
         """
         return self.session.remove(self.cls, *args, **kwargs)
 
@@ -148,6 +151,9 @@ class Manager(object):
         return self.session.ensure_index(self.cls, fields, **kwargs)
 
     def ensure_indexes(self):
+        """
+        Ensures all the indexes defined in __mongometa__ are created.
+        """
         return self.session.ensure_indexes(self.cls)
 
     def group(self, *args, **kwargs):
@@ -291,21 +297,25 @@ class Document(Object):
     _registry = dict()
     m = ManagerDescriptor(Manager)
     class __mongometa__:
-        '''Supply various information on how the class is mapped without
-        polluting the class's namespace.  In particular,
+        '''
+        Supply various information on how the class is mapped without
+        polluting the class's namespace.  In particular:
 
-        name - collection name
-        session - Session object managing the object (link to a DataStore)
-        indexes - list of field name tuples specifying which indexes should exist
-                  for the document
-        schema - (optional) schema object (augmented with any SchemaItems in the
-                                           class dict)
-        polymorphic_on - (optional) field name that specifies the concrete class
+        :var name: collection name
+        :var session: Session object managing the object (link to a DataStore)
+        :var indexes: (optional) list of field name tuples, specifying which indexes should exist for the document
+        :var unique_indexes: (optional) list of field name tuples, specifying unique indexes
+        :var schema: (optional) schema object (augmented with any SchemaItems in the class dict)
+        :var polymorphic_on: (optional) field name that specifies the concrete class
                          of each document in a polymorphic collection
-        polymorphic_identity - (optional) value that should be in the
+        :var polymorphic_identity: (optional) value that should be in the
                                polymorphic_on field to specify that the concrete
                                class is the current one (if unspecified, the
                                class's __name__ attribute is used)
+        :var before_save: (optional) function that is called before save(), insert() or upsert() occurs.
+                        It recieves one parameter, the current document.
+        
+        Indexes and unique indexes will be created when this class is first used.
         '''
         name=None
         session=None

@@ -109,10 +109,10 @@ model classes.  We will start with a model representing a WikiPage::
 
 The first thing you'll notice about the code is the :class:`Document <ming.base.Document>` import -- all Ming
 models are descendants of the `Document` class.  The next thing you'll notice is
-the `__mongometa__` inner class.  This is where you'll give Ming information on
+the :class:`__mongometa__ <ming.base.Document.__mongometa__>` inner class.  This is where you'll give Ming information on
 how to map the class.  (We group all the collection-oriented information under 
-`__mongometa__` in order to minimize the chances of namespace conflicts.)  In the
-`__mongometa__` class, we define the session for this class (the single, global
+:class:`__mongometa__ <ming.base.Document.__mongometa__>` in order to minimize the chances of namespace conflicts.)  In the
+:class:`__mongometa__ <ming.base.Document.__mongometa__>` class, we define the session for this class (the single, global
 session that we're using) as well as the name of the collection in which to store
 instances of this class (in this case, `'wiki_page'`).
 
@@ -229,7 +229,7 @@ Other Sessions
 --------------
 
 If we have a special case where we want to use a different database session for a model,
-other than the one specified in `__mongometa__`, we can do::
+other than the one specified in :class:`__mongometa__ <ming.base.Document.__mongometa__>`, we can do::
 
     foobar = Session.by_name('foobar')
     foobar.save(my_model_instance)
@@ -370,7 +370,7 @@ death::
 
 What we need now is a migration.  Luckily, Ming makes migrations manageable.  All
 we need to do is include the previous schema and a migration function in our
-`__mongometa__` object.  We'll also throw in a schema version number for good measure::
+:class:`__mongometa__ <ming.base.Document.__mongometa__>` object.  We'll also throw in a schema version number for good measure::
 
     class OldWikiPage(Document):
         _id = Field(schema.ObjectId)

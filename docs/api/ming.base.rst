@@ -26,6 +26,10 @@ Classes
    :members:
    :undoc-members:
    
+.. autoclass:: ming.base::Document.__mongometa__
+   :show-inheritance:
+   :members:
+   :undoc-members:
 
 .. autoclass:: DocumentMeta
    :show-inheritance:
