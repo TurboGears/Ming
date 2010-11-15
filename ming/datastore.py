@@ -71,9 +71,9 @@ class Engine(object):
                         network_timeout=network_timeout)
                 except TypeError:
                     self._conn = Connection.paired(
+                        network_timeout=network_timeout,
                         *[ (ma.get('host'), ma.get('port'))
-                           for ma in self.master_args],
-                         network_timeout=network_timeout)
+                           for ma in self.master_args])
             else:
                 if self.master_args:
                     try:
