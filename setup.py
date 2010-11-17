@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.2'
+from ming import version
 
 setup(name='Ming',
-      version=version,
+      version=version.__version__,
       description="Bringing order to Mongo since 2009",
       long_description="""Database mapping layer for MongoDB on Python. Includes schema enforcement and some facilities for schema migration. 
 """,
@@ -29,7 +29,7 @@ setup(name='Ming',
           # -*- Extra requirements: -*-
         "mock >= 0.6.0",
         "FormEncode >= 1.2.1",
-        "pymongo >= 1.1",
+        "pymongo >= 1.7",
       ],
       entry_points="""
       # -*- Entry points: -*-

@@ -345,9 +345,11 @@ class Cursor(object):
     objects that it tracks
     '''
 
-    def __init__(self, cls, cursor):
+    def __init__(self, cls, cursor, allow_extra=True, strip_extra=True):
         self.cls = cls
         self.cursor = cursor
+        self._allow_extra = allow_extra
+        self._strip_extra = strip_extra
 
     def __iter__(self):
         return self
@@ -356,9 +358,12 @@ class Cursor(object):
         return self.count()
 
     def next(self):
-        bson = self.cursor.next()
-        if bson is None: return None
-        return self.cls.make(bson)
+        doc = self.cursor.next()
+        if doc is None: return None
+        return self.cls.make(
+            doc,
+            allow_extra=self._allow_extra,
+            strip_extra=self._strip_extra)
 
     def count(self):
         return self.cursor.count()

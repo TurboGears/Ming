@@ -51,8 +51,12 @@ class Session(object):
         return cls.make(bson)
 
     def find(self, cls, *args, **kwargs):
+        allow_extra=kwargs.pop('allow_extra', True)
+        strip_extra=kwargs.pop('strip_extra', True)
         cursor = self._impl(cls).find(*args, **kwargs)
-        return Cursor(cls, cursor)
+        return Cursor(cls, cursor,
+                      allow_extra=allow_extra,
+                      strip_extra=strip_extra)
 
     def remove(self, cls, *args, **kwargs):
         if 'safe' not in kwargs:

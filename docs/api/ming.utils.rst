@@ -8,10 +8,9 @@
 Functions
 ----------
 
-.. autofunction:: parse_uri
+.. autofunction:: encode_keys
 
-
-
+.. autofunction:: all_class_properties
 
 Classes
 --------

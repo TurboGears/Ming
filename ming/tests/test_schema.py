@@ -2,11 +2,41 @@ from datetime import datetime
 from decimal import Decimal
 from unittest import TestCase, main
 
-import mock
+from formencode import Invalid
 
+import ming.datastore
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
 from bson import ObjectId
+
+class TestQuerySafety(TestCase):
+
+    def setUp(self):
+        self.bind = ming.datastore.DataStore(master='mim:///', database='testdb')
+        self.bind.conn.drop_all()
+        self.bind.db.coll.insert({'_id':'foo', 'a':2, 'b':3})
+        self.session = ming.Session(self.bind)
+        class Doc(Document):
+            class __mongometa__:
+                name='coll'
+                session = self.session
+            _id=Field(str)
+            a=Field(int)
+        self.Doc = Doc
+
+    def test_extra_fields_stripped(self):
+        r = self.Doc.m.find().all()
+        assert  r == [ dict(a=2, _id='foo') ], r
+        r = self.Doc.m.find(allow_extra=True).all()
+        assert  r == [ dict(a=2, _id='foo') ], r
+
+    def test_extra_fields_not_stripped(self):
+        r = self.Doc.m.find(strip_extra=False).all()
+        assert r == [ dict(a=2, b=3, _id='foo') ], r
+
+    def test_extra_fields_not_allowed(self):
+        q = self.Doc.m.find(allow_extra=False)
+        self.assertRaises(Invalid, q.all)
 
 class TestSchemaItem(TestCase):
 

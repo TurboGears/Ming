@@ -26,6 +26,9 @@ class Connection(object):
     def __init__(self):
         self._databases = {}
 
+    def drop_all(self):
+        self._databases = {}
+
     def _make_database(self):
         return Database(self)
 

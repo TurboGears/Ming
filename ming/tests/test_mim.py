@@ -6,6 +6,7 @@ class TestDatastore(TestCase):
 
     def setUp(self):
         self.bind = DS.DataStore(master='mim:///', database='testdb')
+        self.bind.conn.drop_all()
         self.bind.db.coll.insert({'_id':'foo', 'a':2})
 
     def test_exists(self):

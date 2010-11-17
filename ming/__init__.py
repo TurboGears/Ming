@@ -2,6 +2,7 @@ import pymongo
 
 from session import Session
 from base import Document, Field
+from version import __version__, __version_info__
 
 # Re-export direction keys
 ASCENDING = pymongo.ASCENDING

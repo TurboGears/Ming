@@ -3,7 +3,7 @@ from ming import Session
 from ming.datastore import DataStore
 from ming.orm import ThreadLocalORMSession
 
-bind = DataStore('mongodb://localhost:27017/orm_tutorial')
+bind = DataStore('mongodb://localhost:27017/', database='orm_tutorial')
 doc_session = Session(bind)
 session = ThreadLocalORMSession(doc_session=doc_session)
 #}
