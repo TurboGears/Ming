@@ -5,3 +5,4 @@
 * Separated database argument to DataStore (no longer embedded in connection string)
 * By default, more relaxed about extra keys in docs coming from the database
    (allow_extra=True, strip_extra=True is now the default when querying)
+* Add flyway migration support

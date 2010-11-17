@@ -22,6 +22,12 @@ class Engine(object):
         self._connect_args = connect_args
         self.configure(master, slave)
 
+    def __repr__(self):
+        return 'Engine(master=%r, slave=%r, **%r)' % (
+            self.master_args,
+            self.slave_args,
+            self._connect_args)
+
     def configure(self, master='mongodb://localhost:27017/', slave=None):
         if master and master.startswith('mim://'):
             if slave:

@@ -7,12 +7,9 @@ from copy import deepcopy
 
 from ming.utils import LazyProperty
 
+import bson
 from pymongo.errors import OperationFailure, DuplicateKeyError
-try:
-    from pymongo import bson
-except ImportError:
-    import bson
-from pymongo import database, ASCENDING
+from pymongo import database, collection, ASCENDING
 
 class Connection(object):
     _singleton = None
@@ -68,7 +65,7 @@ class Database(database.Database):
     def _make_collection(self):
         return Collection(self)
 
-    def command(self, command):
+    def command(self, command, *args, **kw):
         if 'filemd5' in command:
             return dict(md5='42') # completely bogus value; will it work?
         elif 'findandmodify' in command:
@@ -103,7 +100,7 @@ class Database(database.Database):
     def drop_collection(self, name):
         del self._collections[name]
 
-class Collection(object):
+class Collection(collection.Collection):
 
     def __init__(self, database, name):
         self._name = name
