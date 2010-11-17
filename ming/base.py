@@ -6,7 +6,7 @@ from datetime import datetime
 from collections import defaultdict
 from functools import update_wrapper
 
-import pymongo
+import bson
 
 def build_mongometa(bases, dct):
     mm_bases = []
@@ -410,7 +410,7 @@ def _safe_bson(obj):
         return Object((k, _safe_bson(v)) for k,v in obj.iteritems())
     elif isinstance(obj, (
             basestring, int, long, float, datetime, NoneType,
-            pymongo.objectid.ObjectId)):
+            bson.ObjectId)):
         return obj
     elif isinstance(obj, decimal.Decimal):
         return float(obj)

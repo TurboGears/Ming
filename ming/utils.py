@@ -2,27 +2,6 @@ import cgi
 import urllib
 from threading import local
 
-def parse_uri(uri, **kwargs):
-    scheme, rest = urllib.splittype(uri)
-    host, rest = urllib.splithost(rest)
-    user, host = urllib.splituser(host)
-    if user:
-        username, password = urllib.splitpasswd(user)
-    else:
-        username = password = None
-    host, port = urllib.splitnport(host)
-    path, query = urllib.splitquery(rest)
-    if query:
-        kwargs.update(dict(cgi.parse_qsl(query)))
-    return dict(
-        scheme=scheme,
-        host=host,
-        username=username,
-        password=password,
-        port=port,
-        path=path,
-        query=kwargs)
-
 class EmptyClass(object): pass
 
 class LazyProperty(object):

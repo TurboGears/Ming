@@ -58,7 +58,7 @@ property of the DataStore instance.  For this tutorial, we will be using a
 single, global DataStore::
 
     from ming.datastore import DataStore
-    bind = DataStore('mongodb://localhost:27017/tutorial')
+    bind = DataStore('mongodb://localhost:27017/', database='tutorial')
 
 
 Ming, like many object-relational mappers (ORMs), revolves around the idea of
@@ -78,12 +78,13 @@ If they end with "-N", they will be split into a list.
 
     Ming also provides a "mongo in memory" implementation, which is non-persistent,
     in python, and possibly much faster than mongo.  To use it, just change the
-    connection url to `mim://database`
+    connection url to `mim://`
 
 ::
 
-    config = {'ming.example.master-1': 'mongodb://localhost:27017/tutorial',
+    config = {'ming.example.master-1': 'mongodb://localhost:27017/',
               'ming.example.slave-1': None,
+              'ming.example.database':'tutorial'
              }
     ming.configure(**config)
     # and later access the named session with:
@@ -138,7 +139,7 @@ module "tutorial.py"::
     from ming import Session
     from ming import Document, Field, schema
 
-    bind = DataStore('mongo://localhost:27017/tutorial')
+    bind = DataStore('mongodb://localhost:27017/', database='tutorial')
     session = Session(bind)
 
     class WikiPage(Document):

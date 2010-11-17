@@ -6,7 +6,7 @@ import mock
 
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
-from pymongo.bson import ObjectId
+from bson import ObjectId
 
 class TestSchemaItem(TestCase):
 

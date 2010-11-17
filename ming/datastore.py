@@ -7,41 +7,36 @@ from threading import Lock
 from pymongo.connection import Connection
 from pymongo.master_slave_connection import MasterSlaveConnection
 
-from .utils import parse_uri
 from . import mim
 
-log = logging.getLogger(__name__)
 
 class Engine(object):
     '''Proxy for a pymongo connection, providing some url parsing'''
 
-    def __init__(self, master='mongo://localhost:27017/', slave=None,
-                 connect_retry=3):
+    def __init__(self, master='mongodb://localhost:27017/', slave=None,
+                 connect_retry=3, **connect_args):
+        self._log = logging.getLogger(__name__)
         self._conn = None
         self._lock = Lock()
         self._connect_retry = connect_retry
+        self._connect_args = connect_args
         self.configure(master, slave)
 
-    def configure(self, master='mongo://localhost:27017/gutenberg', slave=None):
-        log.disabled = 0 # @%#$@ logging fileconfig disables our logger
-        if isinstance(master, basestring):
-            master = [ master ]
-        if isinstance(slave, basestring):
-            slave = [ slave ]
-        if master is None: master = []
-        if slave is None: slave = []
-        self.master_args = [ parse_uri(s) for s in master if s ]
-        self.slave_args = [ parse_uri(s) for s in slave if s ]
-        if len(self.master_args) > 1 and self.slave_args:
-            log.warning(
-                'Master/slave is not supported with replica pairs')
-            self.slave_args = []
-        one_url = (self.master_args+self.slave_args)[0]
-        self.scheme = one_url['scheme']
-        if one_url['scheme'] == 'mim':
+    def configure(self, master='mongodb://localhost:27017/', slave=None):
+        if master and master.startswith('mim://'):
+            if slave:
+                self._log.warning('Master/slave not supported with mim://')
+                slave = None
             self._conn = mim.Connection.get()
-        for a in self.master_args + self.slave_args:
-            assert a['scheme'] == self.scheme
+        self.master_args = master
+        self.slave_args = slave
+        assert self.master_args or self.slave_args, \
+            'You must specify either a master or a slave'
+        if self.master_args and self.slave_args:
+            hosts = self.slave_args[len('mongodb://'):]
+            self._slave_hosts = ['mongodb://' + host for host in hosts.split(',') ]
+        else:
+            self._slave_hosts = []
 
     @property
     def conn(self):
@@ -54,65 +49,40 @@ class Engine(object):
 
     def _connect(self):
         self._conn = None
-        network_timeout = self.master_args[0]['query'].get('network_timeout')
-        if network_timeout is not None:
-            network_timeout = float(network_timeout)
+        master = None
+        slaves = []
         try:
-            if len(self.master_args) > 1:
+            if self.master_args:
                 try:
-                    self._conn = Connection(
-                        [ '%s:%s' % (ma.get('host'), ma.get('port'))
-                          for ma in self.master_args ],
-                        network_timeout=network_timeout)
-                except TypeError:
-                    self._conn = Connection.paired(
-                        network_timeout=network_timeout,
-                        *[ (ma.get('host'), ma.get('port'))
-                           for ma in self.master_args])
-            else:
-                if self.master_args:
+                    master = Connection(self.master_args, **self._connect_args)
+                except:
+                    self._log.exception(
+                        'Error connecting to master: %s', self.master_args)
+            if self.slave_args and master:
+                slaves = []
+                for host in self._slave_hosts:
                     try:
-                        master = Connection(str(self.master_args[0]['host']), int(self.master_args[0]['port']),
-                                            network_timeout=network_timeout)
+                        slaves.append(Connection(
+                                host, slave_okay=True, **self._connect_args))
                     except:
-                        if self.slave_args:
-                            log.exception('Cannot connect to master: %s will use slave: %s' % (self.master_args, self.slave_args))
-                            # and continue... to use the slave only
-                            master = None
-                        else:
-                            raise
-                else:
-                    log.info('No master connection specified, using slaves only: %s' % self.slave_args)
-                    master = None
-
-                if self.slave_args:
-                    slave = []
-                    for a in self.slave_args:
-                        network_timeout = a['query'].get('network_timeout')
-                        if network_timeout is not None:
-                            network_timeout = float(network_timeout)
-                        slave.append(
-                            Connection(str(a['host']), int(a['port']),
-                                       slave_okay=True,
-                                       network_timeout=network_timeout,
-                                      )
-                        )
-                    if master:
-                        self._conn = MasterSlaveConnection(master, slave)
-                    else:
-                        self._conn = slave[0]
-
+                        self._log.exception(
+                            'Error connecting to slave: %s', host)
+            if master:
+                if slaves:
+                    self._conn = MasterSlaveConnection(master, slaves)
                 else:
                     self._conn = master
+            else:
+                self._conn = Connection(self.slave_args, slave_okay=True, **self._connect_args)
         except:
-            log.exception('Cannot connect to %s %s' % (self.master_args, self.slave_args))
+            self._log.exception('Cannot connect to %s %s' % (self.master_args, self.slave_args))
         return self._conn
 
 class DataStore(object):
     '''Engine bound to a particular database'''
 
     def __init__(self, master=None, slave=None, connect_retry=3,
-                 bind=None, database=None):
+                 bind=None, database=None, **connect_args):
         '''
         :param master: mongodb connection URL(s)
         :type master: string, or list of strings
@@ -122,12 +92,11 @@ class DataStore(object):
         :type connect_retry: int
         :param bind: instead of master and slave params, use an existing ming.datastore.Engine ...
         :param database: ... and database name
+        :param connect_args: arguments passed along to pymongo.Connect() such as network_timeout
         '''
         if bind is None:
-            master=master or 'mongo://localhost:27017/gutenberg'
-            bind = Engine(master, slave, connect_retry)
-            one_url = (bind.master_args+bind.slave_args)[0]
-            database = one_url['path'][1:]
+            master=master or 'mongodb://localhost:27017/'
+            bind = Engine(master, slave, connect_retry, **connect_args)
         self.bind = bind
         self.database = database
 
@@ -147,12 +116,10 @@ class ShardedDataStore(object):
     _engines = {}
 
     @classmethod
-    def get(cls, uri):
-        args = parse_uri(uri)
-        key = (args['scheme'], args['host'], args['port'])
+    def get(cls, uri, database):
         with cls._lock:
-            engine = cls._engines.get(key)
+            engine = cls._engines.get(uri)
             if not engine:
-                engine = cls._engines[key] = Engine(uri)
-            return DataStore(bind=engine, database=args['path'][1:])
+                engine = cls._engines[uri] = Engine(uri)
+            return DataStore(bind=engine, database=database)
 

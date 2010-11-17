@@ -15,7 +15,7 @@ class TestRelation(TestCase):
 
     def setUp(self):
         self.datastore = DS.DataStore(
-            master='mongo://localhost:27017/test_db')
+            'mongodb://localhost:27017/', database='test_db')
         self.session = ORMSession(bind=self.datastore)
         class Parent(MappedClass):
             class __mongometa__:
@@ -67,7 +67,7 @@ class TestBasicMapping(TestCase):
     
     def setUp(self):
         self.datastore = DS.DataStore(
-            master='mongo://localhost:27017/test_db')
+            'mongodb://localhost:27017/', database='test_db')
         self.session = ORMSession(bind=self.datastore)
         class Basic(MappedClass):
             class __mongometa__:
@@ -267,7 +267,7 @@ class TestICollection(TestCase):
 class TestPolymorphic(TestCase):
 
     def setUp(self):
-        self.bind = DS.DataStore(master='mim:///')
+        self.bind = DS.DataStore(master='mim:///', database='test_db')
         self.doc_session = Session(self.bind)
         self.orm_session = ORMSession(self.doc_session)
         class Base(MappedClass):

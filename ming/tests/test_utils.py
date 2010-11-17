@@ -18,18 +18,6 @@ class TestUtils(TestCase):
         self.assertEqual(obj.prop, 5)
         self.assertEqual(counter, [1])
 
-    def test_uri_parse(self):
-        uri = 'mongo://user:password@host:100/path?a=5'
-        result = utils.parse_uri(uri, b='5')
-        self.assertEqual(result, dict(
-                scheme='mongo',
-                host='host',
-                username='user',
-                password='password',
-                port=100,
-                path='/path',
-                query=dict(a='5', b='5')))
-
     def test_wordwrap(self):
         s='''The quick brown fox jumped over the lazy dog'''
         lines = utils.wordwrap(s, width=20, indent_first=5,

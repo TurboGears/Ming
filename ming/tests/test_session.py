@@ -2,6 +2,7 @@ from collections import defaultdict
 from unittest import TestCase, main
 
 import mock
+import bson
 import pymongo
 
 from ming.base import Object, Document, Field, Cursor
@@ -84,7 +85,7 @@ class TestSession(TestCase):
         sess.save(doc, 'a')
         impl.update.assert_called_with(dict(_id=5), {'$set':dict(a=5)}, safe=True)
         doc = self.TestDocNoSchema({'_id':5, 'a':5})
-        impl.insert.return_value = pymongo.bson.ObjectId()
+        impl.insert.return_value = bson.ObjectId()
         sess.insert(doc)
         impl.insert.assert_called_with(dict(_id=5, a=5), safe=True)
         doc = self.TestDocNoSchema({'_id':5, 'a':5})

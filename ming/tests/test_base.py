@@ -9,7 +9,7 @@ import mock
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
 from ming.session import Session
-from pymongo.bson import ObjectId
+from bson import ObjectId
 
 def mock_datastore():
     ds = mock.Mock()

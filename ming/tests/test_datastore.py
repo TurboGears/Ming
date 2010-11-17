@@ -7,91 +7,62 @@ from ming import Session, Field, Document
 from ming import datastore as DS
 from ming import schema as S
 
-class TestDatastore(TestCase):
+CONNECT_ARGS = dict(
+    network_timeout=0.1)
 
-    def setUp(self):
-        class TestDoc(Document):
-            class __mongometa__:
-                name='test_doc'
-                session = Session.by_name('main')
-            _id=Field(S.ObjectId, if_missing=None)
-            a=Field(S.Int, if_missing=None)
-            b=Field(S.Object, dict(a=S.Int(if_missing=None)))
-        config = {
-            'ming.main.master':'mongo://localhost:27017/test_db' }
-        ming.configure(**config)
-        self.session = TestDoc.__mongometa__.session
-
-    def test_basic(self):
-        self.assert_(repr(self.session.bind), 'DataStore(master=[{')
-        self.session.bind.conn
+class TestEngine(TestCase):
 
     def test_master_slave(self):
-        ms = DS.DataStore(master='mongo://localhost:27017/test_db?network_timeout=5',
-                          slave='mongo://localhost:27017/test_db?network_timeout=5')
-        self.assert_(ms.conn is not None)
-        self.assert_(ms.db is not None)
-    
+        ms = DS.Engine(
+            'mongodb://localhost:27017/',
+            'mongodb://localhost:27017/',
+            **CONNECT_ARGS)
+        assert ms.conn is not None
+
     def test_master_slave_failover(self):
-        ms = DS.DataStore(master='mongo://localhost:23/test_db',
-                          slave='mongo://localhost:27017/test_db')
-        ms.conn # should failover to slave-only
-        ms.db
-        ms_fail = DS.DataStore(master='mongo://localhost:23/test_db')
-        self.assert_(ms_fail.conn is None)
-    
-    @patch('pymongo.connection.Connection.paired')
-    def test_replica_pair(self, paired):
-        ms = DS.DataStore(master=['mongo://localhost:23/test_db',
-                                  'mongo://localhost:27017/test_db'])
-        self.assert_(ms.conn is not None)
-        paired.assert_called_with(('localhost',23), ('localhost',27017), network_timeout=None)
-        self.assert_(ms.db is not None)
-        ms_fail = DS.DataStore(master='mongo://localhost:23/test_db')
-        self.assert_(ms_fail.conn is None)
+        ms = DS.Engine(
+            'mongodb://localhost:23/',
+            'mongodb://localhost:27017/',
+            **CONNECT_ARGS)
+        assert ms.conn is not None
+
+    def test_replica_set(self):
+        ms = DS.Engine(
+            'mongodb://localhost:23,localhost:27017,localhost:999/',
+            **CONNECT_ARGS)
+        assert ms.conn is not None
         
-    def test_3masters(self):
-        ms = DS.DataStore(master=['mongo://localhost:23/test_db',
-                                  'mongo://localhost:27017/test_db',
-                                  'mongo://localhost:999/test_db',
-                                  ])
-        self.assert_(ms.conn is not None)
-        self.assertEqual(len(ms.bind.master_args), 2)
-        
-    def test_replica_pair_slaves(self):
-        ms = DS.DataStore(master=['mongo://localhost:23/test_db',
-                                  'mongo://localhost:27017/test_db'],
-                          slave='mongo://localhost:999/test_db')
-        self.assert_(ms.conn is not None)
-        self.assertEqual(len(ms.bind.slave_args), 0)
+    def test_replica_set_slaves(self):
+        ms = DS.Engine(
+            'mongodb://localhost:23,localhost:27017/',
+            'mongodb://localhost:999/',
+            **CONNECT_ARGS)
+        assert ms.conn is not None
         
     def test_slave_only(self):
-        ms = DS.DataStore(master = None,
-                          slave = 'mongo://localhost:27017/test_db')
-        self.assert_(ms.conn is not None)
-        self.assert_(ms.db is not None)
+        ms = DS.Engine(
+            None, 'mongodb://localhost:27017/',
+            **CONNECT_ARGS)
+        assert ms.conn is not None
 
+class TestDatastore(TestCase):
 
-class TestReplicaSetDataStore(TestCase):
+    def test_basic(self):
+        ds = DS.DataStore(
+            'mongodb://localhost:27017',
+            database='test_db',
+            **CONNECT_ARGS)
+        assert ds.conn is not None
+        assert ds.db is not None
 
-    def test_members(self):
-        ms = DS.DataStore([
-            'mongo://localhost:27017/test_db?network_timeout=5',
-            'mongo://localhost:27017/test_db?network_timeout=5'
-        ])
-        self.assert_(ms.conn is not None)
-        self.assert_(ms.db is not None)
-
-    def test_members_failover(self):
-        ms = DS.DataStore([
-            'mongo://localhost:23/test_db?network_timeout=5',
-            'mongo://localhost:27017/test_db?network_timeout=5'
-        ])
-        ms.conn # should failover to slave-only
-        ms.db
-        ms_fail = DS.DataStore(['mongo://localhost:23/test_db'])
-        self.assert_(ms_fail.conn is None)
-        
+    def test_configure(self):
+        ming.configure(**{
+                'ming.main.master':'mongodb://localhost:27017/',
+                'ming.main.database':'test_db',
+                'ming.main.network_timeout':'0.1'})
+        session = Session.by_name('main')
+        assert session.bind.conn is not None
+        assert session.bind.db is not None
 
 if __name__ == '__main__':
     main()

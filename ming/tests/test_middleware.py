@@ -14,8 +14,7 @@ from ming.orm.middleware import MingMiddleware
 class TestRelation(TestCase):
 
     def setUp(self):
-        self.datastore = DS.DataStore(
-            master='mongo://localhost:27017/test_db')
+        self.datastore = DS.DataStore('mongodb://localhost:27017/', database='test_db')
         self.session = ThreadLocalORMSession(Session(bind=self.datastore))
         class Parent(MappedClass):
             class __mongometa__:

@@ -5,11 +5,8 @@ from copy import deepcopy
 from datetime import datetime
 from formencode.validators import Invalid
 
+import bson
 import pymongo
-try:
-    from pymongo import bson
-except ImportError:
-    import bson
 
 from .utils import LazyProperty
 
@@ -425,15 +422,15 @@ class Binary(ParticularScalar):
 class ObjectId(Scalar):
     def if_missing(self):
         '''Provides a pymongo.bson.ObjectId as default'''
-        return pymongo.bson.ObjectId()
+        return bson.ObjectId()
     def _validate(self, value):
         try:
             value = Scalar._validate(self, value)
             if value is None: return value
-            if isinstance(value, pymongo.bson.ObjectId):
+            if isinstance(value, bson.ObjectId):
                 return value
             elif isinstance(value, basestring):
-                return pymongo.bson.ObjectId(str(value))
+                return bson.ObjectId(str(value))
             else:
                 raise Invalid('%s is not a bson.ObjectId' % value, value, None)
         except Invalid:
