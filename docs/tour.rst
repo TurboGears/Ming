@@ -48,8 +48,8 @@ command.  (We recommend using a virtualenv_ for development.)
     $ source ming_env/bin/activate
     (ming_env)$ easy_install -UZ Ming
 
-The Datastore and Session
--------------------------
+Connecting to the Database
+--------------------------
 
 Ming manages your connection to the MongoBD database using an object known as a
 :class:`Datastore <ming.datastore.DataStore>`.  The DataStore is actually just a thin wrapper around a pymongo_
@@ -127,11 +127,11 @@ object.  In this case, we are declaring that a `WikiPage` has exactly three
 properties.  `title` and `text` are both strings (unicode, technically), and
 `_id` is a pymongo_ ObjectId.
 
-Creating Ming Objects
----------------------
+Using Ming Objects to Represent Mongo Records
+---------------------------------------------
 
 Now that we've defined a basic schema, let's start playing around with Ming in
-the interactive interpreter.  First, make sure you've saved the code above in a
+the interactive interpreter.  First, make sure you've saved the code below in a
 module "tutorial.py"::
 
     from ming.datastore import DataStore
@@ -223,7 +223,16 @@ sort(\*args, \*\*kwargs)
   `pymongo.Cursor.sort()` method
 
 Ming also provides a convenience method `.m.get(**kwargs)` which is equivalent to
-`.m.find(kwargs).first()` for simple queries that are expected to return one result.
+`.m.find(kwargs).first()` for simple queries that are expected to return one result.  Some examples:
+
+    >>> tutorial.WikiPage.m.find({'title': 'MyPage'}).first()
+    {'text': u'', '_id': ObjectId('4b1d638ceb033028a0000000'), 'title': u'MyPage'}
+    >>> tutorial.WikiPage.m.find().count()
+    1
+    >>> tutorial.WikiPage.m.get(title='MyPage')
+    {'text': u'', '_id': ObjectId('4b1d638ceb033028a0000000'), 'title': u'MyPage'}
+
+
 
 Other Sessions
 --------------
@@ -283,14 +292,14 @@ read::
 
     text = Field(str, if_missing='')
 
-Now if we restart the interpreter (or reload the tutorial model), we can do the
+Now if we restart the interpreter (or reload the tutorial module), we can do the
 following::
 
     >>> page = tutorial.WikiPage.make(dict(title='MyPage'))
     >>> page
     {'text': '', 'title': 'MyPage'}
 
-Ming also support supplying a callable as an if_missing value so you could put
+Ming also supports supplying a callable as an if_missing value so you could put
 the creation date in a WikiPage like this::
 
     from datetime import datetime
