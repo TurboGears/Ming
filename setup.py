@@ -43,5 +43,5 @@ setup(name='Ming',
       [paste.paster_command]
       flyway = flyway.command:MigrateCommand
       """,
-      test_suite='ming.tests',
+      test_suite='nose.collector'
       )
