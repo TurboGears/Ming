@@ -35,6 +35,13 @@ setup(name='Ming',
       # -*- Entry points: -*-
       [paste.filter_factory]
       ming_autoflush=ming.orm.middleware:make_ming_autoflush_middleware
+
+      [flyway.test_migrations]
+      a = flyway.tests.migrations_a
+      b = flyway.tests.migrations_b
+
+      [paste.paster_command]
+      flyway = flyway.command:MigrateCommand
       """,
       test_suite='ming.tests',
       )

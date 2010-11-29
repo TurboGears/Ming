@@ -37,7 +37,7 @@ class MigrateCommand(command.Command):
                 for db in bind.conn.database_names()
                 if db not in ('admin', 'local') ]
         else:
-            datastores = [ DataStore(bind, self.options.database) ]
+            datastores = [ DataStore(bind=bind, database=self.options.database) ]
         for ds in datastores:
             self.log.info('Migrate DB: %s', ds.database)
             if self.options.status_only:
