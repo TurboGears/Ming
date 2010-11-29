@@ -29,7 +29,7 @@ setup(name='Ming',
           # -*- Extra requirements: -*-
         "mock >= 0.6.0",
         "FormEncode >= 1.2.1",
-        "pymongo >= 1.7",
+        "pymongo >= 1.9",
       ],
       entry_points="""
       # -*- Entry points: -*-
