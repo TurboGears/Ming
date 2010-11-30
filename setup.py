@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 import sys, os
 
-from ming import version
+exec open('ming/version.py')
 
 setup(name='Ming',
-      version=version.__version__,
+      version=__version__,
       description="Bringing order to Mongo since 2009",
       long_description="""Database mapping layer for MongoDB on Python. Includes schema enforcement and some facilities for schema migration. 
 """,
