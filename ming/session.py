@@ -218,7 +218,7 @@ class Session(object):
             _, keys = self.ensure_index(cls, idx, unique=True, **kwargs)
             indexes.add(frozenset(keys))
         for iname,fields  in self.index_information(cls).iteritems():
-            keys = frozenset(i[0] for i in fields)
+            keys = frozenset(i[0] for i in fields['key'])
             if keys not in indexes and iname != '_id_':
                 log.info('Dropping index %s', iname)
                 self._impl(cls).drop_index(iname)
