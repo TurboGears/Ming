@@ -199,7 +199,9 @@ class Collection(collection.Collection):
         return index_name
 
     def index_information(self):
-        return dict(self._indexes)
+        return dict(
+            (index_name, dict(key=fields))
+            for index_name, fields in self._indexes.iteritems())
 
     def drop_index(self, iname):
         index = self._indexes.pop(iname, None)
