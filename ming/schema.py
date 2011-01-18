@@ -3,7 +3,6 @@ import logging
 
 from copy import deepcopy
 from datetime import datetime
-from formencode.validators import Invalid
 
 import bson
 import pymongo
@@ -11,6 +10,63 @@ import pymongo
 from .utils import LazyProperty
 
 log = logging.getLogger(__name__)
+
+
+# lifted from formencode.validators
+# but separate, so TurboGears special handling of formencode.validators.Invalid won't kick in incorrectly
+class Invalid(Exception):
+
+    """
+    This is raised in response to invalid input.  It has several
+    public attributes:
+
+    msg:
+        The message, *without* values substituted.  For instance, if
+        you want HTML quoting of values, you can apply that.
+    substituteArgs:
+        The arguments (a dictionary) to go with `msg`.
+    str(self):
+        The message describing the error, with values substituted.
+    value:
+        The offending (invalid) value.
+    state:
+        The state that went with this validator.  This is an
+        application-specific object.
+    error_list:
+        If this was a compound validator that takes a repeating value,
+        and sub-validator(s) had errors, then this is a list of those
+        exceptions.  The list will be the same length as the number of
+        values -- valid values will have None instead of an exception.
+    error_dict:
+        Like `error_list`, but for dictionary compound validators.
+    """
+
+    def __init__(self, msg,
+                 value, state, error_list=None, error_dict=None):
+        Exception.__init__(self, msg)
+        self.msg = msg
+        self.value = value
+        self.state = state
+        self.error_list = error_list
+        self.error_dict = error_dict
+        assert (not self.error_list or not self.error_dict), (
+                "Errors shouldn't have both error dicts and lists "
+                "(error %s has %s and %s)"
+                % (self, self.error_list, self.error_dict))
+
+    def __str__(self):
+        val = self.msg
+        #if self.value:
+        #    val += " (value: %s)" % repr(self.value)
+        return val    
+
+    def __unicode__(self):
+        if isinstance(self.msg, unicode):
+            return self.msg
+        elif isinstance(self.msg, str):
+            return self.msg.decode('utf8')
+        else:
+            return unicode(self.msg)
 
 class Missing(tuple):
     '''Missing is a sentinel used to indicate a missing key or missing keyword
@@ -255,6 +311,7 @@ class Object(FancySchemaItem):
                         if value is not Missing:
                             result[name] = value
                     except Invalid, inv:
+                        raise
                         error_dict[name] = inv
                     
         if error_dict:

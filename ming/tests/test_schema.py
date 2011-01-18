@@ -2,8 +2,6 @@ from datetime import datetime
 from decimal import Decimal
 from unittest import TestCase, main
 
-from formencode import Invalid
-
 import ming.datastore
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
@@ -36,7 +34,7 @@ class TestQuerySafety(TestCase):
 
     def test_extra_fields_not_allowed(self):
         q = self.Doc.m.find(allow_extra=False)
-        self.assertRaises(Invalid, q.all)
+        self.assertRaises(S.Invalid, q.all)
 
 class TestSchemaItem(TestCase):
 
