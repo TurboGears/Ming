@@ -31,14 +31,14 @@ class TestEngine(TestCase):
             'mongodb://localhost:23,localhost:27017,localhost:999/',
             **CONNECT_ARGS)
         assert ms.conn is not None
-        
+
     def test_replica_set_slaves(self):
         ms = DS.Engine(
             'mongodb://localhost:23,localhost:27017/',
             'mongodb://localhost:999/',
             **CONNECT_ARGS)
         assert ms.conn is not None
-        
+
     def test_slave_only(self):
         ms = DS.Engine(
             None, 'mongodb://localhost:27017/',
@@ -59,11 +59,13 @@ class TestDatastore(TestCase):
         ming.configure(**{
                 'ming.main.master':'mongodb://localhost:27017/',
                 'ming.main.database':'test_db',
-                'ming.main.network_timeout':'0.1'})
+                'ming.main.network_timeout':'0.1',
+                'ming.main.connect_retry': 1,
+                'ming.main.tz_aware': False,
+                })
         session = Session.by_name('main')
         assert session.bind.conn is not None
         assert session.bind.db is not None
 
 if __name__ == '__main__':
     main()
-

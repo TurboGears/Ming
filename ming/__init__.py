@@ -17,11 +17,13 @@ def configure(**kwargs):
     from formencode import schema, validators
 
     class DatastoreSchema(schema.Schema):
-        network_timeout=validators.Number(if_missing=None, if_empty=None)
         master=validators.UnicodeString(if_missing=None, if_empty=None)
         slave=validators.UnicodeString(if_missing=None, if_empty=None)
         database=validators.UnicodeString(not_empty=True)
-        connect_retry=validators.UnicodeString(if_missing=3, if_empty=0)
+        connect_retry=validators.Number(if_missing=3, if_empty=0)
+        # pymongo
+        network_timeout=validators.Number(if_missing=None, if_empty=None)
+        tz_aware=validators.Bool(if_missing=True)
 
     config = variable_decode(kwargs)
     datastores = {}
