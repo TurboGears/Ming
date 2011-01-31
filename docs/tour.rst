@@ -10,7 +10,7 @@ retrieve JSON-like documents.  MongoDB stores these documents in collections,
 which are analogous to SQL tables.  Because MongoDB is schemaless, there are no
 guarantees given to the database client of the format of the data that may be
 returned from a query; you can put any kind of document into a collection that
-you want.  
+you want.
 
 While this dynamic behavior is handy in a rapid development environment where you
 might delete and re-create the database many times a day, it starts to be a
@@ -71,8 +71,8 @@ this tutorial, we will be using a single global Session::
 
 We can also :class:`configure() <ming.configure>` ming with a set of urls, using a config dict of "ming.*" keys.
 The first part must be 'ming', the second part is a session name, and the third
-parts are used as parameters to construct a :class:`Datastore <ming.datastore.DataStore>` object.
-If they end with "-N", they will be split into a list.
+parts are used as parameters to construct a :class:`Datastore <ming.datastore.DataStore>` object.  Master and slave
+parameters should be comma-sepearated mongodb://host:port[,host:port] if there are multiple.
 
 .. sidebar:: Mongo-in-Memory
 
@@ -82,8 +82,8 @@ If they end with "-N", they will be split into a list.
 
 ::
 
-    config = {'ming.example.master-1': 'mongodb://localhost:27017/',
-              'ming.example.slave-1': None,
+    config = {'ming.example.master': 'mongodb://localhost:27017',
+              'ming.example.slave': None,
               'ming.example.database':'tutorial'
              }
     ming.configure(**config)
@@ -97,7 +97,7 @@ Now that that boilerplate is out of the way, we can actually start writing our
 model classes.  We will start with a model representing a WikiPage::
 
     from ming import Field, Document, schema
-    
+
     class WikiPage(Document):
 
         class __mongometa__:
@@ -111,7 +111,7 @@ model classes.  We will start with a model representing a WikiPage::
 The first thing you'll notice about the code is the :class:`Document <ming.base.Document>` import -- all Ming
 models are descendants of the `Document` class.  The next thing you'll notice is
 the :class:`__mongometa__ <ming.base.Document.__mongometa__>` inner class.  This is where you'll give Ming information on
-how to map the class.  (We group all the collection-oriented information under 
+how to map the class.  (We group all the collection-oriented information under
 :class:`__mongometa__ <ming.base.Document.__mongometa__>` in order to minimize the chances of namespace conflicts.)  In the
 :class:`__mongometa__ <ming.base.Document.__mongometa__>` class, we define the session for this class (the single, global
 session that we're using) as well as the name of the collection in which to store
@@ -148,7 +148,7 @@ module "tutorial.py"::
             session = session
             name = 'wiki_page'
 
-        _id = Field(schema.ObjectId)    
+        _id = Field(schema.ObjectId)
         title = Field(str)
         text = Field(str)
 
@@ -203,7 +203,7 @@ Ming provides an `.m.find()` method on class :class:`managers <ming.base.Manager
 `.find()` method on collection objects in pymongo_ and is used for performing
 queries.  The result of a query is a Python iterator that wraps a pymongo cursor,
 converting each result to a :class:`ming.Document <ming.base.Document>` before yielding it.  Like
-SQLAlchemy_, we provide several convenice methods on query results (:class:`Cursor <ming.base.Cursor>`): 
+SQLAlchemy_, we provide several convenice methods on query results (:class:`Cursor <ming.base.Cursor>`):
 
 one()
   Retrieve a single result from a query.  Raises an exception if the query
@@ -337,7 +337,7 @@ Now, what happens when we create a page?
 
 Ming creates the structure for us automatically.  (If we had wanted to specify a
 different default value for the `metadata` property, we could have done so using
-the `if_missing` parameter, of course.)  
+the `if_missing` parameter, of course.)
 
 Specifying a Migration
 ----------------------
@@ -345,7 +345,7 @@ Specifying a Migration
 One of the most irritating parts of maintaining an application for a while is the
 need to do data migrations from one version of the schema to another.  While Ming
 can't completely remove the pain of migrations, it does seek to make migrations
-as simple as possible.  
+as simple as possible.
 
 Let's see what's in the database right now::
 

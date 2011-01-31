@@ -90,14 +90,14 @@ class DataStore(object):
     def __init__(self, master=None, slave=None, connect_retry=3,
                  bind=None, database=None, **connect_args):
         '''
-        :param master: mongodb connection URL(s)
-        :type master: string, or list of strings
+        :param master: connection URL(s) - mongodb://host:port[,host:port]
+        :type master: string
         :param slave: like master, but slave(s)
-        :type slave: string, or list of strings
+        :type slave: string
         :param connect_retry: retry this many times (with 1-second sleep) when a Connection cannot be established
         :type connect_retry: int
-        :param bind: instead of master and slave params, use an existing ming.datastore.Engine ...
-        :param database: ... and database name
+        :param bind: instead of master and slave params, use an existing ming.datastore.Engine
+        :param database: database name
         :param connect_args: arguments passed along to pymongo.Connect() such as network_timeout
         '''
         if bind is None:
@@ -128,4 +128,3 @@ class ShardedDataStore(object):
             if not engine:
                 engine = cls._engines[uri] = Engine(uri)
             return DataStore(bind=engine, database=database)
-

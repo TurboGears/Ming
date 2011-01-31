@@ -21,6 +21,7 @@ def configure(**kwargs):
         master=validators.UnicodeString(if_missing=None, if_empty=None)
         slave=validators.UnicodeString(if_missing=None, if_empty=None)
         database=validators.UnicodeString(not_empty=True)
+        connect_retry=validators.UnicodeString(if_missing=3, if_empty=0)
 
     config = variable_decode(kwargs)
     datastores = {}
