@@ -279,9 +279,10 @@ class Object(FancySchemaItem):
             disc = d.get(self.polymorphic_on, Missing)
             if disc is Missing:
                 mm = self.managed_class.__mongometa__
-                disc = d[self.polymorphic_on] = mm.polymorphic_identity
-            else:
+                disc = getattr(mm, 'polymorphic_identity', Missing)
+            if disc is not Missing:
                 cls = self.polymorphic_registry[disc]
+                d[self.polymorphic_on] = disc
         if cls is None:
             result = base.Object()
         elif cls != self.managed_class:
