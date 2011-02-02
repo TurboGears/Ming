@@ -23,7 +23,7 @@ def configure(**kwargs):
         connect_retry=validators.Number(if_missing=3, if_empty=0)
         # pymongo
         network_timeout=validators.Number(if_missing=None, if_empty=None)
-        tz_aware=validators.Bool(if_missing=True)
+        tz_aware=validators.Bool(if_missing=False)
 
     config = variable_decode(kwargs)
     datastores = {}

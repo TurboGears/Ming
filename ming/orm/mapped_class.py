@@ -70,7 +70,7 @@ class Mapper(object):
     def create(self, doc):
         mm = self._mapped_class.__mongometa__
         opr = getattr(mm, 'orm_polymorphic_registry', None)
-        if opr:
+        if opr and mm.polymorphic_on:
             discriminator = doc[mm.polymorphic_on]
             cls = opr[discriminator]
         else:
