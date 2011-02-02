@@ -471,8 +471,16 @@ class Int(ParticularScalar):
         return super(Int, self)._validate(value)
 class Float(ParticularScalar):
     type=(float,int,long)
-class DateTime(ParticularScalar):
+class DateTimeTZ(ParticularScalar):
     type=datetime
+class DateTime(DateTimeTZ):
+    def _validate(self, value):
+        value = DateTimeTZ._validate(self, value)
+        if value is None: return value
+        if not isinstance(value, self.type):
+            raise Invalid('%s is not a %r' % (value, self.type),
+                          value, None)
+        return value.replace(tzinfo=None)
 class Bool(ParticularScalar):
     type=bool
 class Binary(ParticularScalar):
