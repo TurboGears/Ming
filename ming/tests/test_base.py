@@ -22,8 +22,8 @@ def mock_collection():
     return c
 
 class TestObject(TestCase):
-    
-    def test_object_copyable(self): 
+
+    def test_object_copyable(self):
         "Object is pretty basic concept, so must be freely copyable."
         obj = Object(foo=1, bar='str')
         obj1 = copy.copy(obj)
@@ -57,7 +57,7 @@ class TestObject(TestCase):
         safe_obj = Object(
             a=[1,2,3],
             b=dict(a=12),
-            c=[ 'foo', 1, 1L, 1.0, now, 
+            c=[ 'foo', 1, 1L, 1.0, now,
                 Decimal('0.3'), None, oid ])
         safe_obj.make_safe()
         self.assertEqual(safe_obj, dict(
@@ -112,6 +112,7 @@ class TestDocument(TestCase):
         self.TestDoc.m.count()
         self.TestDoc.m.ensure_index('foo')
         self.TestDoc.m.ensure_indexes()
+        self.TestDoc.m.update_indexes()
         self.TestDoc.m.group(dict(a=5))
         self.TestDoc.m.update_partial(dict(a=5), dict(b=6))
         doc = self.TestDoc.make(dict(a=5))
@@ -126,6 +127,7 @@ class TestDocument(TestCase):
         self.MockSession.count.assert_called_with(self.TestDoc)
         self.MockSession.ensure_index.assert_called_with(self.TestDoc, 'foo')
         self.MockSession.ensure_indexes.assert_called_with(self.TestDoc)
+        self.MockSession.update_indexes.assert_called_with(self.TestDoc)
         self.MockSession.group.assert_called_with(self.TestDoc, dict(a=5))
         self.MockSession.update_partial.assert_called_with(
             self.TestDoc, dict(a=5), dict(b=6), multi=False, upsert=False)
@@ -133,25 +135,25 @@ class TestDocument(TestCase):
         self.MockSession.delete.assert_called_with(doc)
         self.MockSession.set.assert_called_with(doc, dict(b=10))
         self.MockSession.increase_field.assert_called_with(doc, a=10)
-        
+
         doc.m.insert()
         self.MockSession.insert.assert_called_with(doc)
-        
+
         doc.m.upsert('a')
         self.MockSession.upsert.assert_called_with(doc, 'a')
-        
+
         self.TestDoc.m.index_information()
         self.MockSession.index_information.assert_called_with(self.TestDoc)
-        
+
         self.TestDoc.m.drop_indexes()
         self.MockSession.drop_indexes.assert_called_with(self.TestDoc)
-    
+
     def test_instance_remove(self):
         # remove operates on a whole collection
-        
+
         self.TestDoc.m.remove()
         self.MockSession.remove.assert_called_with(self.TestDoc)
-        
+
         doc = self.TestDoc.make(dict(a=5))
         self.assertRaises(TypeError, doc.m.remove)
 
@@ -164,7 +166,7 @@ class TestDocument(TestCase):
         self.MockSession.save.assert_called_with(doc)
 
 class TestIndexes(TestCase):
-    
+
     def setUp(self):
         class MyDoc(Document):
             class __mongometa__:
@@ -183,12 +185,12 @@ class TestIndexes(TestCase):
                     test3 = int,
                 )
         self.MyDoc = MyDoc
-    
+
     @mock.patch('ming.session.Session.ensure_index')
     def test_ensure_indexes(self, ensure_index):
         # make sure the manager constructor calls ensure_index with the right stuff
         doc = self.MyDoc.m
-        
+
         args = ensure_index.call_args_list
         self.assert_(
             ((self.MyDoc, ('test1','test2')), {})
@@ -244,14 +246,14 @@ class TestCursor(TestCase):
         self.assertEqual(self.cursor.first(), obj)
         self.assertEqual(self.cursor.first(), obj)
         self.assertEqual(self.cursor.first(), None)
-                                 
+
     def test_one_full(self):
         self.assertRaises(ValueError, self.cursor.one)
-                                 
+
     def test_one_empty(self):
         self.cursor.all()
         self.assertRaises(ValueError, self.cursor.one)
-                                 
+
     def test_one_ok(self):
         self.cursor.next()
         self.cursor.next()
@@ -285,7 +287,7 @@ class TestPolymorphic(TestCase):
                          dict(type='base', a=None))
         self.assertEqual(self.Base.make(dict(type='derived')),
                          dict(type='derived', a=None, b=None))
-        
+
 
 class TestHooks(TestCase):
 
@@ -335,7 +337,7 @@ class TestMigration(TestCase):
                 session = self.MockSession
             version=Field(1)
             a=Field(int)
-            
+
         class TestDoc(Document):
             class __mongometa__:
                 name='test_doc'
@@ -351,8 +353,7 @@ class TestMigration(TestCase):
     def testMigration(self):
         self.assertEqual(self.TestDoc.make(dict(version=1, a=5)),
                          dict(version=2, a=5, b=42))
-        
+
 
 if __name__ == '__main__':
     main()
-

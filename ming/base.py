@@ -112,11 +112,11 @@ class Manager(object):
             else:
                 method(self, *args, **kw)
         return update_wrapper(ensure_not_instance, method)
-    
+
     def get(self, **kwargs):
         """
         Returns one matching record, or None::
-        
+
             get(source='sf.net',shortname='foo')
         """
         return self.session.get(self.cls, **kwargs)
@@ -124,7 +124,7 @@ class Manager(object):
     def find(self, *args, **kwargs):
         """
         See pymongo collectin.find().  Examples::
-        
+
             find({"source": "sf.net"})
             find({"source": "sf.net"},['shortname'])  # only return shortname fields
         """
@@ -135,7 +135,7 @@ class Manager(object):
         """
         Removes multiple objects from mongo.  Do not use on an object instance.  See pymongo collection.remove().
         First argument should be a search criteria dict, or an ObjectId.::
-        
+
             model.CustomPage.m.remove({'foo': 3})
         """
         return self.session.remove(self.cls, *args, **kwargs)
@@ -143,7 +143,7 @@ class Manager(object):
     def find_by(self, **kwargs):
         """
         same as `find(spec=kwargs)`::
-        
+
             find_by(source='sf.net', foo='bar')
         """
         return self.session.find_by(self.cls, **kwargs)
@@ -156,7 +156,9 @@ class Manager(object):
 
     def ensure_indexes(self):
         """
-        Ensures all the indexes defined in __mongometa__ are created.
+        Ensures all the indexes defined in __mongometa__ are created.  See
+        :meth:`update_indexes() <ming.base.Manager.update_indexes>` for a more
+        comprehensive update.
         """
         return self.session.ensure_indexes(self.cls)
 
@@ -173,7 +175,7 @@ class Manager(object):
     def save(self, *args):
         """
         Saves an object::
-        
+
             cp = model.CustomPage(...)
             cp['foo'] = 3
             cp.m.save()
@@ -185,7 +187,7 @@ class Manager(object):
     def insert(self):
         """
         Inserts an object::
-        
+
             model.CustomPage(...).m.insert()
         """
         return self.session.insert(self.instance)
@@ -193,10 +195,10 @@ class Manager(object):
     def upsert(self, spec_fields):
         """
         Saves or updates an object::
-        
+
             model.CustomPage(...).m.upsert('my_key_field')
             model.CustomPage(...).m.upsert(['field1','field2'])
-        
+
         :param spec_fields: used to see if the record already exists
         :type spec_fields: a field or list of fields
         """
@@ -205,7 +207,7 @@ class Manager(object):
     def delete(self):
         """
         Deletes on object::
-        
+
             model.CustomPage(...).m.delete()
         """
         return self.session.delete(self.instance)
@@ -213,16 +215,16 @@ class Manager(object):
     def set(self, fields_values):
         """
         Sets only specific fields on an object::
-        
+
             model.CustomPage(...).m.set({'foo':'bar'})
         """
         return self.session.set(self.instance, fields_values)
-    
+
     def increase_field(self, **kwargs):
         """
         Sets a field to value, only if value is greater than the current value.
         Does not change the model object (only the mongo record)::
-        
+
             model.GlobalSettings.instance().increase_field(key=value)
         """
         return self.session.increase_field(self.instance, **kwargs)
@@ -232,12 +234,19 @@ class Manager(object):
         '''
         for m in self.find({}):
             m.m.save()
-    
+
     def index_information(self):
         return self.session.index_information(self.cls)
-    
+
     def drop_indexes(self):
         return self.session.drop_indexes(self.cls)
+
+    def update_indexes(self):
+        """
+        Ensures all the indexes defined in __mongometa__ are created, ones not defined
+        are dropped, and ones changed (e.g. unique flag) are updated.
+        """
+        return self.session.update_indexes(self.cls)
 
 class DocumentMeta(type):
     '''Metaclass for Documents providing several services:
@@ -292,7 +301,7 @@ class DocumentMeta(type):
             else:
                 mm.schema = my_schema
         cls._registry[cls.__name__] = cls
-        
+
 class Document(Object):
     '''Base class for all mapped MongoDB objects (the Document class can be
     thought of as the "collection", where a Document instance is a "document".
@@ -318,7 +327,7 @@ class Document(Object):
                                class's __name__ attribute is used)
         :var before_save: (optional) function that is called before save(), insert() or upsert() occurs.
                         It recieves one parameter, the current document.
-        
+
         Indexes and unique indexes will be created when this class is first used.
         '''
         name=None
@@ -422,4 +431,3 @@ def _safe_bson(obj):
     else:
         assert False, '%s is not safe for bsonification: %r' % (
             type(obj), obj)
-
