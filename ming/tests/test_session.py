@@ -60,7 +60,7 @@ class TestSession(TestCase):
         sess.remove(TestDoc, dict(a=5))
         sess.group(TestDoc, 'a')
         sess.update_partial(TestDoc, dict(a=5), dict(b=6), False)
-        
+
         impl.find_one.assert_called_with(dict(a=5))
         impl.find.assert_called_with(dict(a=5))
         impl.remove.assert_called_with(dict(a=5), safe=True)
@@ -93,7 +93,7 @@ class TestSession(TestCase):
         impl.update.assert_called_with(dict(a=5), dict(_id=5, a=5), upsert=True, safe=True)
         sess.upsert(doc, '_id')
         impl.update.assert_called_with(dict(_id=5), dict(_id=5, a=5), upsert=True, safe=True)
-        
+
         sess.find_by(self.TestDoc, a=5)
         sess.count(self.TestDoc)
         sess.ensure_index(self.TestDoc, 'a')
@@ -101,7 +101,7 @@ class TestSession(TestCase):
         impl.count.assert_called_with()
         impl.ensure_index.assert_called_with([ ('a', pymongo.ASCENDING) ])
         impl.ensure_index.reset_mock()
-        
+
         sess.ensure_indexes(self.TestDoc)
         self.assertEqual(impl.ensure_index.call_args_list, [
             (([('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ],), {}),
@@ -126,12 +126,51 @@ class TestSession(TestCase):
                                        {'$set': dict(b=60)},
                                        safe=True)
         self.assertRaises(ValueError, sess.increase_field, doc, b=None)
-        
+
         sess.index_information(self.TestDoc)
         impl.index_information.assert_called_with()
-        
+
         sess.drop_indexes(self.TestDoc)
         impl.drop_indexes.assert_called_with()
+
+        # test that unique flag changes are handled by update_indexes
+        impl.drop_index.reset_mock()
+        impl.ensure_index.reset_mock()
+        impl.index_information.return_value = dict(
+            b_c = {
+                'key': [('b', 1), ('c', 1)],
+                'unique': True,
+            },
+            z = {
+                'key': [('z', 1)],
+            },
+            cc = {
+                 'key': [('cc', 1)],
+            },
+        )
+        sess.update_indexes(self.TestDoc)
+        assert len(impl.drop_index.call_args_list) == 3, impl.drop_index.call_args_list
+        assert (('b_c',), {}) in impl.drop_index.call_args_list
+        assert (('z',), {}) in impl.drop_index.call_args_list
+        assert (('cc',), {}) in impl.drop_index.call_args_list
+        assert len(impl.ensure_index.call_args_list) == 2, impl.ensure_index.call_args_list
+        assert (([('b', 1), ('c', 1)],), {}) in impl.ensure_index.call_args_list, impl.ensure_index.call_args_list
+        assert (([('cc', 1)],), {'unique': True}) in impl.ensure_index.call_args_list
+
+        # test update_indexes doesn't drop when nothing changes
+        impl.drop_index.reset_mock()
+        impl.ensure_index.reset_mock()
+        impl.index_information.return_value = dict(
+            b_c = {
+                'key': [('b', 1), ('c', 1)],
+            },
+            cc = {
+                 'key': [('cc', 1)],
+                 'unique': True,
+            },
+        )
+        sess.update_indexes(self.TestDoc)
+        assert len(impl.drop_index.call_args_list) == 0, impl.drop_index.call_args_list
 
 class TestThreadLocalSession(TestSession):
 
@@ -160,8 +199,7 @@ class TestThreadLocalSession(TestSession):
 
     def test_basic_tl_session(self):
         pass
-        
-        
+
+
 if __name__ == '__main__':
     main()
-

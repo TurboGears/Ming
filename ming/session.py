@@ -164,7 +164,7 @@ class Session(object):
     def set(self, doc, fields_values):
         """
         sets a key/value pairs, and persists those changes to the datastore
-        immediately 
+        immediately
         """
         fields_values = Object.from_bson(fields_values)
         fields_values.make_safe()
@@ -172,7 +172,7 @@ class Session(object):
             self._set(doc, k.split('.'), v)
         impl = self._impl(doc)
         impl.update({'_id':doc._id}, {'$set':fields_values}, safe=True)
-        
+
     @annotate_doc_failure
     def increase_field(self, doc, **kwargs):
         """
@@ -184,7 +184,7 @@ class Session(object):
         value = kwargs[key]
         if value is None:
             raise ValueError, "%s=%s" % (key, value)
-        
+
         if key not in doc:
             self._impl(doc).update(
                 {'_id': doc._id, key: None},
@@ -199,10 +199,10 @@ class Session(object):
             {'$set': {key: value}},
             safe = True,
         )
-    
+
     def index_information(self, cls):
         return self._impl(cls).index_information()
-    
+
     def drop_indexes(self, cls):
         try:
             return self._impl(cls).drop_indexes()
@@ -210,16 +210,38 @@ class Session(object):
             pass
 
     def update_indexes(self, cls, **kwargs):
-        indexes = set()
+        prev_indexes = {}
+        prev_uniq_indexes = {}
+        for iname, fields in self.index_information(cls).iteritems():
+            if fields.get('unique'):
+                prev_uniq_indexes[iname] = fields['key']
+            else:
+                prev_indexes[iname] = fields['key']
+
+        # add the pymongo.ASCENDING (1) to the key tuples
+        declared_indexes = []
+        declared_uniq_indexes = []
         for idx in getattr(cls.__mongometa__, 'indexes', []):
-            _, keys = self.ensure_index(cls, idx, **kwargs)
-            indexes.add(frozenset(keys))
+            if not isinstance(idx, (list, tuple)):
+                idx = [idx]
+            declared_indexes.append([(k, pymongo.ASCENDING) for k in idx])
         for idx in getattr(cls.__mongometa__, 'unique_indexes', []):
-            _, keys = self.ensure_index(cls, idx, unique=True, **kwargs)
-            indexes.add(frozenset(keys))
-        for iname,fields  in self.index_information(cls).iteritems():
-            keys = frozenset(i[0] for i in fields['key'])
-            if keys not in indexes and iname != '_id_':
+            if not isinstance(idx, (list, tuple)):
+                idx = [idx]
+            declared_uniq_indexes.append([(k, pymongo.ASCENDING) for k in idx])
+
+        # we must drop first, since ensure_index doesn't change the 'unique' flag
+        for iname, key in prev_indexes.iteritems():
+            if key not in declared_indexes and iname != '_id_':
                 log.info('Dropping index %s', iname)
                 self._impl(cls).drop_index(iname)
+        for iname, key in prev_uniq_indexes.iteritems():
+            if key not in declared_uniq_indexes and iname != '_id_':
+                log.info('Dropping index %s', iname)
+                self._impl(cls).drop_index(iname)
+        
+        for idx in declared_indexes:
+            self._impl(cls).ensure_index(idx, **kwargs)
+        for idx in declared_uniq_indexes:
+            self._impl(cls).ensure_index(idx, unique=True, **kwargs)
 
