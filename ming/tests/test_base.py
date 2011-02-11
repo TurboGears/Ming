@@ -203,6 +203,84 @@ class TestIndexes(TestCase):
             args
         )
 
+    def test_index_inheritance_child_none(self):
+        class MyChild(self.MyDoc):
+            class __mongometa__:
+                pass
+
+        self.assertEqual(MyChild.__mongometa__.indexes,
+                         self.MyDoc.__mongometa__.indexes)
+        self.assertEqual(MyChild.__mongometa__.unique_indexes,
+                         self.MyDoc.__mongometa__.unique_indexes)
+
+    def test_index_inheritance_both(self):
+        class MyChild(self.MyDoc):
+            class __mongometa__:
+                indexes = [
+                    ('test3',),
+                ]
+                unique_indexes = [
+                    ('test4',),
+                ]
+        class MyGrandChild(MyChild):
+            class __mongometa__:
+                indexes = [
+                    ('test5',),
+                ]
+                unique_indexes = [
+                    ('test6',),
+                ]
+
+        self.assertEqual(MyGrandChild.__mongometa__.indexes,
+                         [('test5',), ('test3',)] + self.MyDoc.__mongometa__.indexes)
+        self.assertEqual(MyGrandChild.__mongometa__.unique_indexes,
+                         [('test6',), ('test4',)] + self.MyDoc.__mongometa__.unique_indexes)
+
+    def test_index_inheritance_neither(self):
+        class NoIndexDoc(Document):
+            class __mongometa__:
+                session = Session()
+                name = 'test123'
+                schema = dict(
+                    _id = S.ObjectId,
+                    test1 = str,
+                    test2 = str,
+                    test3 = int,
+                )
+        class StillNone(NoIndexDoc):
+            class __mongometa__:
+                pass
+
+        self.assertEqual(StillNone.__mongometa__.indexes,
+                         [])
+        self.assertEqual(StillNone.__mongometa__.unique_indexes,
+                         [])
+
+    def test_index_inheritance_parent_none(self):
+        class NoIndexDoc(Document):
+            class __mongometa__:
+                session = Session()
+                name = 'test123'
+                schema = dict(
+                    _id = S.ObjectId,
+                    test1 = str,
+                    test2 = str,
+                    test3 = int,
+                )
+        class AddSome(NoIndexDoc):
+            class __mongometa__:
+                indexes = [
+                    ('foo',),
+                ]
+                unique_indexes = [
+                    ('bar',),
+                ]
+
+        self.assertEqual(AddSome.__mongometa__.indexes,
+                         [('foo',)])
+        self.assertEqual(AddSome.__mongometa__.unique_indexes,
+                         [('bar',)])
+
 class TestCursor(TestCase):
 
     def setUp(self):

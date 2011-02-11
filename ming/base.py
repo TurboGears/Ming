@@ -269,9 +269,21 @@ class DocumentMeta(type):
         if not hasattr(mm, 'polymorphic_on'):
             mm.polymorphic_on = None
             mm.polymorphic_registry = None
-        # Make sure mongometa's schema incorporates base schemas
+
         my_schema = schema.Object()
+        if not hasattr(mm, 'indexes'):
+            mm.indexes = []
+        if not hasattr(mm, 'unique_indexes'):
+            mm.unique_indexes = []
+
+        # Make sure mongometa's schema & indexes incorporate those from parents
         for base in mm.__bases__:
+            for index in getattr(base, 'indexes', []):
+                if index not in mm.indexes:
+                    mm.indexes.append(index)
+            for index in getattr(base, 'unique_indexes', []):
+                if index not in mm.unique_indexes:
+                    mm.unique_indexes.append(index)
             if hasattr(base, 'schema'):
                 if base.schema:
                     my_schema.extend(schema.SchemaItem.make(base.schema))
