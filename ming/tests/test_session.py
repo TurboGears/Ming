@@ -108,7 +108,7 @@ class TestSession(TestCase):
                 (
                     ([ ('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ],),
                     {} ),
-                
+
                 (
                     ([ ('cc', pymongo.ASCENDING) ],),
                     {'unique':True} ),
@@ -138,6 +138,8 @@ class TestSession(TestCase):
 
         sess.drop_indexes(self.TestDoc)
         impl.drop_indexes.assert_called_with()
+
+        self.assertRaises(ValueError, sess.remove, doc, foobar='baz')
 
 class TestThreadLocalSession(TestSession):
 

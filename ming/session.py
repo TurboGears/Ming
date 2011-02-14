@@ -61,6 +61,9 @@ class Session(object):
     def remove(self, cls, *args, **kwargs):
         if 'safe' not in kwargs:
             kwargs['safe'] = True
+        for kwarg in kwargs:
+            if kwarg not in ('spec_or_id', 'safe'):
+                raise ValueError("Unexpected kwarg %s.  If you provide only kwargs, remove() will empty the whole collection." % kwarg)
         self._impl(cls).remove(*args, **kwargs)
 
     def find_by(self, cls, **kwargs):
@@ -206,4 +209,3 @@ class Session(object):
             return self._impl(cls).drop_indexes()
         except:
             pass
-
