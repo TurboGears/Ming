@@ -7,6 +7,20 @@ from collections import defaultdict
 from functools import update_wrapper
 
 import bson
+import pymongo
+
+def _fixup_indexes(indexes):
+    '''Ensure that the index list is a list of key tuples (no strings).  Also ensure that
+    the keys are specified as ASCENDING or DESCENDING (default ASCENDING)'''
+    for keys in indexes:
+        if not isinstance(keys, (list, tuple)):
+            keys = [(keys, pymongo.ASCENDING)]
+        new_idx = []
+        for k in keys:
+            if not isinstance(k, (list, tuple)):
+                k = (k, pymongo.ASCENDING)
+            new_idx.append(tuple(k))
+        yield new_idx
 
 def build_mongometa(bases, dct):
     mm_bases = []
@@ -275,6 +289,9 @@ class DocumentMeta(type):
             mm.indexes = []
         if not hasattr(mm, 'unique_indexes'):
             mm.unique_indexes = []
+
+        mm.indexes = list(_fixup_indexes(mm.indexes))
+        mm.unique_indexes = list(_fixup_indexes(mm.unique_indexes))
 
         # Make sure mongometa's schema & indexes incorporate those from parents
         for base in mm.__bases__:
