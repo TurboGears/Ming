@@ -63,7 +63,7 @@ class Session(object):
             kwargs['safe'] = True
         for kwarg in kwargs:
             if kwarg not in ('spec_or_id', 'safe'):
-                raise ValueError("Unexpected kwarg %s.  If you provide only kwargs, remove() will empty the whole collection." % kwarg)
+                raise ValueError("Unexpected kwarg %s.  Did you mean to pass a dict?  If you provide only kwargs, remove() will empty the whole collection." % kwarg)
         self._impl(cls).remove(*args, **kwargs)
 
     def find_by(self, cls, **kwargs):
