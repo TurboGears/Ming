@@ -1,5 +1,7 @@
 from unittest import TestCase, main
 
+import pymongo
+
 from ming import utils
 
 class TestUtils(TestCase):
@@ -32,6 +34,26 @@ class TestUtils(TestCase):
         self.assertEqual(lines[0], 'The quick brown fox')
         self.assertEqual(lines[1], '    jumped over the lazy')
         self.assertEqual(lines[2], '    dog')
+
+    def test_fixup_index(self):
+        self.assertEqual(
+            utils.fixup_index('foo'),
+            [('foo', pymongo.ASCENDING)])
+        self.assertEqual(
+            utils.fixup_index(['foo']),
+            [('foo', pymongo.ASCENDING)])
+        self.assertEqual(
+            utils.fixup_index([('foo', pymongo.ASCENDING)]),
+            [('foo', pymongo.ASCENDING)])
+        self.assertEqual(
+            utils.fixup_index([('foo', pymongo.DESCENDING)]),
+            [('foo', pymongo.DESCENDING)])
+        self.assertEqual(
+            utils.fixup_index(('foo', 'bar')),
+            [('foo', pymongo.ASCENDING), ('bar', pymongo.ASCENDING)])
+        self.assertEqual(
+            utils.fixup_index([('foo',pymongo.DESCENDING), 'bar']),
+            [('foo', pymongo.DESCENDING), ('bar', pymongo.ASCENDING)])
         
 
 if __name__ == '__main__':

@@ -2,6 +2,8 @@ import cgi
 import urllib
 from threading import local
 
+import pymongo
+
 class EmptyClass(object): pass
 
 class LazyProperty(object):
@@ -82,3 +84,20 @@ def wordwrap(s, width=80, indent_first=0, indent_subsequent=0):
 def indent(s, level=2):
     prefix = ' ' * level
     return s.replace('\n', '\n' + prefix)
+
+def fixup_index(index):
+    '''Ensure that the index is of the form [ (key1, 1), (key2, -1)...]'''
+    if isinstance(index, basestring):
+        return [ (index, pymongo.ASCENDING) ]
+    result = []
+    for key in index:
+        if (isinstance(key, tuple) 
+            and len(key) == 2
+            and key[1] in (pymongo.ASCENDING, pymongo.DESCENDING)):
+            result.append(key)
+        elif isinstance(key, basestring):
+            result.append((key, pymongo.ASCENDING))
+        else:
+            for k in key:
+                result.append((k, pymongo.ASCENDING))
+    return result

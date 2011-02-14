@@ -5,9 +5,9 @@ from functools import update_wrapper
 import pymongo
 import pymongo.errors
 from pymongo.son import SON
-from threading import local
 
 from .base import Cursor, Object
+from .utils import fixup_index
 from . import exc
 
 log = logging.getLogger(__name__)
@@ -70,9 +70,7 @@ class Session(object):
         return self._impl(cls).count()
 
     def ensure_index(self, cls, fields, **kwargs):
-        if not isinstance(fields, (list, tuple)):
-            fields = [ fields ]
-        index_fields = [(f, pymongo.ASCENDING) for f in fields]
+        index_fields = fixup_index(fields)
         return self._impl(cls).ensure_index(index_fields, **kwargs), fields
 
     def ensure_indexes(self, cls):
@@ -208,40 +206,4 @@ class Session(object):
             return self._impl(cls).drop_indexes()
         except:
             pass
-
-    def update_indexes(self, cls, **kwargs):
-        prev_indexes = {}
-        prev_uniq_indexes = {}
-        for iname, fields in self.index_information(cls).iteritems():
-            if fields.get('unique'):
-                prev_uniq_indexes[iname] = fields['key']
-            else:
-                prev_indexes[iname] = fields['key']
-
-        # add the pymongo.ASCENDING (1) to the key tuples
-        declared_indexes = []
-        declared_uniq_indexes = []
-        for idx in getattr(cls.__mongometa__, 'indexes', []):
-            if not isinstance(idx, (list, tuple)):
-                idx = [idx]
-            declared_indexes.append([(k, pymongo.ASCENDING) for k in idx])
-        for idx in getattr(cls.__mongometa__, 'unique_indexes', []):
-            if not isinstance(idx, (list, tuple)):
-                idx = [idx]
-            declared_uniq_indexes.append([(k, pymongo.ASCENDING) for k in idx])
-
-        # we must drop first, since ensure_index doesn't change the 'unique' flag
-        for iname, key in prev_indexes.iteritems():
-            if key not in declared_indexes and iname != '_id_':
-                log.info('Dropping index %s', iname)
-                self._impl(cls).drop_index(iname)
-        for iname, key in prev_uniq_indexes.iteritems():
-            if key not in declared_uniq_indexes and iname != '_id_':
-                log.info('Dropping index %s', iname)
-                self._impl(cls).drop_index(iname)
-        
-        for idx in declared_indexes:
-            self._impl(cls).ensure_index(idx, **kwargs)
-        for idx in declared_uniq_indexes:
-            self._impl(cls).ensure_index(idx, unique=True, **kwargs)
 

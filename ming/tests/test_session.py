@@ -103,10 +103,16 @@ class TestSession(TestCase):
         impl.ensure_index.reset_mock()
 
         sess.ensure_indexes(self.TestDoc)
-        self.assertEqual(impl.ensure_index.call_args_list, [
-            (([('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ],), {}),
-            (([('cc', pymongo.ASCENDING) ],), {'unique':True}),
-        ])
+        self.assertEqual(
+            impl.ensure_index.call_args_list, [
+                (
+                    ([ ('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ],),
+                    {} ),
+                
+                (
+                    ([ ('cc', pymongo.ASCENDING) ],),
+                    {'unique':True} ),
+                ])
 
         doc = self.TestDocNoSchema(dict(_id=1, a=5))
         sess.set(doc, dict(b=5))
@@ -132,45 +138,6 @@ class TestSession(TestCase):
 
         sess.drop_indexes(self.TestDoc)
         impl.drop_indexes.assert_called_with()
-
-        # test that unique flag changes are handled by update_indexes
-        impl.drop_index.reset_mock()
-        impl.ensure_index.reset_mock()
-        impl.index_information.return_value = dict(
-            b_c = {
-                'key': [('b', 1), ('c', 1)],
-                'unique': True,
-            },
-            z = {
-                'key': [('z', 1)],
-            },
-            cc = {
-                 'key': [('cc', 1)],
-            },
-        )
-        sess.update_indexes(self.TestDoc)
-        assert len(impl.drop_index.call_args_list) == 3, impl.drop_index.call_args_list
-        assert (('b_c',), {}) in impl.drop_index.call_args_list
-        assert (('z',), {}) in impl.drop_index.call_args_list
-        assert (('cc',), {}) in impl.drop_index.call_args_list
-        assert len(impl.ensure_index.call_args_list) == 2, impl.ensure_index.call_args_list
-        assert (([('b', 1), ('c', 1)],), {}) in impl.ensure_index.call_args_list, impl.ensure_index.call_args_list
-        assert (([('cc', 1)],), {'unique': True}) in impl.ensure_index.call_args_list
-
-        # test update_indexes doesn't drop when nothing changes
-        impl.drop_index.reset_mock()
-        impl.ensure_index.reset_mock()
-        impl.index_information.return_value = dict(
-            b_c = {
-                'key': [('b', 1), ('c', 1)],
-            },
-            cc = {
-                 'key': [('cc', 1)],
-                 'unique': True,
-            },
-        )
-        sess.update_indexes(self.TestDoc)
-        assert len(impl.drop_index.call_args_list) == 0, impl.drop_index.call_args_list
 
 class TestThreadLocalSession(TestSession):
 

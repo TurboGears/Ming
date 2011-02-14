@@ -5,11 +5,12 @@ from collections import defaultdict
 import copy
 
 import mock
+from bson import ObjectId
+import pymongo
 
 from ming.base import Object, Document, Field, Cursor
 from ming import schema as S
 from ming.session import Session
-from bson import ObjectId
 
 def mock_datastore():
     ds = mock.Mock()
@@ -189,16 +190,16 @@ class TestIndexes(TestCase):
     @mock.patch('ming.session.Session.ensure_index')
     def test_ensure_indexes(self, ensure_index):
         # make sure the manager constructor calls ensure_index with the right stuff
-        doc = self.MyDoc.m
-
+        self.MyDoc.m
+        
         args = ensure_index.call_args_list
         self.assert_(
-            ((self.MyDoc, ('test1','test2')), {})
+            ((self.MyDoc, [('test1', pymongo.ASCENDING), ('test2', pymongo.ASCENDING)]), {})
             in args,
             args
         )
         self.assert_(
-            ((self.MyDoc, ('test1',)), {'unique':True})
+            ((self.MyDoc, [('test1',pymongo.ASCENDING)]), {'unique':True})
             in args,
             args
         )
@@ -232,9 +233,13 @@ class TestIndexes(TestCase):
                 ]
 
         self.assertEqual(MyGrandChild.__mongometa__.indexes,
-                         [('test5',), ('test3',)] + self.MyDoc.__mongometa__.indexes)
+                         [ [ ('test5',pymongo.ASCENDING)],
+                           [ ('test3',pymongo.ASCENDING)]
+                           ] + self.MyDoc.__mongometa__.indexes)
         self.assertEqual(MyGrandChild.__mongometa__.unique_indexes,
-                         [('test6',), ('test4',)] + self.MyDoc.__mongometa__.unique_indexes)
+                         [ [ ('test6',pymongo.ASCENDING) ],
+                           [ ('test4',pymongo.ASCENDING) ]
+                           ] + self.MyDoc.__mongometa__.unique_indexes)
 
     def test_index_inheritance_neither(self):
         class NoIndexDoc(Document):
@@ -277,9 +282,9 @@ class TestIndexes(TestCase):
                 ]
 
         self.assertEqual(AddSome.__mongometa__.indexes,
-                         [('foo',)])
+                        [  [('foo',pymongo.ASCENDING)] ])
         self.assertEqual(AddSome.__mongometa__.unique_indexes,
-                         [('bar',)])
+                         [ [('bar',pymongo.ASCENDING)] ])
 
 class TestCursor(TestCase):
 
