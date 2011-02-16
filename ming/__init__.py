@@ -24,6 +24,7 @@ def configure(**kwargs):
         # pymongo
         network_timeout=validators.Number(if_missing=None, if_empty=None)
         tz_aware=validators.Bool(if_missing=False)
+        slave_okay=validators.Bool(if_missing=False)
 
     config = variable_decode(kwargs)
     datastores = {}
