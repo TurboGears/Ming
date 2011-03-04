@@ -13,11 +13,15 @@ from . import exc
 log = logging.getLogger(__name__)
 
 def annotate_doc_failure(func):
+    '''Decorator to wrap a session operation so that any pymongo errors raised
+    will note the document that caused the failure
+    '''
     def wrapper(self, doc, *args, **kwargs):
         try:
             return func(self, doc, *args, **kwargs)
         except pymongo.errors.OperationFailure, opf:
             opf.args = opf.args + (('doc:  ' + str(doc)),)
+            raise
     return update_wrapper(wrapper, func)
 
 class Session(object):
