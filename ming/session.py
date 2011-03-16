@@ -96,7 +96,7 @@ class Session(object):
     def find_and_modify(self, cls, query=None, sort=None, new=False, **kw):
         if query is None: query = {}
         if sort is None: sort = {}
-        options = dict(kw, query=query, sort=sort)
+        options = dict(kw, query=query, sort=sort, new=new)
         db = self._impl(cls).database
         cmd = SON(
                 [('findandmodify', cls.__mongometa__.name)]

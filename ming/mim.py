@@ -70,10 +70,10 @@ class Database(database.Database):
             return dict(md5='42') # completely bogus value; will it work?
         elif 'findandmodify' in command:
             coll = self._collections[command['findandmodify']]
-            before = coll.find_one(command['query'])
+            before = coll.find_one(command['query'], sort=command.get('sort'))
             coll.update(command['query'], command['update'])
             if command.get('new', False):
-                return dict(value=coll.find_one(command['query']))
+                return dict(value=coll.find_one(dict(_id=before['_id'])))
             return dict(value=before)
         else:
             raise NotImplementedError, repr(command.items()[0])
@@ -120,17 +120,26 @@ class Collection(collection.Collection):
     def __getattr__(self, name):
         return self._database['%s.%s' % (self.name, name)]
 
-    def _find(self, spec):
-        for doc in self._data.itervalues():
-            if match(spec, doc): yield doc
+    def _find(self, spec, sort=None):
+        def _gen():
+            for doc in self._data.itervalues():
+                if match(spec, doc): yield doc
+        result = _gen()
+        if sort:
+            for key, direction in reversed(sort.items()):
+                result = sorted(
+                    result,
+                    key=lambda x:x[key],
+                    reverse=(direction==-1))
+        return result
 
-    def find(self, spec=None, fields=None):
+    def find(self, spec=None, fields=None, **kwargs):
         if spec is None:
             spec = {}
-        return Cursor(lambda:self._find(spec), fields=fields)
+        return Cursor(lambda:self._find(spec, **kwargs), fields=fields)
 
-    def find_one(self, spec):
-        for x in self.find(spec):
+    def find_one(self, spec, **kwargs):
+        for x in self.find(spec, **kwargs):
             return x
 
     def insert(self, doc_or_docs, safe=False):
