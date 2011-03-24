@@ -126,7 +126,8 @@ class Collection(collection.Collection):
                 if match(spec, doc): yield doc
         result = _gen()
         if sort:
-            for key, direction in reversed(sort.items()):
+            if isinstance(sort, dict): sort = sort.items()
+            for key, direction in reversed(sort):
                 result = sorted(
                     result,
                     key=lambda x:x[key],

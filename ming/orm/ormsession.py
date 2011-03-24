@@ -99,11 +99,12 @@ class ORMSession(object):
         return result
 
     def find(self, cls, *args, **kwargs):
+        refresh = kwargs.pop('refresh', False)
         if self.autoflush:
             self.flush()
         m = mapper(cls)
         ming_cursor = self.impl.find(m.doc_cls, *args, **kwargs)
-        return ORMCursor(self, cls, ming_cursor)
+        return ORMCursor(self, cls, ming_cursor, refresh=refresh)
 
     def find_and_modify(self, cls, *args, **kwargs):
         if self.autoflush:
