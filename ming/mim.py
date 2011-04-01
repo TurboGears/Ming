@@ -8,7 +8,7 @@ from copy import deepcopy
 from ming.utils import LazyProperty
 
 import bson
-from pymongo.errors import OperationFailure, DuplicateKeyError
+from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo import database, collection, ASCENDING
 
 class Connection(object):
@@ -71,6 +71,8 @@ class Database(database.Database):
         elif 'findandmodify' in command:
             coll = self._collections[command['findandmodify']]
             before = coll.find_one(command['query'], sort=command.get('sort'))
+            if before is None:
+                raise OperationFailure, 'No matching object found'
             coll.update(command['query'], command['update'])
             if command.get('new', False):
                 return dict(value=coll.find_one(dict(_id=before['_id'])))
@@ -245,9 +247,11 @@ class Cursor(object):
         self._skip = skip
         self._limit = limit
         self._fields = fields
+        self._safe_to_chain = True
 
     @LazyProperty
     def iterator(self):
+        self._safe_to_chain = False
         result = self._iterator_gen()
         if self._sort is not None:
             result = sorted(result, cmp=cursor_comparator(self._sort))
@@ -271,6 +275,8 @@ class Cursor(object):
         return value
 
     def sort(self, key_or_list, direction=ASCENDING):
+        if not self._safe_to_chain:
+            raise InvalidOperation('cannot set options after executing query')
         if not isinstance(key_or_list, list):
             key_or_list = [ (key_or_list, direction) ]
         keys = []
@@ -289,6 +295,8 @@ class Cursor(object):
         return list(self._iterator_gen())
 
     def skip(self, skip):
+        if not self._safe_to_chain:
+            raise InvalidOperation('cannot set options after executing query')
         return Cursor(
             self._iterator_gen,
             sort=self._sort,
@@ -296,6 +304,8 @@ class Cursor(object):
             limit=self._limit)
 
     def limit(self, limit):
+        if not self._safe_to_chain:
+            raise InvalidOperation('cannot set options after executing query')
         return Cursor(
             self._iterator_gen,
             sort=self._sort,
