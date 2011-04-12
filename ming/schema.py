@@ -195,6 +195,10 @@ class FancySchemaItem(SchemaItem):
         if if_missing is not NoDefault:
             self.if_missing = if_missing
 
+    def __repr__(self):
+        return '<%s required=%s if_missing=...>' % (
+            self.__class__.__name__, self.required)
+
     def validate(self, value, **kw):
         if value is Missing:
             if self.required:
@@ -216,12 +220,6 @@ class FancySchemaItem(SchemaItem):
             pass
         except:
             pass
-        if hasattr(self, '_fast_validate'):
-            try:
-                return self._fast_validate(value, **kw)
-            except Invalid:
-                # must use 'slow' validation path
-                pass
         return self._validate(value, **kw)
 
     def _validate(self, value, **kw): return value
@@ -249,6 +247,12 @@ class Object(FancySchemaItem):
                            for name, field in fields.iteritems())
         self.polymorphic_on = self.polymorphic_registry = None
         self.managed_class=None
+
+    def __repr__(self):
+        l = [ super(Object, self).__repr__() ]
+        for k,f in self.fields.iteritems():
+            l.append('  %s: %s' % (k, repr(f).replace('\n', '\n    ')))
+        return '\n'.join(l) 
 
     def _get_if_missing(self):
         from . import base
@@ -290,79 +294,46 @@ class Object(FancySchemaItem):
                 d, allow_extra=allow_extra, strip_extra=strip_extra)
         else:
             result = cls.__new__(cls)
-        if not isinstance(d, dict):
-            raise Invalid('%r is not dict-like' % d, d, None)
+        if not isinstance(d, dict): raise Invalid('notdict' % d, d, None)
         error_dict = {}
+        check_extra = True
+        to_set = []
         for name,field in self.fields.iteritems():
             if isinstance(name, basestring):
                 try:
                     value = field.validate(d.get(name, Missing))
-                    if value is not Missing:
-                        result[name] = value
+                    to_set.append((name, value))
                 except Invalid, inv:
                     error_dict[name] = inv
             else:
-                # Validate all items in d against this field
+                # Validate all items in d against this field. No
+                #    need in this case to deal with 'extra' keys
+                check_extra = False
                 allow_extra=True
                 name_validator = SchemaItem.make(name)
                 for name, value in d.iteritems():
                     try:
-                        name = name_validator.validate(name)
-                        value = field.validate(value)
-                        if value is not Missing:
-                            result[name] = value
+                        to_set.append((
+                                name_validator.validate(name),
+                                field.validate(value)))
                     except Invalid, inv:
-                        raise
                         error_dict[name] = inv
-                    
         if error_dict:
             msg = '\n'.join('%s:%s' % t for t in error_dict.iteritems())
             raise Invalid(msg, d, None, error_dict=error_dict)
-        try:
-            extra_keys = set(d.iterkeys()) - set(self.fields.iterkeys())
-        except AttributeError, ae:
-            raise Invalid(str(ae), d, None)
-        if extra_keys and not allow_extra:
-            raise Invalid('Extra keys: %r' % extra_keys, d, None)
-        if extra_keys and not strip_extra:
-            for ek in extra_keys:
-                result[ek] = d[ek]
-        return result
-
-    def _fast_validate(self, d, allow_extra=False, strip_extra=False):
-        '''Make the common case fast - valid, non-polymorphic.  Raise ValueError
-        when fast path cannot complete'''
-        cls = self.managed_class
-        if self.polymorphic_registry: raise Invalid('polymorphic', d, None)
-        if cls is None:
-            from . import base
-            result = base.Object()
-        else:
-            result = cls.__new__(cls)
-        if not isinstance(d, dict): raise Invalid('notdict', d, None)
-        to_set = []
-        for name, field in self.fields.iteritems():
-            if isinstance(name, basestring):
-                to_set.append((
-                        name,
-                        field.validate(d.get(name, Missing))))
-            else:
-                # Validate all items in d against this field
-                allow_extra=True
-                name_validator = SchemaItem.make(name)
-                to_set.extend([
-                    (name_validator.validate(name),
-                     field.validate(value))
-                    for name, value in d.iteritems() ])
         for name, value in to_set:
             if value is Missing: continue
             result[name] = value
-        extra_keys = set(d.iterkeys()) - set(self.fields.iterkeys())
-        if extra_keys and not allow_extra:
-            raise Invalid('extrakeys', d, None)
-        if extra_keys and not strip_extra:
-            for ek in extra_keys:
-                result[ek] = d[ek]
+        if check_extra:
+            try:
+                extra_keys = set(d.iterkeys()) - set(self.fields.iterkeys())
+            except AttributeError, ae:
+                raise Invalid(str(ae), d, None)
+            if extra_keys and not allow_extra:
+                raise Invalid('Extra keys: %r' % extra_keys, d, None)
+            if extra_keys and not strip_extra:
+                for ek in extra_keys:
+                    result[ek] = d[ek]
         return result
 
     def extend(self, other):
@@ -385,6 +356,11 @@ class Array(FancySchemaItem):
         if_missing = kw.pop('if_missing', [])
         FancySchemaItem.__init__(self, required, if_missing)
         self._field_type = field_type
+
+    def __repr__(self):
+        l = [ super(Array, self).__repr__() ]
+        l.append('  ' + repr(self.field_type).replace('\n', '\n    '))
+        return '\n'.join(l) 
 
     @LazyProperty
     def field_type(self):
