@@ -20,7 +20,12 @@ def session(v):
 
 def lookup_class(name):
     from .mapped_class import MappedClass
-    return MappedClass._registry[name]
+    try:
+        return MappedClass._registry[name]
+    except KeyError:
+        for n, cls in MappedClass._registry.iteritems():
+            if n.endswith('.' + name): return cls
+        raise
 
 class Decoration(object):
 

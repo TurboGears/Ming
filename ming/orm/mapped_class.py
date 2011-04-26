@@ -82,7 +82,7 @@ class MappedClassMeta(type):
     def __init__(cls, name, bases, dct):
         cls.__ming__ = EmptyClass()
         cls.__ming__.mapper = Mapper(cls)
-        cls._registry[cls.__name__] = cls
+        cls._registry['%s.%s' % (cls.__module__, cls.__name__)] = cls
 
 class QueryDescriptor(object):
 
