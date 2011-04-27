@@ -105,6 +105,10 @@ class TestSchemaItem(TestCase):
         si = S.SchemaItem.make(dict(version=4))
         self.assertEqual(si.validate(dict(version=4)), dict(version=4))
         self.assertRaises(S.Invalid, si.validate, dict(version=3))
+
+    def test_required_none(self):
+        si = S.SchemaItem.make(int, required=True)
+        self.assertRaises(S.Invalid, si.validate, None)
     
     def test_missing(self):
         self.assertEqual(repr(S.Missing), '<Missing>')

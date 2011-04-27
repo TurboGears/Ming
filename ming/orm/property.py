@@ -1,5 +1,6 @@
-from ming.base import Field
+from ming.base import Field, Object
 from ming.utils import LazyProperty
+from ming.schema import SchemaItem
 from .base import session, state, mapper, lookup_class
 from .icollection import InstrumentedList
 
@@ -60,6 +61,9 @@ class FieldProperty(ORMProperty):
             return getattr(st.document, self.name)
 
     def __set__(self, instance, value):
+        si = SchemaItem.make(self.field_type, *self.args, **self.kwargs)
+        si.validate(value)
+
         st = state(instance)
         st.soil()
         st.document[self.name] = value

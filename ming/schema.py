@@ -200,6 +200,8 @@ class FancySchemaItem(SchemaItem):
             self.__class__.__name__, self.required)
 
     def validate(self, value, **kw):
+        if value is None and self.required:
+            value = Missing
         if value is Missing:
             if self.required:
                 raise Invalid('Missing field', value, None)

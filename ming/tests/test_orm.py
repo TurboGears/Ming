@@ -126,6 +126,15 @@ class TestBasicMapping(TestCase):
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 0)
 
+    def test_validate_upon_set(self):
+        doc = self.Basic(a=1)
+        try:
+            doc.a = 'foobar'
+        except S.Invalid:
+            pass
+        else:
+            raise AssertionError('Invalid exception expected')
+
     def test_query(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.session.flush()
