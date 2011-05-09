@@ -172,7 +172,7 @@ class Manager(object):
             multi=multi,
             **kw)
 
-    def save(self, *args):
+    def save(self, *args, **kwargs):
         """
         Saves an object::
 
@@ -182,7 +182,7 @@ class Manager(object):
             # with parameters, only sets specified fields
             cp.m.save('foo')
         """
-        return self.session.save(self.instance, *args)
+        return self.session.save(self.instance, *args, **kwargs)
 
     def insert(self):
         """
@@ -350,9 +350,11 @@ class Document(Object):
         schema=None
         indexes=[]
 
-    def __init__(self, data):
-        session = self.__mongometa__.session
-        data = Object.from_bson(data)
+    def __init__(self, data=None, skip_from_bson=False):
+        if data is None:
+            data = {}
+        elif not skip_from_bson:
+            data = Object.from_bson(data)
         dict.update(self, data)
 
     @classmethod

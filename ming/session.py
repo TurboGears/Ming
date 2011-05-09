@@ -57,7 +57,13 @@ class Session(object):
     def find(self, cls, *args, **kwargs):
         allow_extra=kwargs.pop('allow_extra', True)
         strip_extra=kwargs.pop('strip_extra', True)
-        cursor = self._impl(cls).find(*args, **kwargs)
+        validate=kwargs.pop('validate', True)
+        collection = self._impl(cls)
+        if not validate:
+            return (
+                cls(o, skip_from_bson=True)
+                for o in collection.find(as_class=Object, *args, **kwargs))
+        cursor = collection.find(*args, **kwargs)
         return Cursor(cls, cursor,
                       allow_extra=allow_extra,
                       strip_extra=strip_extra)
@@ -105,7 +111,7 @@ class Session(object):
         return cls.make(bson['value'])
 
     @annotate_doc_failure
-    def save(self, doc, *args):
+    def save(self, doc, *args, **kwargs):
         hook = getattr(doc.__mongometa__, 'before_save', None)
         if hook: hook.im_func(doc)
         doc.make_safe()
@@ -117,9 +123,9 @@ class Session(object):
         if args:
             values = dict((arg, data[arg]) for arg in args)
             result = self._impl(doc).update(
-                dict(_id=doc._id), {'$set':values}, safe=True)
+                dict(_id=doc._id), {'$set':values}, safe=kwargs.get('safe', True))
         else:
-            result = self._impl(doc).save(data, safe=True)
+            result = self._impl(doc).save(data, safe=kwargs.get('safe', True))
         if result and '_id' not in doc:
             doc._id = result
 
