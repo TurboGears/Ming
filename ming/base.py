@@ -184,13 +184,13 @@ class Manager(object):
         """
         return self.session.save(self.instance, *args, **kwargs)
 
-    def insert(self):
+    def insert(self, **kwargs):
         """
         Inserts an object::
 
             model.CustomPage(...).m.insert()
         """
-        return self.session.insert(self.instance)
+        return self.session.insert(self.instance, **kwargs)
 
     def upsert(self, spec_fields):
         """

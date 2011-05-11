@@ -130,7 +130,7 @@ class Session(object):
             doc._id = result
 
     @annotate_doc_failure
-    def insert(self, doc):
+    def insert(self, doc, **kwargs):
         hook = getattr(doc.__mongometa__, 'before_save', None)
         if hook: hook.im_func(doc)
         doc.make_safe()
@@ -139,7 +139,7 @@ class Session(object):
         else:
             data = dict(doc)
         doc.update(data)
-        bson = self._impl(doc).insert(data, safe=True)
+        bson = self._impl(doc).insert(data, safe=kwargs.get('safe', True))
         if bson and '_id' not in doc:
             doc._id = bson
 
