@@ -232,7 +232,7 @@ class Anything(FancySchemaItem):
         if isinstance(value, dict) and not isinstance(value, base.Object):
             return base.Object(value)
         return value
-    
+
 class Object(FancySchemaItem):
     '''Used for dict-like validation.  Also ensures that the incoming object does
     not have any extra keys AND performs polymorphic validation (which means that
@@ -245,8 +245,6 @@ class Object(FancySchemaItem):
         FancySchemaItem.__init__(self, required, if_missing)
         self.fields = dict((name, SchemaItem.make(field))
                            for name, field in fields.iteritems())
-        self.polymorphic_on = self.polymorphic_registry = None
-        self.managed_class=None
 
     def __repr__(self):
         l = [ super(Object, self).__repr__() ]
@@ -266,34 +264,9 @@ class Object(FancySchemaItem):
         self._if_missing = value
     if_missing = property(_get_if_missing, _set_if_missing)
 
-    def validate(self, value, **kw):
-        try:
-            return super(Object, self).validate(value, **kw)
-        except Invalid, inv:
-            if self.managed_class:
-                inv.msg = '%s:\n    %s' % (
-                    self.managed_class,
-                    inv.msg.replace('\n', '\n    '))
-            raise
-
     def _validate(self, d, allow_extra=False, strip_extra=False):
         from . import base
-        cls = self.managed_class
-        if self.polymorphic_registry:
-            disc = d.get(self.polymorphic_on, Missing)
-            if disc is Missing:
-                mm = self.managed_class.__mongometa__
-                disc = getattr(mm, 'polymorphic_identity', Missing)
-            if disc is not Missing:
-                cls = self.polymorphic_registry[disc]
-                d[self.polymorphic_on] = disc
-        if cls is None:
-            result = base.Object()
-        elif cls != self.managed_class:
-            return cls.__mongometa__.schema.validate(
-                d, allow_extra=allow_extra, strip_extra=strip_extra)
-        else:
-            result = cls.__new__(cls)
+        result = base.Object()
         if not isinstance(d, dict): raise Invalid('notdict' % d, d, None)
         error_dict = {}
         check_extra = True
@@ -339,6 +312,43 @@ class Object(FancySchemaItem):
     def extend(self, other):
         if other is None: return
         self.fields.update(other.fields)
+
+class Document(Object):
+    '''Used for dict-like validation, adding polymorphic validation (which means that
+    ParentClass._validate(...) sometimes will return an instance of ChildClass).
+    '''
+
+    def __init__(self, fields=None, required=False, if_missing=NoDefault):
+        super(Document, self).__init__(fields, required, if_missing)
+        self.polymorphic_on = self.polymorphic_registry = None
+        self.managed_class=None
+
+    def validate(self, value, **kw):
+        try:
+            return super(Document, self).validate(value, **kw)
+        except Invalid, inv:
+            if self.managed_class:
+                inv.msg = '%s:\n    %s' % (
+                    self.managed_class,
+                    inv.msg.replace('\n', '\n    '))
+            raise
+
+    def _validate(self, d, allow_extra=False, strip_extra=False):
+        cls = self.managed_class
+        if self.polymorphic_registry:
+            disc = d.get(self.polymorphic_on, Missing)
+            if disc is Missing:
+                mm = self.managed_class.__mongometa__
+                disc = getattr(mm, 'polymorphic_identity', Missing)
+            if disc is not Missing:
+                cls = self.polymorphic_registry[disc]
+                d[self.polymorphic_on] = disc
+        if cls is None or cls == self.managed_class:
+            result = cls.__new__(cls)
+            result.update(super(Document, self)._validate(d, allow_extra, strip_extra))
+            return result
+        return cls.__mongometa__.schema.validate(
+            d, allow_extra=allow_extra, strip_extra=strip_extra)
 
     def set_polymorphic(self, field, registry, identity):
         self.polymorphic_on = field

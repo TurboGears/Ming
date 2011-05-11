@@ -270,7 +270,7 @@ class DocumentMeta(type):
             mm.polymorphic_on = None
             mm.polymorphic_registry = None
 
-        my_schema = schema.Object()
+        my_schema = schema.Document()
         if not hasattr(mm, 'indexes'):
             mm.indexes = []
         if not hasattr(mm, 'unique_indexes'):
