@@ -4,6 +4,10 @@ from ming.utils import EmptyClass, wordwrap, all_class_properties, encode_keys
 from .base import Decoration, mapper, session, state
 from .property import ORMProperty
 
+def mapper(v, doc_cls=None):
+    if doc_cls is None:
+        return cls.__ming__.mapper
+
 class Mapper(object):
 
     def __init__(self, mapped_class):
@@ -167,9 +171,10 @@ class Query(object):
 def make_document_class(mapped_class, dct):
     name = '_ming_document_' + mapped_class.__name__
     bases = mapped_class.__bases__
-    doc_bases = tuple( mapper(base).compile().doc_cls
-                       for base in bases
-                       if hasattr(base, '__ming__') )
+    doc_bases = tuple(
+        mapper(base).compile().doc_cls
+        for base in bases
+        if hasattr(base, '__ming__') )
     if not doc_bases:
         doc_bases = (Document,)
     doc_dct = dict(

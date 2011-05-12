@@ -8,7 +8,9 @@ import mock
 from bson import ObjectId
 import pymongo
 
-from ming.base import Object, Document, Field, Cursor
+from ming.base import Object, Cursor
+from ming.declarative import Document
+from ming.metadata import Field
 from ming import schema as S
 from ming.session import Session
 

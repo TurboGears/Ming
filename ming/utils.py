@@ -85,10 +85,10 @@ def indent(s, level=2):
     prefix = ' ' * level
     return s.replace('\n', '\n' + prefix)
 
-def fixup_index(index):
+def fixup_index(index, direction=pymongo.ASCENDING):
     '''Ensure that the index is of the form [ (key1, 1), (key2, -1)...]'''
     if isinstance(index, basestring):
-        return [ (index, pymongo.ASCENDING) ]
+        return [ (index, direction) ]
     result = []
     for key in index:
         if (isinstance(key, tuple) 
@@ -96,8 +96,8 @@ def fixup_index(index):
             and key[1] in (pymongo.ASCENDING, pymongo.DESCENDING)):
             result.append(key)
         elif isinstance(key, basestring):
-            result.append((key, pymongo.ASCENDING))
+            result.append((key, direction))
         else:
             for k in key:
-                result.append((k, pymongo.ASCENDING))
+                result.append((k, direction))
     return result

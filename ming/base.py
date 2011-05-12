@@ -54,12 +54,17 @@ class Field(object):
     so see :meth:`SchemaItem.make() <ming.schema.SchemaItem.make>` and the various SchemaItem classes
     for argument documentation.'''
 
-    def __init__(self, field_type, *args, **kwargs):
-        self.type = field_type
-        self.args = args
+    def __init__(self, *args, **kwargs):
+        if len(args) == 1:
+            self.name = None
+            self.type = args[0]
+        elif len(args) == 2:
+            self.name = args[0]
+            self.type = args[1]
+        else:
+            raise TypeError, 'Field() takes 1 or 2 argments, not %s' % len(args)
         self.kwargs = kwargs
-        self.name = None
-
+        
     def __get__(self, instance, cls):
         try:
             return instance[self.name]

@@ -199,20 +199,24 @@ class FancySchemaItem(SchemaItem):
         return '<%s required=%s if_missing=...>' % (
             self.__class__.__name__, self.required)
 
+    @LazyProperty
+    def _callable_if_missing(self):
+        return isinstance(
+            self.if_missing, (
+                types.FunctionType,
+                types.MethodType,
+                types.BuiltinFunctionType))
+    
     def validate(self, value, **kw):
         if value is Missing:
             if self.required:
                 raise Invalid('Missing field', value, None)
+            elif self.if_missing is Missing:
+                return self.if_missing
+            elif self._callable_if_missing:
+                return self.if_missing()
             else:
-                if self.if_missing is Missing:
-                    return self.if_missing
-                elif isinstance(self.if_missing, (
-                        types.FunctionType,
-                        types.MethodType,
-                        types.BuiltinFunctionType)):
-                    return self.if_missing()
-                else:
-                    return deepcopy(self.if_missing) # handle mutable defaults
+                return deepcopy(self.if_missing) # handle mutable defaults
         try:
             if value == self.if_missing:
                 return value
@@ -240,7 +244,6 @@ class Object(FancySchemaItem):
     '''
 
     def __init__(self, fields=None, required=False, if_missing=NoDefault):
-        self._if_missing = NoDefault
         if fields is None: fields = {}
         FancySchemaItem.__init__(self, required, if_missing)
         self.fields = dict((name, SchemaItem.make(field))
@@ -252,17 +255,13 @@ class Object(FancySchemaItem):
             l.append('  %s: %s' % (k, repr(f).replace('\n', '\n    ')))
         return '\n'.join(l) 
 
-    def _get_if_missing(self):
+    @LazyProperty
+    def if_missing(self):
         from . import base
-        if self._if_missing is NoDefault:
-            self._if_missing = base.Object(
-                (k, v.validate(Missing))
-                for k,v in self.fields.iteritems()
-                if isinstance(k, basestring))
-        return self._if_missing
-    def _set_if_missing(self, value):
-        self._if_missing = value
-    if_missing = property(_get_if_missing, _set_if_missing)
+        return base.Object(
+            (k, v.validate(Missing))
+            for k,v in self.fields.iteritems()
+            if isinstance(k, basestring))
 
     def _validate(self, d, allow_extra=False, strip_extra=False):
         from . import base
@@ -338,7 +337,7 @@ class Document(Object):
         if self.polymorphic_registry:
             disc = d.get(self.polymorphic_on, Missing)
             if disc is Missing:
-                mm = self.managed_class.__mongometa__
+                mm = self.managed_class.m
                 disc = getattr(mm, 'polymorphic_identity', Missing)
             if disc is not Missing:
                 cls = self.polymorphic_registry[disc]
@@ -347,7 +346,7 @@ class Document(Object):
             result = cls.__new__(cls)
             result.update(super(Document, self)._validate(d, allow_extra, strip_extra))
             return result
-        return cls.__mongometa__.schema.validate(
+        return cls.m.make(
             d, allow_extra=allow_extra, strip_extra=strip_extra)
 
     def set_polymorphic(self, field, registry, identity):

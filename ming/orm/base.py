@@ -4,12 +4,16 @@ def state(obj):
     '''The state of a mapped object'''
     return obj.__ming__.state
 
-def mapper(v):
-    '''The mapper object for either a class or an instance'''
+def mapper(v, doc_cls=None):
+    '''Map a ORM class onto its document class'''
     if isinstance(v, type):
-        return v.__ming__.mapper
+        cls = v
     else:
+        cls = type(v)
         return mapper(type(v))
+    if doc_cls is not None:
+        pass
+    return cls.__ming__.mapper
 
 def session(v):
     '''The ORMSession object managing either a class or an instance'''

@@ -41,7 +41,7 @@ class Session(object):
 
     def _impl(self, cls):
         try:
-            return self.db[cls.__mongometa__.name]
+            return self.db[cls.m.name]
         except TypeError:
             raise exc.MongoGone, 'MongoDB is not connected'
 
@@ -87,12 +87,6 @@ class Session(object):
         index_fields = fixup_index(fields)
         return self._impl(cls).ensure_index(index_fields, **kwargs), fields
 
-    def ensure_indexes(self, cls):
-        for idx in getattr(cls.__mongometa__, 'indexes', []):
-            self.ensure_index(cls, idx)
-        for idx in getattr(cls.__mongometa__, 'unique_indexes', []):
-            self.ensure_index(cls, idx, unique=True)
-
     def group(self, cls, *args, **kwargs):
         return self._impl(cls).group(*args, **kwargs)
 
@@ -105,21 +99,25 @@ class Session(object):
         options = dict(kw, query=query, sort=sort, new=new)
         db = self._impl(cls).database
         cmd = SON(
-                [('findandmodify', cls.__mongometa__.name)]
+                [('findandmodify', cls.m.name)]
                 + options.items())
         bson = db.command(cmd)
         return cls.make(bson['value'])
 
+    def _prep_save(self, doc, validate):
+        hook = doc.m.before_save
+        if hook: hook(doc)
+        if validate:
+            doc.make_safe()
+            data = doc.m.schema.validate(doc)
+            doc.update(data)
+        else:
+            data =dict(doc)
+        return data
+
     @annotate_doc_failure
     def save(self, doc, *args, **kwargs):
-        hook = getattr(doc.__mongometa__, 'before_save', None)
-        if hook: hook.im_func(doc)
-        doc.make_safe()
-        if doc.__mongometa__.schema is not None:
-            data = doc.__mongometa__.schema.validate(doc)
-        else:
-            data = dict(doc)
-        doc.update(data)
+        data = self._prep_save(doc, kwargs.pop('validate', True))
         if args:
             values = dict((arg, data[arg]) for arg in args)
             result = self._impl(doc).update(
@@ -131,28 +129,14 @@ class Session(object):
 
     @annotate_doc_failure
     def insert(self, doc, **kwargs):
-        hook = getattr(doc.__mongometa__, 'before_save', None)
-        if hook: hook.im_func(doc)
-        doc.make_safe()
-        if doc.__mongometa__.schema is not None:
-            data = doc.__mongometa__.schema.validate(doc)
-        else:
-            data = dict(doc)
-        doc.update(data)
+        data = self._prep_save(doc, kwargs.pop('validate', True))
         bson = self._impl(doc).insert(data, safe=kwargs.get('safe', True))
         if bson and '_id' not in doc:
             doc._id = bson
 
     @annotate_doc_failure
-    def upsert(self, doc, spec_fields):
-        hook = getattr(doc.__mongometa__, 'before_save', None)
-        if hook: hook.im_func(doc)
-        doc.make_safe()
-        if doc.__mongometa__.schema is not None:
-            data = doc.__mongometa__.schema.validate(doc)
-        else:
-            data = dict(doc)
-        doc.update(data)
+    def upsert(self, doc, spec_fields, **kwargs):
+        self._prep_save(doc, kwargs.pop('validate', True))
         if type(spec_fields) != list:
             spec_fields = [spec_fields]
         self._impl(doc).update(dict((k,doc[k]) for k in spec_fields),
