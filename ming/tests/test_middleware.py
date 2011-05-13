@@ -14,7 +14,8 @@ from ming.orm.middleware import MingMiddleware
 class TestRelation(TestCase):
 
     def setUp(self):
-        self.datastore = DS.DataStore('mongodb://localhost:27017/', database='test_db')
+        self.datastore = DS.DataStore(
+            'mim:///', database='test_db')
         self.session = ThreadLocalORMSession(Session(bind=self.datastore))
         class Parent(MappedClass):
             class __mongometa__:
@@ -23,10 +24,12 @@ class TestRelation(TestCase):
             _id = FieldProperty(S.ObjectId)
         MappedClass.compile_all()
         self.Parent = Parent
-        self.session.impl.remove(self.Parent, {})
         self.create_app =  TestApp(MingMiddleware(self._wsgi_create_object))
         self.remove_app =  TestApp(MingMiddleware(self._wsgi_remove_object))
         self.remove_exc =  TestApp(MingMiddleware(self._wsgi_remove_object_exc))
+
+    def tearDown(self):
+        self.datastore.conn.drop_all()
 
     def test_create_flush(self):
         self.create_app.get('/')

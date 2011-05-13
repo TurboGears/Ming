@@ -8,18 +8,29 @@ from .property import FieldProperty
 
 def mapper(cls, collection=None, session=None, **kwargs):
     if collection is None and session is None:
-        return cls.query.mapper
+        if isinstance(cls, type):
+            return Mapper.by_class(cls)
+        elif isinstance(cls, basestring):
+            return Mapper.by_classname(cls)
+        else:
+            return Mapper._mapper_by_class[cls.__class__]
     return Mapper(cls, collection, session, **kwargs)
 
 class Mapper(object):
     _mapper_by_collection = {}
+    _mapper_by_class = {}
+    _mapper_by_classname = {}
 
-    def __init__(self, cls, collection, session, **kwargs):
-        self.cls = cls
+
+    def __init__(self, mapped_class, collection, session, **kwargs):
+        self.mapped_class = mapped_class
         self.collection = collection
         self.session = session
         self.properties = []
         self._mapper_by_collection[collection] = self
+        self._mapper_by_class[mapped_class] = self
+        classname = '%s.%s' % (mapped_class.__module__, mapped_class.__name__)
+        self._mapper_by_classname[classname] = self
         properties = kwargs.pop('properties', {})
         include_properties = kwargs.pop('include_properties', None)
         exclude_properties = kwargs.pop('exclude_properties', [])
@@ -29,7 +40,7 @@ class Mapper(object):
 
     def __repr__(self):
         return '<Mapper %s:%s>' % (
-            self.cls.__name__, self.collection.m.collection_name)
+            self.mapped_class.__name__, self.collection.m.collection_name)
 
     def insert(self, obj, state, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
@@ -53,15 +64,28 @@ class Mapper(object):
 
     def create(self, doc):
         doc = self.collection.make(doc)
-        mapper = self.mapper_for(type(doc))
+        mapper = self.by_collection(type(doc))
         return mapper._from_doc(doc)
 
     @classmethod
-    def mapper_for(cls, collection_class):
+    def by_collection(cls, collection_class):
         return cls._mapper_by_collection[collection_class]
 
+    @classmethod
+    def by_class(cls, mapped_class):
+        return cls._mapper_by_class[mapped_class]
+
+    @classmethod
+    def by_classname(cls, name):
+        try:
+            return cls._mapper_by_classname[name]
+        except KeyError:
+            for n, mapped_class in cls._mapper_by_classname.iteritems():
+                if n.endswith('.' + name): return mapped_class
+            raise
+
     def _from_doc(self, doc):
-        obj = self.cls.__new__(self.cls)
+        obj = self.mapped_class.__new__(self.mapped_class)
         obj.__ming__ = _ORMDecoration(self, obj)
         st = state(obj)
         st.document = doc
@@ -73,7 +97,7 @@ class Mapper(object):
         self.collection.m.update_partial(*args, **kwargs)
 
     def _instrument_class(self, properties, include_properties, exclude_properties):
-        self.cls.query = _QueryDescriptor(self)
+        self.mapped_class.query = _QueryDescriptor(self)
         base_properties = dict((fld.name, fld) for fld in self.collection.m.fields)
         properties = dict(base_properties, **properties)
         if include_properties:
@@ -85,23 +109,14 @@ class Mapper(object):
             if isinstance(v, Field):
                 v = FieldProperty(v)
             v.mapper = self
-            setattr(self.cls, k, v)
+            setattr(self.mapped_class, k, v)
             self.properties.append(v)
-        orig_init = self.cls.__init__
-        if orig_init is object.__init__:
-            def orig_init(self_, **kwargs):
-                for k,v in kwargs.iteritems():
-                    setattr(self_, k, v)
-        def __init__(self_, *args, **kwargs):
-            self_.__ming__ = _ORMDecoration(self, self_)
-            self.session.save(self_)
-            orig_init(self_, *args, **kwargs)
-        self.cls.__init__ = __init__
+        _InitDecorator.decorate(self.mapped_class, self)
         inst = self._instrumentation()
         for k in ('__repr__', '__getitem__', '__setitem__', '__contains__',
                   'delete'):
-            if getattr(self.cls, k, ()) == getattr(object, k, ()):
-                setattr(self.cls, k, getattr(inst, k).im_func)
+            if getattr(self.mapped_class, k, ()) == getattr(object, k, ()):
+                setattr(self.mapped_class, k, getattr(inst, k).im_func)
 
     def _instrumentation(self):
         class _Instrumentation(object):
@@ -112,7 +127,7 @@ class Mapper(object):
                     if prop.include_in_repr ]
                 return wordwrap(
                     '<%s %s>' % 
-                    (self.cls.__name__, ' '.join(properties)),
+                    (self_.__class__.__name__, ' '.join(properties)),
                     60,
                     indent_subsequent=2)
             def delete(self_):
@@ -155,12 +170,12 @@ class _ClassQuery(object):
     def __init__(self, mapper):
         self.mapper = mapper
         self.session = self.mapper.session
-        self.cls = self.mapper.cls
+        self.mapped_class = self.mapper.mapped_class
 
         def _proxy(name):
             def inner(*args, **kwargs):
                 method = getattr(self.session, name)
-                return method(self.cls, *args, **kwargs)
+                return method(self.mapped_class, *args, **kwargs)
             inner.__name__ = name
             return inner
 
@@ -183,7 +198,7 @@ class _InstQuery(object):
         self.classquery = classquery
         self.mapper = classquery.mapper
         self.session = classquery.session
-        self.cls = classquery.cls
+        self.mapped_class = classquery.mapped_class
         self.instance = instance
 
         def _proxy(name):
@@ -214,3 +229,30 @@ class _DocumentTracker(object):
     removed_item = soil
     cleared = soil
 
+class _InitDecorator(object):
+
+    def __init__(self, mapper, func):
+        self.mapper = mapper
+        self.func = func
+
+    def __get__(self, self_, cls=None):
+        if self_ is None: return self
+        def __init__(*args, **kwargs):
+            self_.__ming__ = _ORMDecoration(self.mapper, self_)
+            self.mapper.session.save(self_)
+            self.func(self_, *args, **kwargs)
+        return __init__
+
+    @classmethod
+    def decorate(cls, mapped_class, mapper):
+        old_init = mapped_class.__init__
+        if isinstance(old_init, cls):
+            mapped_class.__init__ = cls(mapper, old_init.func)
+        elif old_init is object.__init__:
+            mapped_class.__init__ = cls(mapper, _basic_init)
+        else:
+            mapped_class.__init__ = cls(mapper, old_init)
+
+def _basic_init(self_, **kwargs):
+    for k,v in kwargs.iteritems():
+        setattr(self_, k, v)

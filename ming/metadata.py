@@ -50,7 +50,7 @@ class Index(object):
 def collection(*args, **kwargs):
     if len(args) < 1:
         raise TypeError, 'collection() takes at least one argument'
-    if isinstance(args[0], basestring):
+    if isinstance(args[0], (basestring, type(None))):
         if len(args) < 2:
             raise TypeError, 'collection(name, session) takes at least two arguments'
         collection_name = args[0]
@@ -62,13 +62,15 @@ def collection(*args, **kwargs):
             bases = (_Document,)
         args = args[2:]
     elif isinstance(args[0], type) and issubclass(args[0], _Document):
-        collection_name = args[0].m.collection_name
-        session = args[0].m.session
+        collection_name =  kwargs.pop(
+            'override_name', args[0].m.collection_name)
+        session =  kwargs.pop(
+            'override_session', args[0].m.session)
         bases = (args[0],)
         args = args[1:]
     else:
         raise TypeError, (
-            'collection(name, metadata, ...) and collection(base_class) are the'
+            'collection(name, session, ...) and collection(base_class) are the'
             ' only valid signatures')
     fields, indexes = _process_collection_args(*args)
     dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
@@ -122,7 +124,7 @@ class _ClassManager(object):
         self.cls = cls
         self.collection_name = collection_name
         self.session = session
-        self.fields = fields
+        self.field_index = dict((f.name, f) for f in fields)
         self._indexes = indexes
 
         if polymorphic_on and polymorphic_registry is None:
@@ -159,6 +161,10 @@ class _ClassManager(object):
             raise TypeError, (
                 'Multiple inheritance of document models is unsupported')
         else: return None
+
+    @property
+    def fields(self):
+        return self.field_index.values()
 
     @property
     def polymorphic_registry(self):

@@ -1,7 +1,7 @@
 from ming.metadata import Field
 from ming.utils import LazyProperty
 from ming import schema as S
-from .base import session, state, lookup_class
+from .base import session, state
 from .icollection import InstrumentedList, instrument
 
 class ORMError(Exception): pass
@@ -22,7 +22,7 @@ class ORMProperty(object):
         raise TypeError, '%r is a read-only property on %r' % (
             self.name, self.cls)
 
-    def compile(self):
+    def compile(self, mapper):
         pass
 
     def __repr__(self):
@@ -38,7 +38,7 @@ class FieldProperty(ORMProperty):
             if args or kwargs:
                 raise TypeError, 'Unexpected args: %r, %r' % (args, kwargs)
         else:
-            self.field = field_type(*args, **kwargs)
+            self.field = Field(field_type, *args, **kwargs)
         self.name = self.field.name
         if self.name == '_id':
             self.__get__ = self._get_id
@@ -89,11 +89,12 @@ class ForeignIdProperty(ORMProperty):
 
     @LazyProperty
     def related(self):
-        return lookup_class(self._related_classname)
+        from .mapper import mapper
+        return mapper(self._related_classname).mapped_class
 
     @LazyProperty
     def field(self):
-        return self.related._id.field
+        return Field(self.name, self.related._id.field.type)
 
     def repr(self, doc):
         try:
@@ -126,7 +127,8 @@ class RelationProperty(ORMProperty):
 
     @LazyProperty
     def related(self):
-        return lookup_class(self._related_classname)
+        from .mapper import mapper
+        return mapper(self._related_classname).mapped_class
 
     @LazyProperty
     def join(self):

@@ -20,17 +20,6 @@ def lookup_class(name):
             if n.endswith('.' + name): return cls
         raise
 
-class Decoration(object):
-
-    def __init__(self, obj, bson):
-        self.obj = obj
-        doc_cls = mapper(obj).doc_cls
-        self.state = ObjectState()
-        doc = instrument(doc_cls.make(bson),
-                         DocumentTracker(self.state))
-        self.state.document = doc
-        self.state.original_document = bson
-
 class ObjectState(object):
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 

@@ -15,7 +15,7 @@ class TestRelation(TestCase):
 
     def setUp(self):
         self.datastore = DS.DataStore(
-            'mongodb://localhost:27017/', database='test_db')
+            'mim:///', database='test_db')
         self.session = ORMSession(bind=self.datastore)
         class Parent(MappedClass):
             class __mongometa__:
@@ -33,13 +33,10 @@ class TestRelation(TestCase):
         MappedClass.compile_all()
         self.Parent = Parent
         self.Child = Child
-        self.session.impl.remove(self.Parent, {})
-        self.session.impl.remove(self.Child, {})
 
     def tearDown(self):
-        self.session.impl.remove(self.Parent, {})
-        self.session.impl.remove(self.Child, {})
         self.session.clear()
+        self.datastore.conn.drop_all()
 
     def test_parent(self):
         parent = self.Parent(_id=1)
@@ -67,7 +64,7 @@ class TestBasicMapping(TestCase):
     
     def setUp(self):
         self.datastore = DS.DataStore(
-            'mongodb://localhost:27017/', database='test_db')
+            'mim:///', database='test_db')
         self.session = ORMSession(bind=self.datastore)
         class Basic(MappedClass):
             class __mongometa__:
@@ -80,11 +77,11 @@ class TestBasicMapping(TestCase):
                     d=int, e=int))
         MappedClass.compile_all()
         self.Basic = Basic
-        self.session.impl.remove(self.Basic, {})
+        self.session.remove(self.Basic)
 
     def tearDown(self):
         self.session.clear()
-        self.session.impl.remove(self.Basic, {})
+        self.datastore.conn.drop_all()
 
     def test_repr(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
@@ -117,7 +114,7 @@ class TestBasicMapping(TestCase):
 
     def test_mapper(self):
         m = mapper(self.Basic)
-        self.assert_(repr(m).startswith('<Mapper for '))
+        self.assertEqual(repr(m), '<Mapper Basic:basic>')
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.session.flush()
         q = self.Basic.query.find()
