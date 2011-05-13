@@ -1,4 +1,4 @@
-from ming.base import Document, DocumentMeta
+from ming.metadata import collection
 from ming.utils import EmptyClass, wordwrap, all_class_properties, encode_keys
 
 from .base import Decoration, mapper, session, state
@@ -98,7 +98,6 @@ class QueryDescriptor(object):
 class MappedClass(object):
 
     __metaclass__ = MappedClassMeta
-    __mongometa__ = Document.__mongometa__
     query = QueryDescriptor()
     _registry = {}
 

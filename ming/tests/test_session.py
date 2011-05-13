@@ -5,7 +5,7 @@ import mock
 import bson
 import pymongo
 
-from ming.base import Object, Document, Field, Cursor
+from ming import Document, Field
 from ming import schema as S
 from ming.session import Session
 from ming.utils import ThreadLocalProxy
@@ -107,7 +107,7 @@ class TestSession(TestCase):
             impl.ensure_index.call_args_list, [
                 (
                     ([ ('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ],),
-                    {} ),
+                    {'unique':False} ),
 
                 (
                     ([ ('cc', pymongo.ASCENDING) ],),

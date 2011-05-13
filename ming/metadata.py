@@ -22,6 +22,15 @@ class Field(object):
         self.unique = kwargs.pop('unique', False)
         self.schema = S.SchemaItem.make(self.type, **kwargs)
 
+    def __repr__(self):
+        if self.unique:
+            flags = 'index unique'
+        elif self.index:
+            flags = 'index'
+        else:
+            flags = ''
+        return '<Field %s(%s)%s>' % (self.name, self.schema, flags)
+
 class Index(object):
 
     def __init__(self, *fields, **kwargs):
@@ -44,7 +53,7 @@ def collection(*args, **kwargs):
     if isinstance(args[0], basestring):
         if len(args) < 2:
             raise TypeError, 'collection(name, session) takes at least two arguments'
-        name = args[0]
+        collection_name = args[0]
         if isinstance(args[1], type) and issubclass(args[1], _Document):
             bases = (args[1],)
             session = args[1].m.session
@@ -53,7 +62,7 @@ def collection(*args, **kwargs):
             bases = (_Document,)
         args = args[2:]
     elif isinstance(args[0], type) and issubclass(args[0], _Document):
-        name = args[0].m.name
+        collection_name = args[0].m.collection_name
         session = args[0].m.session
         bases = (args[0],)
         args = args[1:]
@@ -61,20 +70,19 @@ def collection(*args, **kwargs):
         raise TypeError, (
             'collection(name, metadata, ...) and collection(base_class) are the'
             ' only valid signatures')
-    return _prepare_collection(
-        type, 'Document<%s>' % name, name,
-        session, bases,
-        *args, **kwargs)
+    fields, indexes = _process_collection_args(*args)
+    dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
+    cls = type('Document<%s>' % collection_name, bases, dct)
+    m = _ClassManager(
+        cls, collection_name, session, fields, indexes, **kwargs)
+    cls.m = _ManagerDescriptor(m)
+    return cls
 
-def _prepare_collection(
-    metaclass, classname, collection_name, session, bases,
-    *args, **kwargs):
-    dct = {}
+def _process_collection_args(*args):
     fields = []
     indexes = []
     for a in args:
         if isinstance(a, Field):
-            dct[a.name] = _FieldDescriptor(a)
             fields.append(a)
             if a.unique:
                 indexes.append(Index(a.name, unique=True))
@@ -84,12 +92,8 @@ def _prepare_collection(
             indexes.append(a)
         else:
             raise TypeError, "don't know what to do with %r" % a
-            
-    cls = metaclass(classname, bases, dct)
-    m = ClassManager(
-        cls, collection_name, session, fields, indexes, **kwargs)
-    cls.m = _ManagerDescriptor(m)
-    return cls
+
+    return fields, indexes
 
 class _Document(Object):
 
@@ -105,33 +109,31 @@ class _Document(Object):
         'Kind of a virtual constructor'
         return cls.m.make(data, allow_extra=allow_extra, strip_extra=strip_extra)
 
-class ClassManager(object):
+class _ClassManager(object):
     _proxy_methods = (
         'get', 'find', 'find_by', 'remove', 'count', 'update_partial',
-        'group', 'ensure_index', 'index_information',  'drop_indexes' )
+        'group', 'ensure_index', 'ensure_indexes', 'index_information',  'drop_indexes' )
 
     def __init__(
-        self, cls, name, session, fields, indexes, 
-        polymorphic_on=None, polymorphic_identity=None,
+        self, cls, collection_name, session, fields, indexes, 
+        polymorphic_on=None, polymorphic_identity=None, polymorphic_registry=None,
         version_of=None, migrate=None,
         before_save=None):
         self.cls = cls
-        self.name = name
+        self.collection_name = collection_name
         self.session = session
         self.fields = fields
         self._indexes = indexes
 
-        if polymorphic_on:
-            self._polymorphic_on = polymorphic_on
+        if polymorphic_on and polymorphic_registry is None:
             self._polymorphic_registry = {}
         else:
-            self._polymorphic_on = self._polymorphic_registry = None
+            self._polymorphic_registry = polymorphic_registry
+        self._polymorphic_on = polymorphic_on
         self.polymorphic_identity = polymorphic_identity
         self.version_of = version_of
         self.base = self._get_base()
-        self.schema = self._get_schema(
-            polymorphic_on, polymorphic_identity,
-            version_of, migrate)
+        self.schema = self._get_schema(version_of, migrate)
         self._before_save = before_save
 
         def _proxy(name):
@@ -158,9 +160,19 @@ class ClassManager(object):
                 'Multiple inheritance of document models is unsupported')
         else: return None
 
-    def _get_schema(
-        self, polymorphic_on, polymorphic_identity,
-        version_of, migrate):
+    @property
+    def polymorphic_registry(self):
+        if self._polymorphic_registry is not None: return self._polymorphic_registry
+        if self.base: return self.base.polymorphic_registry
+        return None
+
+    @property
+    def polymorphic_on(self):
+        if self._polymorphic_on is not None: return self._polymorphic_on
+        if self.base: return self.base.polymorphic_on
+        return None
+
+    def _get_schema(self, version_of, migrate):
         schema = S.Document()
         for base in self.cls.__bases__:
             try:
@@ -173,18 +185,8 @@ class ClassManager(object):
         if not schema.fields:
             return None
         schema.managed_class = self.cls
-        if polymorphic_on:
-            self.polymorphic_registry = {}
-            self.polymorphic_on = polymorphic_on
-            schema.set_polymorphic(
-                self.polymorphic_on, self.polymorphic_registry, polymorphic_identity)
-        elif self.base and self.base.polymorphic_registry:
-            self.polymorphic_registry = self.base.polymorphic_registry
-            self.polymorphic_on = self.base.polymorphic_on
-            schema.set_polymorphic(
-                self.polymorphic_on, self.polymorphic_registry, polymorphic_identity)
-        else:
-            self.polymorphic_on = self.polymorphic_registry  = None
+        if self.polymorphic_registry is not None:
+            schema.set_polymorphic(self.polymorphic_on, self.polymorphic_registry, self.polymorphic_identity)
         if version_of:
             return S.Migrate(
                 version_of.m.schema, schema, migrate)
@@ -218,12 +220,6 @@ class ClassManager(object):
         '''Load each doc in the collection and immediately save it'''
         for doc in self.find(): doc.m.save()
 
-    def ensure_indexes(self):
-        """Ensures all the indexes defined for this manager are created"""
-        for idx in self.indexes:
-            self.session.ensure_index(
-                self.cls, idx.index_spec, unique=idx.unique)
-
     def make(self, data, allow_extra=False, strip_extra=True):
         if self.schema:
             return self.schema.validate(
@@ -231,7 +227,7 @@ class ClassManager(object):
         else:
             return self.cls(data)
         
-class InstanceManager(object):
+class _InstanceManager(object):
     _proxy_methods = (
         'save', 'insert', 'upsert', 'delete', 'set', 'increase_field')
 
@@ -239,7 +235,7 @@ class InstanceManager(object):
         self.session = mgr.session
         self.inst = inst
         self.schema = mgr.schema
-        self.name = mgr.name
+        self.collection_name = mgr.collection_name
         self.before_save = mgr.before_save
 
         def _proxy(name):
@@ -261,14 +257,14 @@ class _ManagerDescriptor(object):
     def __get__(self, inst, cls=None):
         if not self.initialized and self.manager.session:
             try:
-                self.manager.ensure_indexes()
                 self.initialized = True
+                self.manager.ensure_indexes()
             except:
                 pass
         if inst is None:
             return self.manager
         else:
-            return InstanceManager(self.manager, inst)
+            return _InstanceManager(self.manager, inst)
 
 class _FieldDescriptor(object):
 

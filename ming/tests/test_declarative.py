@@ -1,36 +1,41 @@
-'''
-Test the new functional syntax for collection definition
-'''
-
 from unittest import TestCase
 from collections import defaultdict
 
 import mock
 import pymongo
 
-from ming import Session, Field, Index, Cursor, collection
+from ming.base import Cursor
+from ming.declarative import Document
+from ming.metadata import Field, Index
 from ming import schema as S
+from ming.session import Session
 
 def mock_datastore():
+    def mock_collection():
+        c = mock.Mock()
+        c.find_one = mock.Mock(return_value={})
+        return c
     ds = mock.Mock()
     ds.db = defaultdict(mock_collection)
     return ds
-
-def mock_collection():
-    c = mock.Mock()
-    c.find_one = mock.Mock(return_value={})
-    return c
 
 class TestDocument(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
-        self.TestDoc = collection(
-            'test_doc', self.MockSession,
-            Field('a', int, if_missing=None, index=True),
-            Field('b', S.Object, if_missing=dict(a=S.Int(if_missing=None))))
-        self.TestDocNoSchema = collection(
-            'test_doc', self.MockSession)
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+                indexes = [ ('a',) ]
+            a=Field(S.Int, if_missing=None)
+            b=Field(S.Object, dict(a=S.Int(if_missing=None)))
+        class TestDocNoSchema(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+        self.TestDoc = TestDoc
+        self.TestDocNoSchema = TestDocNoSchema
 
     def test_field(self):
         doc = self.TestDoc(dict(a=1, b=dict(a=5)))
@@ -67,11 +72,13 @@ class TestDocument(TestCase):
 
     def test_instance_remove(self):
         # remove operates on a whole collection
+
         self.TestDoc.m.remove()
         self.MockSession.remove.assert_called_with(self.TestDoc)
 
         doc = self.TestDoc.make(dict(a=5))
         self.assertRaises(AttributeError, getattr, doc.m, 'remove')
+
 
     def test_migrate(self):
         doc = self.TestDoc.make(dict(a=5))
@@ -83,27 +90,32 @@ class TestDocument(TestCase):
 class TestIndexes(TestCase):
 
     def setUp(self):
-        self.session = Session()
-        self.MyDoc = collection(
-            'test_some_indexes', self.session,
-            Field('_id', S.ObjectId),
-            Field('test1', str, index=True, unique=True),
-            Field('test2'),
-            Field('test3', str),
-            Index('test2'),
-            Index('test1', 'test2', direction=pymongo.DESCENDING))
+        class MyDoc(Document):
+            class __mongometa__:
+                session = Session()
+                name = 'test_some_indexes'
+                indexes = [
+                    ('test1', 'test2'),
+                ]
+                unique_indexes = [
+                    ('test1',),
+                ]
+                schema = dict(
+                    _id = S.ObjectId,
+                    test1 = str,
+                    test2 = str,
+                    test3 = int,
+                )
+        self.MyDoc = MyDoc
 
     @mock.patch('ming.session.Session.ensure_index')
     def test_ensure_indexes(self, ensure_index):
-        # make sure the manager constructor calls ensure_index with the right
-        # stuff
+        # make sure the manager constructor calls ensure_index with the right stuff
         self.MyDoc.m
         
         args = ensure_index.call_args_list
         self.assert_(
-            ((self.MyDoc,
-              [('test1', pymongo.DESCENDING), ('test2', pymongo.DESCENDING)]),
-             {'unique':False})
+            ((self.MyDoc, [('test1', pymongo.ASCENDING), ('test2', pymongo.ASCENDING)]), {'unique':False})
             in args,
             args
         )
@@ -114,66 +126,94 @@ class TestIndexes(TestCase):
         )
 
     def test_index_inheritance_child_none(self):
-        MyChild = collection('my_child', self.MyDoc)
+        class MyChild(self.MyDoc):
+            class __mongometa__:
+                pass
 
-        self.assertEqual(
-            list(MyChild.m.indexes),
-            list(self.MyDoc.m.indexes))
+        self.assertEqual(MyChild.__mongometa__.indexes,
+                         self.MyDoc.__mongometa__.indexes)
+        self.assertEqual(MyChild.__mongometa__.unique_indexes,
+                         self.MyDoc.__mongometa__.unique_indexes)
 
     def test_index_inheritance_both(self):
-        MyChild = collection(
-            'my_child', self.MyDoc,
-            Index('test3'),
-            Index('test4', unique=True))
-        MyGrandChild = collection(
-            'my_grand_child', MyChild,
-            Index('test5'),
-            Index('test6', unique=True))
+        class MyChild(self.MyDoc):
+            class __mongometa__:
+                indexes = [
+                    ('test3',),
+                ]
+                unique_indexes = [
+                    ('test4',),
+                ]
+        class MyGrandChild(MyChild):
+            class __mongometa__:
+                indexes = [
+                    ('test5',),
+                ]
+                unique_indexes = [
+                    ('test6',),
+                ]
 
         self.assertEqual(
             list(MyGrandChild.m.indexes),
-            [ Index('test1', unique=True),
-              Index('test2'),
-              Index(('test1', -1), ('test2', -1)),
+            [ Index('test1', 'test2'),
+              Index('test1', unique=True),
               Index('test3'),
               Index('test4', unique=True),
               Index('test5'),
               Index('test6', unique=True) ])
 
     def test_index_inheritance_neither(self):
-        NoIndexDoc = collection(
-            'test123', self.session,
-            Field('_id', S.ObjectId),
-            Field('test1', str),
-            Field('test2', str),
-            Field('test3', str))
-        StillNone = collection('still_none', NoIndexDoc)
+        class NoIndexDoc(Document):
+            class __mongometa__:
+                session = Session()
+                name = 'test123'
+                schema = dict(
+                    _id = S.ObjectId,
+                    test1 = str,
+                    test2 = str,
+                    test3 = int,
+                )
+        class StillNone(NoIndexDoc):
+            class __mongometa__:
+                pass
 
         self.assertEqual(list(StillNone.m.indexes), [])
 
     def test_index_inheritance_parent_none(self):
-        NoIndexDoc = collection(
-            'test123', self.session,
-            Field('_id', S.ObjectId),
-            Field('test1', str),
-            Field('test2', str),
-            Field('test3', str))
-        AddSome = collection(
-            'add_some', NoIndexDoc,
-            Index('foo'),
-            Index('bar', unique=True))
+        class NoIndexDoc(Document):
+            class __mongometa__:
+                session = Session()
+                name = 'test123'
+                schema = dict(
+                    _id = S.ObjectId,
+                    test1 = str,
+                    test2 = str,
+                    test3 = int,
+                )
+        class AddSome(NoIndexDoc):
+            class __mongometa__:
+                indexes = [
+                    ('foo',),
+                ]
+                unique_indexes = [
+                    ('bar',),
+                ]
 
-        self.assertEqual(list(AddSome.m.indexes),
-                         [ Index('foo'), Index('bar', unique=True) ])
+        self.assertEqual(
+            list(AddSome.m.indexes),
+            [ Index('foo'), Index('bar', unique=True) ])
 
 class TestCursor(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
-        self.TestDoc = collection(
-            'test_doc', self.MockSession,
-            Field('a', int),
-            Field('b', dict(a=int)))
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+            a=Field(int)
+            b=Field(S.Object, dict(a=int))
+        self.TestDoc = TestDoc
         base_iter = iter([ {}, {}, {} ])
         mongo_cursor = mock.Mock()
         mongo_cursor.count = mock.Mock(return_value=3)
@@ -183,7 +223,7 @@ class TestCursor(TestCase):
         mongo_cursor.hint = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.skip = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.sort = mock.Mock(return_value=mongo_cursor)
-        self.cursor = Cursor(self.TestDoc, mongo_cursor)
+        self.cursor = Cursor(TestDoc, mongo_cursor)
 
     def test_cursor(self):
         obj = dict(a=None, b=dict(a=None))
@@ -224,16 +264,23 @@ class TestPolymorphic(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
-        self.Base = collection(
-            'test_doc', self.MockSession,
-            Field('type', str),
-            Field('a', int),
-            polymorphic_on='type',
-            polymorphic_identity='base')
-        self.Derived = collection(
-            self.Base,
-            Field('b', int),
-            polymorphic_identity='derived')
+        class Base(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+                polymorphic_registry={}
+                polymorphic_on='type'
+                polymorphic_identity='base'
+            type=Field(str)
+            a=Field(int)
+        class Derived(Base):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+                polymorphic_identity='derived'
+            b=Field(int)
+        self.Base = Base
+        self.Derived = Derived
 
     def test_polymorphic(self):
         self.assertEqual(self.Base.make(dict(type='base')),
@@ -245,22 +292,31 @@ class TestPolymorphic(TestCase):
 class TestHooks(TestCase):
 
     def setUp(self):
+        from ming.session import Session
         self.bind = mock_datastore()
         self.session = Session(self.bind)
         self.hooks_called = defaultdict(list)
-        self.Base = collection(
-            'test_doc', self.session,
-            Field('_id', int),
-            Field('type', str),
-            Field('a', int),
-            polymorphic_on='type',
-            polymorphic_identity='base',
-            before_save = lambda inst: (
-                self.hooks_called['before_save'].append(inst)))
-        self.Derived = collection(
-            self.Base,
-            Field('b', int),
-            polymorphic_identity='derived')
+        tc = self
+        class Base(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.session
+                polymorphic_registry={}
+                polymorphic_on='type'
+                polymorphic_identity='base'
+                def before_save(instance):
+                    tc.hooks_called['before_save'].append(instance)
+            _id=Field(int)
+            type=Field(str)
+            a=Field(int)
+        class Derived(Base):
+            class __mongometa__:
+                name='test_doc'
+                session = self.session
+                polymorphic_identity='derived'
+            b=Field(int)
+        self.Base = Base
+        self.Derived = Derived
 
     def test_hook_base(self):
         b = self.Base(dict(_id=1, a=5))
@@ -274,20 +330,27 @@ class TestMigration(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
-        TestDoc_old = collection(
-            'test_doc', self.MockSession,
-            Field('version', 1),
-            Field('a', int))
-        self.TestDoc = collection(
-            'test_doc', self.MockSession,
-            Field('version', 2),
-            Field('a', int),
-            Field('b', int, required=True),
-            version_of=TestDoc_old,
-            migrate=lambda old_doc: dict(old_doc, b=42 ,version=2))
+
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+            version=Field(1)
+            a=Field(int)
+
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+                version_of = TestDoc
+                def migrate(old_doc):
+                    return dict(old_doc, b=42, version=2)
+            version=Field(2)
+            a=Field(int)
+            b=Field(int, required=True)
+        self.TestDoc = TestDoc
 
     def testMigration(self):
         self.assertEqual(self.TestDoc.make(dict(version=1, a=5)),
                          dict(version=2, a=5, b=42))
-
 

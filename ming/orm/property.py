@@ -1,4 +1,4 @@
-from ming.base import Field
+from ming.metadata import Field
 from ming.utils import LazyProperty
 from .base import session, state, mapper, lookup_class
 from .icollection import InstrumentedList

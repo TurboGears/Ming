@@ -2,7 +2,8 @@ import pymongo
 
 from session import Session
 from metadata import Field, Index, collection
-from base import Document, Cursor
+from declarative import Document
+from base import Cursor
 from version import __version__, __version_info__
 
 # Re-export direction keys

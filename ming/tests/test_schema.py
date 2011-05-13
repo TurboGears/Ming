@@ -1,11 +1,8 @@
-from datetime import datetime
-from decimal import Decimal
 from unittest import TestCase, main
 
 import ming.datastore
-from ming.base import Object, Document, Field, Cursor
+from ming import Document, Field
 from ming import schema as S
-from bson import ObjectId
 
 class TestQuerySafety(TestCase):
 

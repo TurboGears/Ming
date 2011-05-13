@@ -41,7 +41,7 @@ class Session(object):
 
     def _impl(self, cls):
         try:
-            return self.db[cls.m.name]
+            return self.db[cls.m.collection_name]
         except TypeError:
             raise exc.MongoGone, 'MongoDB is not connected'
 
@@ -87,6 +87,10 @@ class Session(object):
         index_fields = fixup_index(fields)
         return self._impl(cls).ensure_index(index_fields, **kwargs), fields
 
+    def ensure_indexes(self, cls):
+        for idx in cls.m.indexes:
+            self.ensure_index(cls, idx.index_spec, unique=idx.unique)
+
     def group(self, cls, *args, **kwargs):
         return self._impl(cls).group(*args, **kwargs)
 
@@ -99,7 +103,7 @@ class Session(object):
         options = dict(kw, query=query, sort=sort, new=new)
         db = self._impl(cls).database
         cmd = SON(
-                [('findandmodify', cls.m.name)]
+                [('findandmodify', cls.m.collection_name)]
                 + options.items())
         bson = db.command(cmd)
         return cls.make(bson['value'])
@@ -109,7 +113,10 @@ class Session(object):
         if hook: hook(doc)
         if validate:
             doc.make_safe()
-            data = doc.m.schema.validate(doc)
+            if doc.m.schema is None:
+                data = dict(doc)
+            else:
+                data = doc.m.schema.validate(doc)
             doc.update(data)
         else:
             data =dict(doc)
