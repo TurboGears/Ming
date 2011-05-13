@@ -4,21 +4,10 @@ def state(obj):
     '''The state of a mapped object'''
     return obj.__ming__.state
 
-def mapper(v, doc_cls=None):
-    '''Map a ORM class onto its document class'''
-    if isinstance(v, type):
-        cls = v
-    else:
-        cls = type(v)
-        return mapper(type(v))
-    if doc_cls is not None:
-        pass
-    return cls.__ming__.mapper
-
 def session(v):
     '''The ORMSession object managing either a class or an instance'''
     if isinstance(v, type):
-        return v.__mongometa__.session
+        return v.query.mapper.session
     else:
         return session(type(v))
 
@@ -47,9 +36,10 @@ class ObjectState(object):
 
     def __init__(self):
         self._status = self.new
-        self.original_document = None
+        self.raw = None
         self.document = None
         self.extra_state = {}
+        self.tracker = None
 
     def soil(self):
         if self.status == self.clean:

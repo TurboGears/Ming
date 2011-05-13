@@ -1,7 +1,8 @@
 from ming.metadata import Field
 from ming.utils import LazyProperty
-from .base import session, state, mapper, lookup_class
-from .icollection import InstrumentedList
+from ming import schema as S
+from .base import session, state, lookup_class
+from .icollection import InstrumentedList, instrument
 
 class ORMError(Exception): pass
 class AmbiguousJoin(ORMError): pass
@@ -32,10 +33,13 @@ class FieldProperty(ORMProperty):
 
     def __init__(self, field_type, *args, **kwargs):
         ORMProperty.__init__(self)
-        self.field_type = field_type
-        self.args = args
-        self.kwargs = kwargs
-        self.field = Field(field_type, *args, **kwargs)
+        if isinstance(field_type, Field):
+            self.field = field_type
+            if args or kwargs:
+                raise TypeError, 'Unexpected args: %r, %r' % (args, kwargs)
+        else:
+            self.field = field_type(*args, **kwargs)
+        self.name = self.field.name
         if self.name == '_id':
             self.__get__ = self._get_id
 
@@ -48,7 +52,16 @@ class FieldProperty(ORMProperty):
     def __get__(self, instance, cls=None):
         if instance is None: return self
         st = state(instance)
-        return getattr(st.document, self.name)
+        value = st.document.get(self.name, S.Missing)
+        if value is S.Missing:
+            value = st.raw.get(self.name, S.Missing)
+            value = self.field.schema.validate(value)
+            if value is S.Missing: raise AttributeError, self.name
+            value = instrument(value, st.tracker)
+            last_status = st.status
+            st.document[self.name] = value
+            st.status = last_status
+        return value
 
     def _get_id(self, instance, cls=None):
         if instance is None: return self
@@ -61,7 +74,6 @@ class FieldProperty(ORMProperty):
 
     def __set__(self, instance, value):
         st = state(instance)
-        st.soil()
         st.document[self.name] = value
 
 class ForeignIdProperty(ORMProperty):
@@ -70,8 +82,6 @@ class ForeignIdProperty(ORMProperty):
         ORMProperty.__init__(self)
         self.args = args
         self.kwargs = kwargs
-        self.field_type = None
-        self.field = None
         if isinstance(related, type):
             self.related = related
         else:
@@ -81,10 +91,10 @@ class ForeignIdProperty(ORMProperty):
     def related(self):
         return lookup_class(self._related_classname)
 
-    def compile(self):
-        self.field_type = self.related._id.field_type
-        self.field = Field(self.field_type, *self.args, **self.kwargs)
-        
+    @LazyProperty
+    def field(self):
+        return self.related._id.field
+
     def repr(self, doc):
         try:
             return repr(self.__get__(doc))
@@ -109,7 +119,6 @@ class RelationProperty(ORMProperty):
         self.via = via
         self.via_property = None
         self.fetch = fetch
-        self.join = None
         if isinstance(related, type):
             self.related = related
         else:
@@ -119,10 +128,9 @@ class RelationProperty(ORMProperty):
     def related(self):
         return lookup_class(self._related_classname)
 
-    def compile(self):
-        self.join = self._infer_join()
-        
-    def _infer_join(self):
+    @LazyProperty
+    def join(self):
+        from .mapper import mapper
         cls = self.cls
         rel = self.related
         own_mapper = mapper(self.cls)
@@ -156,6 +164,7 @@ class RelationProperty(ORMProperty):
             return '<Missing>'
 
     def __get__(self, instance, cls=None):
+        self.cls = cls
         if instance is None: return self
         if self.fetch:
             st = state(instance)

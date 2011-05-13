@@ -1,12 +1,8 @@
-from ming.metadata import collection
+from ming.metadata import collection, _Document
 from ming.utils import EmptyClass, wordwrap, all_class_properties, encode_keys
 
-from .base import Decoration, mapper, session, state
+from .base import Decoration, session, state
 from .property import ORMProperty
-
-def mapper(v, doc_cls=None):
-    if doc_cls is None:
-        return cls.__ming__.mapper
 
 class Mapper(object):
 
@@ -168,7 +164,6 @@ class Query(object):
         return self.session.update(self.cls, *args, **kwargs)
     
 def make_document_class(mapped_class, dct):
-    name = '_ming_document_' + mapped_class.__name__
     bases = mapped_class.__bases__
     doc_bases = tuple(
         mapper(base).compile().doc_cls

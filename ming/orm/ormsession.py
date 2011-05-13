@@ -1,6 +1,7 @@
 from ming.session import Session
 from ming.utils import ThreadLocalProxy, indent
-from .base import mapper, state, ObjectState, session
+from .base import state, ObjectState, session
+from .mapper import mapper
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
 
@@ -51,8 +52,6 @@ class ORMSession(object):
         return result
     
     def save(self, obj):
-        from .mapped_class import MappedClass
-        assert isinstance(obj, MappedClass)
         self.uow.save(obj)
         self.imap.save(obj)
 
@@ -75,18 +74,16 @@ class ORMSession(object):
                 self.update_now(obj, st)
 
     @with_hooks('insert')
-    def insert_now(self, obj, st):
-        mapper(obj).insert(self, obj, st)
-        self.imap.save(obj)
+    def insert_now(self, obj, st, **kwargs):
+        mapper(obj).insert(obj, st, **kwargs)
 
     @with_hooks('update')
-    def update_now(self, obj, st):
-        mapper(obj).update(self, obj, st)
-        self.imap.save(obj)
+    def update_now(self, obj, st, **kwargs):
+        mapper(obj).update(obj, st, **kwargs)
 
     @with_hooks('delete')
-    def delete_now(self, obj, st):
-        mapper(obj).delete(self, obj, st)
+    def delete_now(self, obj, st, **kwargs):
+        mapper(obj).delete(obj, st, **kwargs)
         
     def clear(self):
         self.uow.clear()
@@ -103,7 +100,7 @@ class ORMSession(object):
         if self.autoflush:
             self.flush()
         m = mapper(cls)
-        ming_cursor = self.impl.find(m.doc_cls, *args, **kwargs)
+        ming_cursor = m.collection.m.find(*args, **kwargs)
         return ORMCursor(self, cls, ming_cursor, refresh=refresh)
 
     def find_and_modify(self, cls, *args, **kwargs):
@@ -119,11 +116,11 @@ class ORMSession(object):
     @with_hooks('remove')
     def remove(self, cls, *args, **kwargs):
         m = mapper(cls)
-        self.impl.remove(m.doc_cls, *args, **kwargs)
+        m.remove(*args, **kwargs)
 
-    def update(self, cls, spec, fields, **kw):
+    def update(self, cls, spec, fields, **kwargs):
         m = mapper(cls)
-        self.impl.update_partial(m.doc_cls, spec, fields, **kw)
+        m.update_partial(spec, fields, **kwargs)
 
     def update_if_not_modified(self, obj, fields, upsert=False):
         self.update(obj.__class__, state(obj).original_document, fields, upsert)
