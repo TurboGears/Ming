@@ -54,7 +54,8 @@ class TestUtils(TestCase):
         self.assertEqual(
             utils.fixup_index([('foo',pymongo.DESCENDING), 'bar']),
             [('foo', pymongo.DESCENDING), ('bar', pymongo.ASCENDING)])
-        
+        completed = [ ('a', 1), ('b', -1) ]
+        self.assertEqual(completed, utils.fixup_index([completed]))
 
 if __name__ == '__main__':
     main()

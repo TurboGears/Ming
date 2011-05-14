@@ -9,18 +9,16 @@ class _MappedClassMeta(type):
         cls._compiled = False
         
     def __new__(meta, name, bases, dct):
-        # Get the mapped base class (if any)
+        # Get the mapped base class(es)
         mapped_bases = [
             b for b in bases if hasattr(b, 'query') ]
+        doc_bases = [
+            mapper(b).collection for b in mapped_bases ]
         # Build up the mongometa class
-        if len(mapped_bases) == 1:
-            doc_base = mapper(mapped_bases[0]).collection
-            if hasattr(mapped_bases[0], '__mongometa__'):
-                mm_bases = (mapped_bases[0].__mongometa__,)
-            else:
-                mm_bases = (object,)
-        else:
-            doc_base = None
+        mm_bases = tuple(
+            (b.__mongometa__ for b in mapped_bases
+             if hasattr(b, '__mongometa__')))
+        if not mm_bases:
             mm_bases = (object,)
         mm_dict = {}
         if '__mongometa__' in dct:
@@ -32,7 +30,7 @@ class _MappedClassMeta(type):
         if hasattr(mm, 'collection_class'):
             collection_class = mm.collection
         else:
-            collection_class = meta._build_collection_class(doc_base, dct, mm, mm_dict)
+            collection_class = meta._build_collection_class(doc_bases, dct, mm, mm_dict)
         clsdict = {}
         properties = {}
         include_properties = getattr(mm, 'include_properties', [])
@@ -51,16 +49,15 @@ class _MappedClassMeta(type):
         return cls
         
     @classmethod
-    def _build_collection_class(meta, doc_base, dct, mm, mm_dict):
+    def _build_collection_class(meta, doc_bases, dct, mm, mm_dict):
         fields = []
         indexes = []
         # Set the names of the fields
         for k,v in dct.iteritems():
-            if hasattr(v, 'field'):
-                if v.field.name is None:
-                    v.field.name = k
-                if v.name is None:
-                    v.name = k
+            field = getattr(v, 'field', None)
+            if field is not None:
+                if field.name is None:
+                    field.name = k
                 fields.append(v.field)
         # Get the index information
         for idx in getattr(mm, 'indexes', []):
@@ -70,18 +67,18 @@ class _MappedClassMeta(type):
         collection_kwargs = dict(
             polymorphic_on=mm_dict.get('polymorphic_on', None),
             polymorphic_identity=getattr(mm, 'polymorphic_identity', None))
-        if doc_base is None:
+        if not doc_bases:
             collection_cls = collection(
-                mm.name, mm.session,
+                mm.name, mm.session and mm.session.impl,
                 *(fields + indexes),
                 **collection_kwargs)
         else:
             if mm.name is not None:
-                collection_kwargs['override_name'] = mm.name
+                collection_kwargs['collection_name'] = mm.name
             if mm.session is not None:
-                collection_kwargs['override_session'] = mm.session.impl
+                collection_kwargs['session'] = mm.session.impl
             collection_cls = collection(
-                doc_base, *(fields + indexes), **collection_kwargs)
+                doc_bases, *(fields + indexes), **collection_kwargs)
         return collection_cls
 
 class MappedClass(object):
@@ -90,18 +87,5 @@ class MappedClass(object):
     class __mongometa__:
         name=None
         session=None
-
-    @classmethod
-    def compile_all(cls):
-        return
-        for mapper in cls._registry.itervalues():
-            mapper.mapped_class.compile(mapper)
-
-    @classmethod
-    def compile(cls, mapper):
-        if cls._compiled: return
-        for p in mapper.properties:
-            p.compile(mapper)
-        cls._compiled = True
 
 

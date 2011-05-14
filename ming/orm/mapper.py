@@ -1,3 +1,4 @@
+from copy import copy
 from ming.base import Object
 from ming.utils import wordwrap
 from ming.metadata import Field
@@ -20,17 +21,19 @@ class Mapper(object):
     _mapper_by_collection = {}
     _mapper_by_class = {}
     _mapper_by_classname = {}
-
+    _all_mappers = []
+    _compiled = False
 
     def __init__(self, mapped_class, collection, session, **kwargs):
         self.mapped_class = mapped_class
         self.collection = collection
         self.session = session
         self.properties = []
+        classname = '%s.%s' % (mapped_class.__module__, mapped_class.__name__)
         self._mapper_by_collection[collection] = self
         self._mapper_by_class[mapped_class] = self
-        classname = '%s.%s' % (mapped_class.__module__, mapped_class.__name__)
         self._mapper_by_classname[classname] = self
+        self._all_mappers.append(self)
         properties = kwargs.pop('properties', {})
         include_properties = kwargs.pop('include_properties', None)
         exclude_properties = kwargs.pop('exclude_properties', [])
@@ -67,6 +70,11 @@ class Mapper(object):
         mapper = self.by_collection(type(doc))
         return mapper._from_doc(doc)
 
+    def base_mappers(self):
+        for base in self.mapped_class.__bases__:
+            if base in self._mapper_by_class:
+                yield self._mapper_by_class[base]
+
     @classmethod
     def by_collection(cls, collection_class):
         return cls._mapper_by_collection[collection_class]
@@ -84,6 +92,24 @@ class Mapper(object):
                 if n.endswith('.' + name): return mapped_class
             raise
 
+    @classmethod
+    def all_mappers(cls):
+        return cls._all_mappers
+
+    @classmethod
+    def compile_all(cls):
+        for m in cls.all_mappers():
+            m.compile()
+
+    def compile(self):
+        if self._compiled: return
+        self._compiled = True
+        for p in self.properties:
+            p.compile(self)
+    
+    def update_partial(self, *args, **kwargs):
+        self.collection.m.update_partial(*args, **kwargs)
+
     def _from_doc(self, doc):
         obj = self.mapped_class.__new__(self.mapped_class)
         obj.__ming__ = _ORMDecoration(self, obj)
@@ -92,22 +118,24 @@ class Mapper(object):
         st.status = st.new
         self.session.save(obj)
         return obj
-    
-    def update_partial(self, *args, **kwargs):
-        self.collection.m.update_partial(*args, **kwargs)
 
     def _instrument_class(self, properties, include_properties, exclude_properties):
         self.mapped_class.query = _QueryDescriptor(self)
-        base_properties = dict((fld.name, fld) for fld in self.collection.m.fields)
-        properties = dict(base_properties, **properties)
+        properties = dict(properties)
+        # Copy properties from inherited mappers
+        for b in self.base_mappers():
+            for prop in b.properties:
+                properties.setdefault(prop.name, copy(prop))
+        # Copy default properties from collection class
+        for fld in self.collection.m.fields:
+            properties.setdefault(fld.name, FieldProperty(fld))
+        # Handle include/exclude_properties
         if include_properties:
             properties = dict((k,properties[k]) for k in include_properties)
         for k in exclude_properties:
             properties.pop(k, None)
         for k,v in properties.iteritems():
             v.name = k
-            if isinstance(v, Field):
-                v = FieldProperty(v)
             v.mapper = self
             setattr(self.mapped_class, k, v)
             self.properties.append(v)
@@ -123,7 +151,7 @@ class Mapper(object):
             def __repr__(self_):
                 properties = [
                     '%s=%s' % (prop.name, prop.repr(self_))
-                    for prop in self.properties
+                    for prop in mapper(self_).properties
                     if prop.include_in_repr ]
                 return wordwrap(
                     '<%s %s>' % 
@@ -183,11 +211,12 @@ class _ClassQuery(object):
             setattr(self, method_name, _proxy(method_name))
 
     def get(self, **kwargs):
+        if kwargs.keys() == [ '_id' ]:
+            return self.session.get(self.mapped_class, kwargs['_id'])
         return self.find(kwargs).first()
 
     def find_by(self, **kwargs):
         return self.find(kwargs)
-    
 
 class _InstQuery(object):
     _proxy_methods = (
@@ -235,13 +264,24 @@ class _InitDecorator(object):
         self.mapper = mapper
         self.func = func
 
-    def __get__(self, self_, cls=None):
-        if self_ is None: return self
+    def saving_init(self, self_):
         def __init__(*args, **kwargs):
             self_.__ming__ = _ORMDecoration(self.mapper, self_)
             self.mapper.session.save(self_)
             self.func(self_, *args, **kwargs)
         return __init__
+    
+    def nonsaving_init(self, self_):
+        def __init__(*args, **kwargs):
+            self.func(self_, *args, **kwargs)
+        return __init__
+    
+    def __get__(self, self_, cls=None):
+        if self_ is None: return self
+        if self.mapper.mapped_class == cls:
+            return self.saving_init(self_)
+        else:
+            return self.nonsaving_init(self_)
 
     @classmethod
     def decorate(cls, mapped_class, mapper):

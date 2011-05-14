@@ -17,6 +17,7 @@ class Field(object):
             self.name = args[0]
             self.type = args[1]
         else:
+            import pdb; pdb.set_trace()
             raise TypeError, 'Field() takes 1 or 2 argments, not %s' % len(args)
         self.index = kwargs.pop('index', False)
         self.unique = kwargs.pop('unique', False)
@@ -38,11 +39,13 @@ class Index(object):
         self.direction = kwargs.pop('direction', pymongo.ASCENDING)
         self.unique = kwargs.pop('unique', False)
         self.index_spec = fixup_index(fields, self.direction)
+        self.name = 'idx_' + '_'.join('%s_%d' % t for t in self.index_spec)
         if kwargs: raise TypeError, 'unknown kwargs: %r' % kwargs
 
     def __repr__(self):
-        return '<Index %r unique=%s>' % (
-            self.index_spec, self.unique)
+        specs = [ '%s:%s' % t  for t in self.index_spec ]
+        return '<Index (%s) unique=%s>' % (
+            ','.join(specs), self.unique)
 
     def __eq__(self, o):
         return self.index_spec == o.index_spec and self.unique == o.unique
@@ -54,25 +57,28 @@ def collection(*args, **kwargs):
         if len(args) < 2:
             raise TypeError, 'collection(name, session) takes at least two arguments'
         collection_name = args[0]
-        if isinstance(args[1], type) and issubclass(args[1], _Document):
-            bases = (args[1],)
-            session = args[1].m.session
-        else:
-            session = args[1]
-            bases = (_Document,)
+        session = args[1]
+        bases = (_Document,)
         args = args[2:]
     elif isinstance(args[0], type) and issubclass(args[0], _Document):
-        collection_name =  kwargs.pop(
-            'override_name', args[0].m.collection_name)
-        session =  kwargs.pop(
-            'override_session', args[0].m.session)
         bases = (args[0],)
         args = args[1:]
+        collection_name = bases[-1].m.collection_name
+        session = bases[-1].m.session
+    elif hasattr(args[0], '__iter__'):
+        bases = tuple(args[0])
+        args = args[1:]
+        collection_name = bases[-1].m.collection_name
+        session = bases[-1].m.session        
     else:
         raise TypeError, (
             'collection(name, session, ...) and collection(base_class) are the'
             ' only valid signatures')
-    fields, indexes = _process_collection_args(*args)
+    collection_name =  kwargs.pop(
+        'collection_name', collection_name)
+    session =  kwargs.pop(
+        'session', session)
+    fields, indexes = _process_collection_args(bases, *args)
     dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
     cls = type('Document<%s>' % collection_name, bases, dct)
     m = _ClassManager(
@@ -80,9 +86,13 @@ def collection(*args, **kwargs):
     cls.m = _ManagerDescriptor(m)
     return cls
 
-def _process_collection_args(*args):
+def _process_collection_args(bases, *args):
     fields = []
     indexes = []
+    for b in bases:
+        if not hasattr(b, 'm'): continue
+        fields += b.m.fields
+        indexes += b.m.indexes
     for a in args:
         if isinstance(a, Field):
             fields.append(a)
@@ -96,20 +106,6 @@ def _process_collection_args(*args):
             raise TypeError, "don't know what to do with %r" % a
 
     return fields, indexes
-
-class _Document(Object):
-
-    def __init__(self, data=None, skip_from_bson=False):
-        if data is None:
-            data = {}
-        elif not skip_from_bson:
-            data = Object.from_bson(data)
-        dict.update(self, data)
-
-    @classmethod
-    def make(cls, data, allow_extra=False, strip_extra=True):
-        'Kind of a virtual constructor'
-        return cls.m.make(data, allow_extra=allow_extra, strip_extra=strip_extra)
 
 class _ClassManager(object):
     _proxy_methods = (
@@ -125,7 +121,7 @@ class _ClassManager(object):
         self.collection_name = collection_name
         self.session = session
         self.field_index = dict((f.name, f) for f in fields)
-        self._indexes = indexes
+        self.indexes = indexes
 
         if polymorphic_on and polymorphic_registry is None:
             self._polymorphic_registry = {}
@@ -133,9 +129,10 @@ class _ClassManager(object):
             self._polymorphic_registry = polymorphic_registry
         self._polymorphic_on = polymorphic_on
         self.polymorphic_identity = polymorphic_identity
-        self.version_of = version_of
-        self.base = self._get_base()
-        self.schema = self._get_schema(version_of, migrate)
+        self._version_of = version_of
+        self._migrate = migrate
+        self.bases = self._get_bases()
+        self.schema = self._get_schema()
         self._before_save = before_save
 
         def _proxy(name):
@@ -148,19 +145,10 @@ class _ClassManager(object):
         for method_name in self._proxy_methods:
             setattr(self, method_name, _proxy(method_name))
 
-    def _get_base(self):
-        possible_bases = []
-        for base in self.cls.__bases__:
-            try:
-                possible_bases.append(base.m)
-            except AttributeError:
-                pass
-        if len(possible_bases) == 1:
-            return possible_bases[0]
-        elif len(possible_bases) > 1:
-            raise TypeError, (
-                'Multiple inheritance of document models is unsupported')
-        else: return None
+    def _get_bases(self):
+        return tuple(
+            b.m for b in self.cls.__bases__
+            if hasattr(b, 'm'))
 
     @property
     def fields(self):
@@ -169,20 +157,29 @@ class _ClassManager(object):
     @property
     def polymorphic_registry(self):
         if self._polymorphic_registry is not None: return self._polymorphic_registry
-        if self.base: return self.base.polymorphic_registry
+        for b in self.bases:
+            if b.polymorphic_registry: return b.polymorphic_registry
         return None
 
     @property
     def polymorphic_on(self):
         if self._polymorphic_on is not None: return self._polymorphic_on
-        if self.base: return self.base.polymorphic_on
+        for b in self.bases:
+            if b.polymorphic_on: return b.polymorphic_on
         return None
 
-    def _get_schema(self, version_of, migrate):
+    @LazyProperty
+    def before_save(self):
+        if self._before_save: return self._before_save
+        for b in self.bases:
+            if b.before_save: return b.before_save
+        return None
+
+    def _get_schema(self):
         schema = S.Document()
-        for base in self.cls.__bases__:
+        for b in self.bases:
             try:
-                schema.extend(S.SchemaItem.make(base.m.schema))
+                schema.extend(S.SchemaItem.make(b.schema))
             except AttributeError:
                 pass
         schema.fields.update(
@@ -193,25 +190,10 @@ class _ClassManager(object):
         schema.managed_class = self.cls
         if self.polymorphic_registry is not None:
             schema.set_polymorphic(self.polymorphic_on, self.polymorphic_registry, self.polymorphic_identity)
-        if version_of:
+        if self._version_of:
             return S.Migrate(
-                version_of.m.schema, schema, migrate)
+                self._version_of.m.schema, schema, self._migrate)
         return schema
-
-    @LazyProperty
-    def before_save(self):
-        if self._before_save: return self._before_save
-        return self.base and self.base.before_save
-    
-    @property
-    def indexes(self):
-        for base in self.cls.__bases__:
-            try:
-                for idx in base.m.indexes:
-                    yield idx
-            except AttributeError:
-                pass
-        for idx in self._indexes: yield idx
 
     def add_index(self, idx):
         self._indexes.append(idx)
@@ -238,6 +220,7 @@ class _InstanceManager(object):
         'save', 'insert', 'upsert', 'delete', 'set', 'increase_field')
 
     def __init__(self, mgr, inst):
+        self.classmanager = mgr
         self.session = mgr.session
         self.inst = inst
         self.schema = mgr.schema
@@ -291,3 +274,17 @@ class _FieldDescriptor(object):
     def __delete__(self, inst):
         del inst[self.name]
         
+class _Document(Object):
+
+    def __init__(self, data=None, skip_from_bson=False):
+        if data is None:
+            data = {}
+        elif not skip_from_bson:
+            data = Object.from_bson(data)
+        dict.update(self, data)
+
+    @classmethod
+    def make(cls, data, allow_extra=False, strip_extra=True):
+        'Kind of a virtual constructor'
+        return cls.m.make(data, allow_extra=allow_extra, strip_extra=strip_extra)
+

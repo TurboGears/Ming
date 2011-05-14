@@ -114,7 +114,7 @@ class TestIndexes(TestCase):
         )
 
     def test_index_inheritance_child_none(self):
-        MyChild = collection('my_child', self.MyDoc)
+        MyChild = collection(self.MyDoc, collection_name='my_child')
 
         self.assertEqual(
             list(MyChild.m.indexes),
@@ -122,13 +122,15 @@ class TestIndexes(TestCase):
 
     def test_index_inheritance_both(self):
         MyChild = collection(
-            'my_child', self.MyDoc,
+            self.MyDoc,
             Index('test3'),
-            Index('test4', unique=True))
+            Index('test4', unique=True),
+            collection_name='my_child')
         MyGrandChild = collection(
-            'my_grand_child', MyChild,
+            MyChild,
             Index('test5'),
-            Index('test6', unique=True))
+            Index('test6', unique=True),
+            collection_name='my_grand_child')
 
         self.assertEqual(
             list(MyGrandChild.m.indexes),
@@ -159,7 +161,7 @@ class TestIndexes(TestCase):
             Field('test2', str),
             Field('test3', str))
         AddSome = collection(
-            'add_some', NoIndexDoc,
+            NoIndexDoc,
             Index('foo'),
             Index('bar', unique=True))
 

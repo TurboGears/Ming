@@ -5,11 +5,22 @@ from mock import Mock
 from ming import schema as S
 from ming import datastore as DS
 from ming import Session
-from ming.orm import ORMSession
+from ming.orm import ORMSession, Mapper
 from ming.orm import FieldProperty, RelationProperty, ForeignIdProperty
-from ming.orm import MappedClass
+from ming.orm.declarative import MappedClass
 from ming.orm import state, mapper
 from ming.orm.icollection import instrument, deinstrument, InstrumentedObj
+
+class TestIndex(TestCase):
+
+    def test_string_index(self):
+        class Test(MappedClass):
+            class __mongometa__:
+                indexes = [ 'abc' ]
+            _id = FieldProperty(S.Int)
+            abc=FieldProperty(S.Int, if_missing=None)
+        mgr = mapper(Test).collection.m
+        assert len(mgr.indexes) == 1, mgr.indexes
 
 class TestRelation(TestCase):
 
@@ -30,7 +41,7 @@ class TestRelation(TestCase):
             _id = FieldProperty(int)
             parent_id = ForeignIdProperty('Parent')
             parent = RelationProperty('Parent')
-        MappedClass.compile_all()
+        Mapper.compile_all()
         self.Parent = Parent
         self.Child = Child
 
@@ -75,7 +86,7 @@ class TestBasicMapping(TestCase):
             b = FieldProperty([int])
             c = FieldProperty(dict(
                     d=int, e=int))
-        MappedClass.compile_all()
+        Mapper.compile_all()
         self.Basic = Basic
         self.session.remove(self.Basic)
 
@@ -281,12 +292,13 @@ class TestPolymorphic(TestCase):
                 polymorphic_identity='derived'
             type=FieldProperty(str, if_missing='derived')
             b=FieldProperty(int)
-        MappedClass.compile_all()
+        Mapper.compile_all()
         self.Base = Base
         self.Derived = Derived
 
     def test_polymorphic(self):
         self.Base(a=1)
+        self.orm_session.flush()
         self.Derived(a=2,b=2)
         self.orm_session.flush()
         self.orm_session.clear()

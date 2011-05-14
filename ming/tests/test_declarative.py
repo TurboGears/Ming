@@ -19,6 +19,16 @@ def mock_datastore():
     ds.db = defaultdict(mock_collection)
     return ds
 
+class TestIndex(TestCase):
+
+    def test_string_index(self):
+        class TestDoc(Document):
+            class __mongometa__:
+                indexes = [ 'abc' ]
+            _id = Field(S.Int)
+            abc=Field(S.Int, if_missing=None)
+        assert len(TestDoc.m.indexes) == 1, TestDoc.m.indexes
+
 class TestDocument(TestCase):
 
     def setUp(self):

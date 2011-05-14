@@ -1,4 +1,3 @@
-from .utils import fixup_index
 from .metadata import Field, Index
 from .metadata import _Document, _FieldDescriptor, _ManagerDescriptor, _ClassManager
 
@@ -9,6 +8,11 @@ class _DocumentMeta(type):
         session = mm.session
         fields = []
         indexes = []
+        # Inherit appropriate fields & indexes
+        for b in bases:
+            if not hasattr(b, 'm'): continue
+            fields += b.m.fields
+            indexes += b.m.indexes
         # Set the names of the fields
         clsdct = {}
         for k,v in dct.iteritems():

@@ -5,7 +5,7 @@ from mock import Mock
 from ming import datastore as DS
 from ming import schema as S
 from ming import collection, Field, Session
-from ming.orm import ORMSession, mapper, state
+from ming.orm import ORMSession, mapper, state, Mapper
 from ming.orm import ForeignIdProperty, RelationProperty
 
 class TestBasicMapping(TestCase):

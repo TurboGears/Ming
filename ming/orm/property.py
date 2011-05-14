@@ -39,9 +39,17 @@ class FieldProperty(ORMProperty):
                 raise TypeError, 'Unexpected args: %r, %r' % (args, kwargs)
         else:
             self.field = Field(field_type, *args, **kwargs)
+        if not isinstance(self.field.name, (basestring, type(None))):
+            raise TypeError, 'Field name must be string or None, not %r' % (
+                self.field.name)
         self.name = self.field.name
         if self.name == '_id':
             self.__get__ = self._get_id
+
+    @property
+    def include_in_repr(self):
+        if isinstance(self.field.schema, S.Deprecated): return False
+        return True
 
     def repr(self, doc):
         try:
@@ -56,7 +64,8 @@ class FieldProperty(ORMProperty):
         if value is S.Missing:
             value = st.raw.get(self.name, S.Missing)
             value = self.field.schema.validate(value)
-            if value is S.Missing: raise AttributeError, self.name
+            if value is S.Missing:
+                raise AttributeError, self.name
             value = instrument(value, st.tracker)
             last_status = st.status
             st.document[self.name] = value
@@ -74,27 +83,39 @@ class FieldProperty(ORMProperty):
 
     def __set__(self, instance, value):
         st = state(instance)
-        st.document[self.name] = value
+        st.document[self.name] = self.field.schema.validate(value)
 
-class ForeignIdProperty(ORMProperty):
+class ForeignIdProperty(FieldProperty):
 
     def __init__(self, related, *args, **kwargs):
         ORMProperty.__init__(self)
         self.args = args
         self.kwargs = kwargs
         if isinstance(related, type):
+            self._compiled = True
             self.related = related
         else:
+            self._compiled = False
             self._related_classname = related
 
     @LazyProperty
     def related(self):
+        if not self._compiled: raise AttributeError, 'related'
         from .mapper import mapper
         return mapper(self._related_classname).mapped_class
 
     @LazyProperty
     def field(self):
+        if not self._compiled: raise AttributeError, 'field'
         return Field(self.name, self.related._id.field.type)
+
+    def compile(self, mapper):
+        if self._compiled: return
+        self._compiled = True
+        fld = self.field
+        mgr = mapper.collection.m
+        mgr.field_index[fld.name] = fld
+        mgr.schema = mgr._get_schema()
 
     def repr(self, doc):
         try:

@@ -7,8 +7,8 @@ from ming import schema as S
 from ming import datastore as DS
 from ming import Session
 from ming.orm import ThreadLocalORMSession
-from ming.orm import FieldProperty
-from ming.orm import MappedClass
+from ming.orm import FieldProperty, Mapper
+from ming.orm.declarative import MappedClass
 from ming.orm.middleware import MingMiddleware
 
 class TestRelation(TestCase):
@@ -22,7 +22,7 @@ class TestRelation(TestCase):
                 name='parent'
                 session = self.session
             _id = FieldProperty(S.ObjectId)
-        MappedClass.compile_all()
+        Mapper.compile_all()
         self.Parent = Parent
         self.create_app =  TestApp(MingMiddleware(self._wsgi_create_object))
         self.remove_app =  TestApp(MingMiddleware(self._wsgi_remove_object))
