@@ -114,7 +114,8 @@ class Mapper(object):
         obj = self.mapped_class.__new__(self.mapped_class)
         obj.__ming__ = _ORMDecoration(self, obj)
         st = state(obj)
-        st.document = doc
+        st.original_document = doc
+        st.document = self.collection.m.schema.validate(doc)
         st.status = st.new
         self.session.save(obj)
         return obj
@@ -269,11 +270,13 @@ class _InitDecorator(object):
             self_.__ming__ = _ORMDecoration(self.mapper, self_)
             self.mapper.session.save(self_)
             self.func(self_, *args, **kwargs)
+            self_.__ming__.state.validate(self.mapper.collection.m.schema)
         return __init__
     
     def nonsaving_init(self, self_):
         def __init__(*args, **kwargs):
             self.func(self_, *args, **kwargs)
+            self_.__ming__.state.validate(self.mapper.collection.m.schema)
         return __init__
     
     def __get__(self, self_, cls=None):

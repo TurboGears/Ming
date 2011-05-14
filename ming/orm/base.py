@@ -25,7 +25,7 @@ class ObjectState(object):
 
     def __init__(self):
         self._status = self.new
-        self.raw = None
+        self.original_document = None # unvalidated, as loaded from mongodb
         self.document = None
         self.extra_state = {}
         self.tracker = None
@@ -33,6 +33,13 @@ class ObjectState(object):
     def soil(self):
         if self.status == self.clean:
             self.status = self.dirty
+
+    def validate(self, schema):
+        status = self._status
+        self.document = instrument(
+            schema.validate(self.document),
+            self.tracker)
+        self._status = status
 
     def _get_status(self):
         return self._status

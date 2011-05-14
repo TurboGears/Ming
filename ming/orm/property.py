@@ -60,17 +60,10 @@ class FieldProperty(ORMProperty):
     def __get__(self, instance, cls=None):
         if instance is None: return self
         st = state(instance)
-        value = st.document.get(self.name, S.Missing)
-        if value is S.Missing:
-            value = st.raw.get(self.name, S.Missing)
-            value = self.field.schema.validate(value)
-            if value is S.Missing:
-                raise AttributeError, self.name
-            value = instrument(value, st.tracker)
-            last_status = st.status
-            st.document[self.name] = value
-            st.status = last_status
-        return value
+        try:
+            return st.document[self.name]
+        except KeyError:
+            raise AttributeError, self.name
 
     def _get_id(self, instance, cls=None):
         if instance is None: return self
@@ -83,7 +76,9 @@ class FieldProperty(ORMProperty):
 
     def __set__(self, instance, value):
         st = state(instance)
-        st.document[self.name] = self.field.schema.validate(value)
+        st.document[self.name] = instrument(
+            self.field.schema.validate(value), st.tracker)
+        st.soil()
 
 class ForeignIdProperty(FieldProperty):
 
@@ -107,7 +102,7 @@ class ForeignIdProperty(FieldProperty):
     @LazyProperty
     def field(self):
         if not self._compiled: raise AttributeError, 'field'
-        return Field(self.name, self.related._id.field.type)
+        return Field(self.name, self.related._id.field.type, **self.kwargs)
 
     def compile(self, mapper):
         if self._compiled: return
@@ -116,22 +111,6 @@ class ForeignIdProperty(FieldProperty):
         mgr = mapper.collection.m
         mgr.field_index[fld.name] = fld
         mgr.schema = mgr._get_schema()
-
-    def repr(self, doc):
-        try:
-            return repr(self.__get__(doc))
-        except AttributeError:
-            return '<Missing>'
-
-    def __get__(self, instance, cls=None):
-        if instance is None: return self
-        st = state(instance)
-        return getattr(st.document, self.name)
-
-    def __set__(self, instance, value):
-        st = state(instance)
-        st.soil()
-        st.document[self.name] = value
 
 class RelationProperty(ORMProperty): 
     include_in_repr = False

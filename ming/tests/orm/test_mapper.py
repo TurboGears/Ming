@@ -49,7 +49,7 @@ class TestBasicMapping(TestCase):
         assert state(doc).status == 'clean'
         c = doc.c
         c.e = 5
-        assert state(doc).status == 'dirty'
+        assert state(doc).status == 'dirty', state(doc).status
         assert repr(state(doc)).startswith('<ObjectState')
 
     def test_mapped_object(self):
