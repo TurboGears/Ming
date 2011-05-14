@@ -2,7 +2,7 @@ from ming.metadata import Field
 from ming.utils import LazyProperty
 from ming import schema as S
 from .base import session, state
-from .icollection import InstrumentedList, instrument
+from .icollection import instrument, deinstrument
 
 class ORMError(Exception): pass
 class AmbiguousJoin(ORMError): pass
@@ -61,9 +61,14 @@ class FieldProperty(ORMProperty):
         if instance is None: return self
         st = state(instance)
         try:
-            return st.document[self.name]
+            return instrument(st.document[self.name], st.tracker)
         except KeyError:
-            raise AttributeError, self.name
+            value = self.field.schema.validate(S.Missing)
+            if value is S.Missing:
+                raise AttributeError, self.name
+            else:
+                st.document[self.name] = value
+            return value
 
     def _get_id(self, instance, cls=None):
         if instance is None: return self
@@ -76,8 +81,9 @@ class FieldProperty(ORMProperty):
 
     def __set__(self, instance, value):
         st = state(instance)
-        st.document[self.name] = instrument(
-            self.field.schema.validate(value), st.tracker)
+        value = deinstrument(value)
+        value = self.field.schema.validate(value)
+        st.document[self.name] = value
         st.soil()
 
 class ForeignIdProperty(FieldProperty):
@@ -195,9 +201,9 @@ class OneToManyJoin(object):
         self.own_cls, self.rel_cls, self.prop = own_cls, rel_cls, prop
 
     def load(self, instance):
-        return InstrumentedList(
-            OneToManyTracker(state(instance)),
-            self.iterator(instance))
+        return instrument(
+            list(self.iterator(instance)), 
+            OneToManyTracker(state(instance)))
         
     def iterator(self, instance):
         key_value = instance._id

@@ -1,4 +1,4 @@
-from .icollection import instrument
+from copy import deepcopy
 
 def state(obj):
     '''The state of a mapped object'''
@@ -28,7 +28,7 @@ class ObjectState(object):
         self.original_document = None # unvalidated, as loaded from mongodb
         self.document = None
         self.extra_state = {}
-        self.tracker = None
+        self.tracker = _DocumentTracker(self)
 
     def soil(self):
         if self.status == self.clean:
@@ -36,10 +36,11 @@ class ObjectState(object):
 
     def validate(self, schema):
         status = self._status
-        self.document = instrument(
-            schema.validate(self.document),
-            self.tracker)
+        self.document = schema.validate(self.document)
         self._status = status
+
+    def clone(self):
+        return deepcopy(self.document)
 
     def _get_status(self):
         return self._status
@@ -50,7 +51,7 @@ class ObjectState(object):
     def __repr__(self):
         return '<ObjectState status=%s>' % self.status
 
-class DocumentTracker(object):
+class _DocumentTracker(object):
     __slots__ = ('state',)
 
     def __init__(self, state):

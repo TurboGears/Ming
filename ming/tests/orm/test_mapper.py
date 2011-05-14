@@ -35,8 +35,8 @@ class TestBasicMapping(TestCase):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4,e=5))
         sdoc = repr(doc)
         assert 'a=1' in sdoc, sdoc
-        assert 'b=[2, 3]' in sdoc, sdoc
-        assert "c={'e': 5, 'd': 4}" in sdoc, sdoc
+        assert 'b=I[2, 3]' in sdoc, sdoc
+        assert "c=I{'e': 5, 'd': 4}" in sdoc, sdoc
 
     def test_create(self):
         doc = self.Basic()

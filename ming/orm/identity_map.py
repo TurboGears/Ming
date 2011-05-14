@@ -25,7 +25,7 @@ class IdentityMap(object):
             pass
 
     def __repr__(self):
-        l = [ '<imap>' ]
+        l = [ '<imap (%d)>' % len(self._objects) ]
         for k,v in sorted(self._objects.iteritems()):
             l.append(indent('  %s : %s => %r'
                             % (k[0].__name__, k[1], v),

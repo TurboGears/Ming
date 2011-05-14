@@ -1,10 +1,8 @@
 from copy import copy
 from ming.base import Object
 from ming.utils import wordwrap
-from ming.metadata import Field
 
 from .base import ObjectState, state
-from .icollection import InstrumentedObj
 from .property import FieldProperty
 
 def mapper(cls, collection=None, session=None, **kwargs):
@@ -46,14 +44,13 @@ class Mapper(object):
             self.mapped_class.__name__, self.collection.m.collection_name)
 
     def insert(self, obj, state, **kwargs):
-        doc = self.collection(state.document, skip_from_bson=True)
-        doc.m.insert(**kwargs)
+        state.document.m.insert(validate=False)
         self.session.save(obj)
         state.status = state.clean
 
     def update(self, obj, state, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
-        doc.m.save(**kwargs)
+        doc.m.save(validate=False, **kwargs)
         self.session.save(obj)
         state.status = state.clean
 
@@ -179,9 +176,8 @@ class _ORMDecoration(object):
         self.mapper = mapper
         self.instance = instance
         self.state = ObjectState()
-        tracker = _DocumentTracker(self.state)
-        self.state.document = InstrumentedObj(tracker)
-        self.state.raw = Object()
+        self.state.document = Object()
+        self.state.original_document = Object()
 
 class _QueryDescriptor(object):
 
@@ -240,11 +236,19 @@ class _InstQuery(object):
 
         for method_name in self._proxy_methods:
             setattr(self, method_name, _proxy(method_name))
+
+        # Some methods are just convenient (and safe)
         self.find = self.classquery.find
+        self.get = self.classquery.get
 
     def delete(self):
         st = state(self.instance)
         st.status = st.deleted
+
+    def update(self, fields, **kwargs):
+        self.classquery.update(
+            {'_id': self.instance._id },
+            fields)
 
 class _DocumentTracker(object):
     __slots__ = ('state',)
@@ -265,18 +269,25 @@ class _InitDecorator(object):
         self.mapper = mapper
         self.func = func
 
+    @property
+    def schema(self):
+        return self.mapper.collection.m.schema
+
     def saving_init(self, self_):
         def __init__(*args, **kwargs):
             self_.__ming__ = _ORMDecoration(self.mapper, self_)
-            self.mapper.session.save(self_)
             self.func(self_, *args, **kwargs)
-            self_.__ming__.state.validate(self.mapper.collection.m.schema)
+            self.save(self_)
         return __init__
+
+    def save(self, obj):
+        if self.schema:
+            obj.__ming__.state.validate(self.schema)
+        self.mapper.session.save(obj)
     
     def nonsaving_init(self, self_):
         def __init__(*args, **kwargs):
             self.func(self_, *args, **kwargs)
-            self_.__ming__.state.validate(self.mapper.collection.m.schema)
         return __init__
     
     def __get__(self, self_, cls=None):
