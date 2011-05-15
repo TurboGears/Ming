@@ -35,6 +35,9 @@ class InstrumentedProxy(object):
     def __len__(self):
         return len(self._impl)
 
+    def __json__(self):
+        return self._impl
+
 class InstrumentedObj(InstrumentedProxy):
 
     def __getitem__(self, name):
