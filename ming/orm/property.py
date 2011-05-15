@@ -142,15 +142,15 @@ class RelationProperty(ORMProperty):
         cls = self.cls
         rel = self.related
         own_mapper = mapper(self.cls)
-        own_props = [ p for p in own_mapper.properties
+        own_props = [ p for p in own_mapper.all_properties()
                       if isinstance(p, ForeignIdProperty)
-                      and p.related == rel ]
+                      and issubclass(rel, p.related) ]
         if self.via:
             own_props = [ p for p in own_props if p.name == self.via ]
         rel_mapper = mapper(self.related)
-        rel_props = [ p for p in rel_mapper.properties
+        rel_props = [ p for p in rel_mapper.all_properties()
                       if isinstance(p, ForeignIdProperty)
-                      and p.related == cls ]
+                      and issubclass(cls, p.related) ]
         if self.via:
             rel_props = [ p for p in rel_props if p.name == self.via ]
         if len(own_props) == 1:

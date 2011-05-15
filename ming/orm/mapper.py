@@ -72,6 +72,18 @@ class Mapper(object):
             if base in self._mapper_by_class:
                 yield self._mapper_by_class[base]
 
+    def all_properties(self):
+        seen = set()
+        for p in self.properties:
+            if p.name in seen: continue
+            seen.add(p.name)
+            yield p
+        for base in self.base_mappers():
+            for p in base.all_properties():
+                if p.name in seen: continue
+                seen.add(p.name)
+                yield p
+                
     @classmethod
     def by_collection(cls, collection_class):
         return cls._mapper_by_collection[collection_class]
