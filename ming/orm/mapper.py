@@ -262,19 +262,6 @@ class _InstQuery(object):
             {'_id': self.instance._id },
             fields)
 
-class _DocumentTracker(object):
-    __slots__ = ('state',)
-
-    def __init__(self, state):
-        self.state = state
-        self.state.tracker = self
-
-    def soil(self, value):
-        self.state.soil()
-    added_item = soil
-    removed_item = soil
-    cleared = soil
-
 class _InitDecorator(object):
 
     def __init__(self, mapper, func):
