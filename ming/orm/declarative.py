@@ -1,4 +1,4 @@
-from ming.metadata import collection, Field, Index
+from ming.metadata import collection, Index
 from .mapper import mapper
 from .property import ORMProperty
 
@@ -67,6 +67,8 @@ class _MappedClassMeta(type):
         collection_kwargs = dict(
             polymorphic_on=mm_dict.get('polymorphic_on', None),
             polymorphic_identity=getattr(mm, 'polymorphic_identity', None))
+        if hasattr(mm, 'before_save'):
+            collection_kwargs['before_save'] = mm.before_save.im_func
         if not doc_bases:
             collection_cls = collection(
                 mm.name, mm.session and mm.session.impl,
