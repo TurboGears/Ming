@@ -87,15 +87,15 @@ def collection(*args, **kwargs):
     return cls
 
 def _process_collection_args(bases, *args):
-    fields = []
+    field_index = {}
     indexes = []
-    for b in bases:
+    for b in reversed(bases):
         if not hasattr(b, 'm'): continue
-        fields += b.m.fields
+        field_index.update(b.m.field_index)
         indexes += b.m.indexes
     for a in args:
         if isinstance(a, Field):
-            fields.append(a)
+            field_index[a.name] = a
             if a.unique:
                 indexes.append(Index(a.name, unique=True))
             elif a.index:
@@ -105,7 +105,7 @@ def _process_collection_args(bases, *args):
         else:
             raise TypeError, "don't know what to do with %r" % a
 
-    return fields, indexes
+    return field_index.values(), indexes
 
 class _ClassManager(object):
     _proxy_methods = (

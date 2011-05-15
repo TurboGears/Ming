@@ -166,6 +166,11 @@ class InstrumentedList(InstrumentedProxy):
         new_impl.extend(other)
         return self._instrument(new_impl)
 
+    def __radd__(self, other):
+        new_impl = list(other)
+        new_impl.extend(self)
+        return self._instrument(new_impl)
+
     def __imul__(self, y):
         if y <= 0:
             self[:] = []
