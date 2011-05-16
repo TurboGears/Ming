@@ -84,6 +84,7 @@ class TestBasicMapping(TestCase):
         q = self.Basic.query.find(dict(a=1))
         self.assertEqual(q.count(), 0)
         self.assertEqual(doc.query.find(dict(a=1)).count(), 0)
+        self.assertEqual(doc.query.find(dict(b=doc.b)).count(), 1)
         doc = self.Basic.query.get(a=5)
         self.assert_(doc is not None)
         self.Basic.query.remove({})

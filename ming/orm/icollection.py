@@ -12,6 +12,18 @@ def deinstrument(obj):
     else:
         return obj
 
+def full_deinstrument(obj):
+    obj = deinstrument(obj)
+    if hasattr(obj, 'iteritems'):
+        return dict(
+            (k, full_deinstrument(v))
+            for k,v in obj.iteritems())
+        return full_deinstrument(obj)
+    elif hasattr(obj, 'extend'):
+        return list(full_deinstrument(o) for o in obj)
+    else:
+        return obj
+
 class InstrumentedProxy(object):
     _impl = None
     _tracker = None

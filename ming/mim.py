@@ -123,6 +123,7 @@ class Collection(collection.Collection):
         return self._database['%s.%s' % (self.name, name)]
 
     def _find(self, spec, sort=None):
+        bson_safe(spec)
         def _gen():
             for doc in self._data.itervalues():
                 if match(spec, doc): yield doc
@@ -149,6 +150,7 @@ class Collection(collection.Collection):
         if not isinstance(doc_or_docs, list):
             doc_or_docs = [ doc_or_docs ]
         for doc in doc_or_docs:
+            bson_safe(doc)
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
@@ -168,6 +170,8 @@ class Collection(collection.Collection):
             return _id
 
     def update(self, spec, document, upsert=False, safe=False, multi=False):
+        bson_safe(spec)
+        bson_safe(document)
         updated = False
         for doc in self._find(spec):
             self._deindex(doc) 
@@ -404,4 +408,5 @@ def validate(doc):
         if hasattr(v, 'iteritems'):
             validate(v)
             
-        
+def bson_safe(obj):
+    bson.BSON.encode(obj)
