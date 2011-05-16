@@ -99,20 +99,4 @@ def fixup_index(index, direction=pymongo.ASCENDING):
                 for x in _fixup(key): yield x
 
     return list(_fixup(index))
-    
-    if isinstance(index, basestring):
-        # field name only
-        return [ (index, direction) ]
-    result = []
-    for key in index:
-        if (isinstance(key, tuple) 
-            and len(key) == 2
-            and key[1] in (pymongo.ASCENDING, pymongo.DESCENDING)):
-            result.append(key)
-        elif isinstance(key, basestring):
-            result.append((key, direction))
-        else:
-            for k in key:
-                result.append((k, direction))
-    return result
 
