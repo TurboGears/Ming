@@ -54,7 +54,10 @@ class _MappedClassMeta(type):
         indexes = []
         # Set the names of the fields
         for k,v in dct.iteritems():
-            field = getattr(v, 'field', None)
+            try:
+                field = getattr(v, 'field', None)
+            except:
+                continue
             if field is not None:
                 if field.name is None:
                     field.name = k
