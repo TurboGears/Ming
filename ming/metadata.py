@@ -17,7 +17,6 @@ class Field(object):
             self.name = args[0]
             self.type = args[1]
         else:
-            import pdb; pdb.set_trace()
             raise TypeError, 'Field() takes 1 or 2 argments, not %s' % len(args)
         self.index = kwargs.pop('index', False)
         self.unique = kwargs.pop('unique', False)
