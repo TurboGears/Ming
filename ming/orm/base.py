@@ -11,15 +11,6 @@ def session(v):
     else:
         return session(type(v))
 
-def lookup_class(name):
-    from .mapped_class import MappedClass
-    try:
-        return MappedClass._registry[name]
-    except KeyError:
-        for n, cls in MappedClass._registry.iteritems():
-            if n.endswith('.' + name): return cls
-        raise
-
 class ObjectState(object):
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 
