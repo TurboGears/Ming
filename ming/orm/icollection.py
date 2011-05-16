@@ -1,3 +1,5 @@
+from mock import Mock
+
 def instrument(obj, tracker):
     if isinstance(obj, dict):
         return InstrumentedObj(obj, tracker)
@@ -14,7 +16,9 @@ def deinstrument(obj):
 
 def full_deinstrument(obj):
     obj = deinstrument(obj)
-    if hasattr(obj, 'iteritems'):
+    if isinstance(obj, Mock):
+        return obj
+    elif hasattr(obj, 'iteritems'):
         return dict(
             (k, full_deinstrument(v))
             for k,v in obj.iteritems())
