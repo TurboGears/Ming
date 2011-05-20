@@ -109,7 +109,7 @@ class InstrumentedObj(InstrumentedProxy):
         return ( (k, self._instrument(v)) for k,v in self._impl.iteritems() )
 
     def get(self, k, default=None):
-        return self._instrument(self._impl.get(k))
+        return self._instrument(self._impl.get(k, default))
 
     def setdefault(self, k, default=None):
         return self._instrument(self._impl.setdefault(k, deinstrument(default)))

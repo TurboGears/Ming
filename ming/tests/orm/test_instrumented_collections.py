@@ -56,6 +56,9 @@ class TestICollection(TestCase):
         self.assertEqual(self.iobj, dict(a=5, b=6, c=7, d=8))
         self.iobj.replace(dict(a=5, b=6))
         self.assertEqual(self.iobj, dict(a=5, b=6))
+        assert self.iobj.get('a', 4) == 5, self.iobj
+        assert self.iobj.get('x') == None, self.iobj
+        assert self.iobj.get('x', 7) == 7, self.iobj
 
     def test_ilist(self):
         self.ilist[0] = 5
