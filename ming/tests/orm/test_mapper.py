@@ -24,7 +24,7 @@ class TestBasicMapping(TestCase):
                     d=int, e=int)))
         class Basic(object):
             pass                    
-        mapper(Basic, basic, self.session)
+        self.session.mapper(Basic, basic)
         self.Basic = Basic
 
     def tearDown(self):

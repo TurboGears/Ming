@@ -51,6 +51,10 @@ class ORMSession(object):
         else:
             result = cls._registry[name] = cls(Session._datastores.get(name))
         return result
+
+    def mapper(self, cls, collection, **kwargs):
+        return mapper(
+            cls, collection=collection, session=self, **kwargs)
     
     def save(self, obj):
         self.uow.save(obj)
