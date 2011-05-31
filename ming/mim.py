@@ -62,6 +62,10 @@ class Database(database.Database):
     def name(self):
         return self._name
 
+    @property
+    def connection(self):
+        return self._connection
+
     def _make_collection(self):
         return Collection(self)
 

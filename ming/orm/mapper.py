@@ -27,6 +27,7 @@ class Mapper(object):
         self.collection = collection
         self.session = session
         self.properties = []
+        self.property_index = {}
         classname = '%s.%s' % (mapped_class.__module__, mapped_class.__name__)
         self._mapper_by_collection[collection] = self
         self._mapper_by_class[mapped_class] = self
@@ -149,6 +150,7 @@ class Mapper(object):
             v.mapper = self
             setattr(self.mapped_class, k, v)
             self.properties.append(v)
+            self.property_index[k] = v
         _InitDecorator.decorate(self.mapped_class, self)
         inst = self._instrumentation()
         for k in ('__repr__', '__getitem__', '__setitem__', '__contains__',
