@@ -50,6 +50,7 @@ class _DocumentTracker(object):
 
     def soil(self, value):
         self.state.soil()
+    added_items = soil
     added_item = soil
     removed_item = soil
     cleared = soil

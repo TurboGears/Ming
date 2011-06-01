@@ -219,6 +219,7 @@ class OneToManyTracker(object):
     def soil(self, value):
         raise TypeError, 'read-only'
     added_item = soil
+    added_items = soil
     removed_item = soil
     cleared = soil
 

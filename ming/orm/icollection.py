@@ -1,7 +1,7 @@
-from mock import Mock
-
 def instrument(obj, tracker):
-    if isinstance(obj, dict):
+    if hasattr(obj, '_ming_instrumentation'):
+        return obj
+    elif isinstance(obj, dict):
         return InstrumentedObj(obj, tracker)
     elif isinstance(obj, list):
         return InstrumentedList(obj, tracker)
@@ -14,228 +14,214 @@ def deinstrument(obj):
     else:
         return obj
 
-def full_deinstrument(obj):
-    obj = deinstrument(obj)
-    if isinstance(obj, Mock):
-        return obj
-    elif hasattr(obj, 'iteritems'):
-        return dict(
-            (k, full_deinstrument(v))
-            for k,v in obj.iteritems())
-        return full_deinstrument(obj)
-    elif hasattr(obj, 'extend'):
-        return list(full_deinstrument(o) for o in obj)
-    else:
-        return obj
-
-class InstrumentedProxy(object):
-    _impl = None
-    _tracker = None
+class InstrumentedObj(dict):
+    '''self is instrumented; _impl is not.'''
+    __slots__ = ('_impl', '_tracker')
+    _ming_instrumentation = True
 
     def __init__(self, impl, tracker):
         self._impl = impl
         self._tracker = tracker
-
-    def __repr__(self):
-        return 'I' + repr(self._impl)
-
-    def _instrument(self, v):
-        return instrument(v, self._tracker)
+        self.update(impl)
 
     def _deinstrument(self):
         return self._impl
 
-    def __eq__(self, o):
-        return self._impl == o
+    def __repr__(self):
+        return 'I' + repr(self._impl)
 
-    def __len__(self):
-        return len(self._impl)
+    def __delitem__(self, k):
+        self.pop(k)
 
-    def __json__(self):
-        return self._impl
+    def __setitem__(self, k, v):
+        v = deinstrument(v)
+        iv = instrument(v, self._tracker)
+        self.pop(k, None)
+        super(InstrumentedObj, self).__setitem__(k, iv)
+        self._impl[k] = v
+        self._tracker.added_item(v)
 
-class InstrumentedObj(InstrumentedProxy):
-
-    def __getitem__(self, name):
-        return self._instrument(self._impl[name])
-
-    def __setitem__(self, name, value):
-        value = deinstrument(value)
-        old_value = self._impl.get(name, ())
-        self._impl[name] = value
-        if old_value is not ():
-            self._tracker.removed_item(old_value)
-        self._tracker.added_item(value)
-
-    def __delitem__(self, name):
-        value = self._impl[name]
-        del self._impl[name]
-        self._tracker.removed_item(value)
-
-    def __getattr__(self, name):
-        try:
-            return self[name]
-        except KeyError:
-            raise AttributeError, name
-
-    def __setattr__(self, name, value):
-        if hasattr(self.__class__, name):
-            super(InstrumentedObj, self).__setattr__(name, value)
+    def __setattr__(self, k, v):
+        if hasattr(self.__class__, k):
+            super(InstrumentedObj, self).__setattr__(k, v)
         else:
-            self.__setitem__(name, value)
+            self[k] = v
 
-    def __contains__(self, k):
-        return k in self._impl
+    def __getattr__(self, k):
+        try:
+            return self[k]
+        except KeyError:
+            raise AttributeError, k
 
-    def __iter__(self):
-        return iter(self._impl)
-
-    def keys(self):
-        return self._impl.keys()
-
-    def values(self):
-        return map(self._instrument, self._impl.values())
-
-    def items(self):
-        return [ (k, self._instrument(v)) for k,v in self._impl.iteritems() ]
-
-    def iterkeys(self):
-        return self._impl.iterkeys()
-
-    def itervalues(self):
-        return ( self._instrument(v) for v in self._impl.itervalues() )
-
-    def iteritems(self):
-        return ( (k, self._instrument(v)) for k,v in self._impl.iteritems() )
-
-    def get(self, k, default=None):
-        return self._instrument(self._impl.get(k, default))
-
-    def setdefault(self, k, default=None):
-        return self._instrument(self._impl.setdefault(k, deinstrument(default)))
+    def __eq__(self, y):
+        return self._impl == deinstrument(y)
 
     def clear(self):
+        super(InstrumentedObj, self).clear()
         self._impl.clear()
         self._tracker.cleared()
 
+    def copy(self):
+        return InstrumentedObj(self._impl.copy(), self._tracker)
+
+    @classmethod
+    def fromkeys(self, *args, **kwargs):
+        return instrument(dict.fromkeys(*args, **kwargs))
+
     def pop(self, k, *args):
-        result = self._impl.pop(k, *args)
-        self._tracker.removed_item(result)
-        return result
+        value = self._impl.pop(k, *args)
+        if k in self: self._tracker.removed_item(value)
+        super(InstrumentedObj, self).pop(k, *args)
+        return value
 
     def popitem(self):
         k,v = self._impl.popitem()
+        super(InstrumentedObj, self).popitem()
         self._tracker.removed_item(v)
-        return k,v
+        return v
+
+    def setdefault(self, k, *args):
+        if k in self:
+            return self.get(k)
+        if len(args) == 1:
+            self[k] = args[0]
+            return self[k]
+        raise (
+            TypeError,
+            'setdefault expected 1 or 2 arguments, got %d' % len(args)+1)
 
     def update(self, *args, **kwargs):
-        'Must do all the work ourselves so we track the related objects'
-        if len(args) == 1:
-            arg = args[0]
-            if isinstance(arg, dict): arg = arg.iteritems()
-            for k,v in arg:
-                self[k] = v
+        if len(args) > 1:
+            raise (
+                TypeError,
+                'update expected at most 1 arguments, got %d' % len(args)+1)
+        elif args:
+            E = args[0]
+            if hasattr(E, 'keys'):
+                for k in E:
+                    self[k] = E[k]
+            else:
+                for k,v in E:
+                    self[k] = v
         for k,v in kwargs.iteritems():
             self[k] = v
 
-    def replace(self, other):
+    def replace(self, v):
         self.clear()
-        self.update(other)
+        self.update(v)
 
-class InstrumentedList(InstrumentedProxy):
+class InstrumentedList(list):
+    '''self is instrumented; _impl is not.'''
+    __slots__ = ('_impl', '_tracker')
+    _ming_instrumentation = True
 
-    def __getitem__(self, i):
-        return self._instrument(self._impl[i])
+    def __init__(self, impl, tracker):
+        self._impl = impl
+        self._tracker = tracker
+        super(InstrumentedList, self).extend(
+            instrument(item, self._tracker)
+            for item in self._impl)
 
-    def __setitem__(self, i, value):
-        value = deinstrument(value)
-        oldvalue = self[i]
-        self._impl[i] = value
-        self._tracker.removed_item(oldvalue)
-        self._tracker.added_item(value)
+    def __repr__(self):
+        return 'I' + repr(self._impl)
+
+    def _deinstrument(self):
+        return self._impl
+
+    def __eq__(self, y):
+        return self._impl == deinstrument(y)
+
+    def __setitem__(self, i, v):
+        v = deinstrument(v)
+        iv = instrument(v, self._tracker)
+        super(InstrumentedList, self).__setitem__(i, iv)
+        self._tracker.removed_item(self._impl[i])
+        self._impl[i] = v
+        self._tracker.added_item(self._impl[i])
 
     def __delitem__(self, i):
-        item = self[i]
+        super(InstrumentedList, self).__delitem__(i)
+        self._tracker.removed_item(self._impl[i])
         del self._impl[i]
-        self._tracker.removed_item(item)
 
-    def __getslice__(self, i, j):
-        return self._instrument(self._impl[i:j])
-    
-    def __setslice__(self, i, j, value):
-        value = deinstrument(value)
-        old_items = self._impl[i:j]
-        self._impl[i:j] = value
-        for item in old_items:
-            self._tracker.removed_item(item)
-        for item in self._impl[i:j]:
-            self._tracker.added_item(item)
+    def __setslice__(self, i, j, v):
+        v = map(deinstrument, v)
+        iv = (instrument(item, self._tracker) for item in v)
+        super(InstrumentedList, self).__setslice__(i, j, iv)
+        self._tracker.removed_items(self._impl[i:j])
+        self._impl[i:j] = v
+        self._tracker.added_items(v)
 
     def __delslice__(self, i, j):
-        for item in self._impl[i:j]:
-            self._tracker.removed_item(item)
+        super(InstrumentedList, self).__delslice__(i, j)
+        self._tracker.removed_items(self._impl[i:j])
         del self._impl[i:j]
+
+    def __add__(self, y):
+        return instrument(self._impl + y, self._tracker)
+
+    def __radd__(self, y):
+        return instrument(y + self._impl, self._tracker)
 
     def __iadd__(self, y):
         self.extend(y)
         return self
 
-    def __add__(self, other):
-        new_impl = list(self)
-        new_impl.extend(other)
-        return self._instrument(new_impl)
+    def __mul__(self, y):
+        return instrument(self._impl * y, self._tracker)
 
-    def __radd__(self, other):
-        new_impl = list(other)
-        new_impl.extend(self)
-        return self._instrument(new_impl)
+    def __rmul__(self, y):
+        return instrument(y * self._impl, self._tracker)
 
     def __imul__(self, y):
         if y <= 0:
             self[:] = []
         else:
-            orig = self._impl
-            for i in range(1,y):
-                self.extend(list(orig))
+            lst = list(self._impl)
+            for x in range(y-1):
+                self.extend(lst)
         return self
 
-    def __iter__(self):
-        return (self._instrument(v) for v in self._impl)
+    def __contains__(self, v):
+        v = deinstrument(v)
+        return v in self._impl
 
-    def append(self, value):
-        value = deinstrument(value)
-        self._impl.append(value)
-        self._tracker.added_item(value)
+    def append(self, v):
+        v = deinstrument(v)
+        iv =instrument(v, self._tracker)
+        self._impl.append(v)
+        super(InstrumentedList, self).append(iv)
+        self._tracker.added_item(v)
 
     def extend(self, iterable):
-        for item in iterable:
-            self.append(item)
+        new_items = map(deinstrument, iterable)
+        self._impl.extend(new_items)
+        super(InstrumentedList, self).extend(
+            instrument(item, self._tracker)
+            for item in new_items)
+        self._tracker.added_items(new_items)
 
-    def insert(self, index, value):
-        value = deinstrument(value)
-        self._impl.insert(index, value)
-        self._tracker.added_item(value)
+    def insert(self, index, v):
+        v = deinstrument(v)
+        iv = instrument(v, self._tracker)
+        super(InstrumentedList, self).insert(index, iv)
+        self._impl.insert(index, v)
+        self._tracker.added_item(v)
 
-    def pop(self, index=()):
-        if index is ():
-            result = self._impl.pop()
-        else:
-            result = self._impl.pop(index)
-        self._tracker.removed_item(result)
-        return self._instrument(result)
-           
-    def remove(self, value):
-        try:
-            index = self.index(value)
-        except ValueError:
-            raise ValueError, 'InstrumentedList.remove(x): x not in list'
-        del self[index]
-        
-    def replace(self, other):
-        while self:
-            self.pop()
-        self.extend(other)
+    def pop(self, pos=-1):
+        v = self._impl.pop(pos)
+        super(InstrumentedList, self).pop(pos)
+        self._tracker.removed_item(v)
+        return v
 
-    def index(self, value):
-        value = deinstrument(value)
-        return self._impl.index(value)
+    def remove(self, v):
+        v = deinstrument(v)
+        i = self._impl.index(v)
+        del self[i]
+
+    def index(self, v, *args, **kwargs):
+        v = deinstrument(v)
+        return self._impl.index(v, *args, **kwargs)
+
+    def replace(self, iterable):
+        self[:] = iterable

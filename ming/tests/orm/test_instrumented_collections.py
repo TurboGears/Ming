@@ -66,23 +66,23 @@ class TestICollection(TestCase):
         self.tracker.removed_item.assert_called_with(1)
         self.tracker.added_item.assert_called_with(5)
         self.ilist[:2] = [1,2,3]
-        self.tracker.removed_item.assert_called_with(2)
-        self.tracker.added_item.assert_called_with(2)
+        self.tracker.removed_items.assert_called_with([5,2])
+        self.tracker.added_items.assert_called_with([1,2,3])
         self.assertEqual(self.ilist, [1,2,3,3])
         del self.ilist[0]
         self.tracker.removed_item.assert_called_with(1)
         self.assertEqual(self.ilist, [2,3,3])
         del self.ilist[:1]
-        self.tracker.removed_item.assert_called_with(2)
+        self.tracker.removed_items.assert_called_with([2])
         self.assertEqual(self.ilist, [3,3])
         self.ilist += self.list
-        self.tracker.added_item.assert_called_with(3)
+        self.tracker.added_items.assert_called_with([1,2,3])
         self.assertEqual(self.ilist, [3,3,1,2,3])
         self.ilist *= 2
-        self.tracker.added_item.assert_called_with(3)
+        self.tracker.added_items.assert_called_with([3,3,1,2,3])
         self.assertEqual(self.ilist, [3,3,1,2,3] * 2)
         self.ilist *= 0
-        self.tracker.removed_item.assert_called_with(3)
+        self.tracker.removed_items.assert_called_with([3,3,1,2,3] * 2)
         self.assertEqual(self.ilist, [])
         self.ilist.insert(0, 1)
         self.tracker.added_item.assert_called_with(1)

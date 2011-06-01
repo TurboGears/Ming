@@ -4,7 +4,6 @@ from .base import state, ObjectState, session
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
-from .icollection import full_deinstrument
 
 class with_hooks(object):
     'Decorator to use for Session extensions'
@@ -105,7 +104,7 @@ class ORMSession(object):
         if self.autoflush:
             self.flush()
         m = mapper(cls)
-        args = map(full_deinstrument, args)
+        # args = map(deinstrument, args)
         ming_cursor = m.collection.m.find(*args, **kwargs)
         return ORMCursor(self, cls, ming_cursor, refresh=refresh)
 
