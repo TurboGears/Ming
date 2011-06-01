@@ -7,6 +7,7 @@ from collections import defaultdict
 
 import mock
 import pymongo
+from pymongo.errors import AutoReconnect
 
 from ming import Session, Field, Index, Cursor, collection
 from ming import schema as S
@@ -112,6 +113,13 @@ class TestIndexes(TestCase):
             in args,
             args
         )
+
+
+    @mock.patch('ming.session.Session.ensure_index')
+    def test_ensure_indexes_slave(self, ensure_index):
+        # on a slave, an error will be thrown, but it should be swallowed
+        self.MyDoc.m
+        assert ensure_index.called
 
     def test_index_inheritance_child_none(self):
         MyChild = collection(self.MyDoc, collection_name='my_child')
