@@ -141,10 +141,10 @@ class Collection(collection.Collection):
                     reverse=(direction==-1))
         return result
 
-    def find(self, spec=None, fields=None, **kwargs):
+    def find(self, spec=None, fields=None, as_class=dict, **kwargs):
         if spec is None:
             spec = {}
-        return Cursor(lambda:self._find(spec, **kwargs), fields=fields)
+        return Cursor(lambda:self._find(spec, **kwargs), fields=fields, as_class=as_class)
 
     def find_one(self, spec, **kwargs):
         for x in self.find(spec, **kwargs):
@@ -249,12 +249,13 @@ class Collection(collection.Collection):
 
 class Cursor(object):
 
-    def __init__(self, iterator_gen, sort=None, skip=None, limit=None, fields=None):
+    def __init__(self, iterator_gen, sort=None, skip=None, limit=None, fields=None, as_class=dict):
         self._iterator_gen = iterator_gen
         self._sort = sort
         self._skip = skip
         self._limit = limit
         self._fields = fields
+        self._as_class = as_class
         self._safe_to_chain = True
 
     @LazyProperty
@@ -280,7 +281,7 @@ class Cursor(object):
         value = deepcopy(value)
         if self._fields:
             value = dict((k, value[k]) for k in self._fields)
-        return value
+        return self._as_class(value)
 
     def sort(self, key_or_list, direction=ASCENDING):
         if not self._safe_to_chain:
