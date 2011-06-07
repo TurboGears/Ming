@@ -104,9 +104,3 @@ class TestCommands(TestCase):
         self.assertEqual(
             list(self.bind.db.reduce.find()),
             [ dict(_id=1, value=45) ])
-
-
-        
-
-        
-    
