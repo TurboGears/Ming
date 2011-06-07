@@ -383,6 +383,8 @@ def compare(op, a, b):
     if op == '$nin': return a not in b
     if op == '$exists':
         return a != () if b else a == ()
+    if op == '$all':
+        return set(a).issuperset(b)
     raise NotImplementedError, op
         
 def update(doc, updates):
