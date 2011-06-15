@@ -3,7 +3,11 @@ non-persistent and hopefully much, much faster
 '''
 import sys
 import itertools
+import collections
+from datetime import datetime
 from copy import deepcopy
+
+from spidermonkey import Runtime 
 
 from ming.utils import LazyProperty
 
@@ -57,6 +61,7 @@ class Database(database.Database):
         self._name = name
         self._connection = connection
         self._collections = {}
+        self._jsruntime = Runtime()
 
     @property
     def name(self):
@@ -81,8 +86,76 @@ class Database(database.Database):
             if command.get('new', False):
                 return dict(value=coll.find_one(dict(_id=before['_id'])))
             return dict(value=before)
+        elif 'mapreduce' in command:
+            self._handle_mapreduce(*args, **kw)
         else:
-            raise NotImplementedError, repr(command.items()[0])
+            raise NotImplementedError, repr(command)
+
+    def _handle_mapreduce(self, collection,
+                          query=None, map=None, reduce=None, out=None):
+        j = self._jsruntime.new_context()
+        temp_coll = collections.defaultdict(list)
+        def emit(k, v):
+            if isinstance(k, dict):
+                k = bson.BSON.encode(k)
+            temp_coll[k].append(v)
+        def emit_reduced(k, v):
+            print k,v 
+        j.add_global('emit', emit)
+        j.add_global('emit_reduced', emit_reduced)
+        j.execute('var map=%s;' % map)
+        j.execute('var reduce=%s;' % reduce)
+        if query is None: query = {}
+        # Run the map phase
+        def tojs(obj):
+            if isinstance(obj, basestring):
+                return obj
+            elif isinstance(obj, datetime):
+                return j.execute('new Date("%s")' % obj.ctime())
+            elif isinstance(obj, collections.Mapping):
+                return dict((k,tojs(v)) for k,v in obj.iteritems())
+            elif isinstance(obj, collections.Sequence):
+                result = j.execute('new Array()')
+                for v in obj:
+                    result.push(tojs(v))
+                return result
+            else: return obj
+        for obj in self._collections[collection].find(query):
+            obj = tojs(obj)
+            j.execute('map').apply(obj)
+        # Run the reduce phase
+        reduced = dict(
+            (k, j.execute('reduce')(k, tojs(values)))
+            for k, values in temp_coll.iteritems())
+        # Handle the output phase
+        result = dict()
+        assert len(out) == 1
+        if out.keys() == ['reduce']:
+            out_coll = self[out.values()[0]]
+            for k, v in reduced.iteritems():
+                doc = out_coll.find_one(dict(_id=k))
+                if doc is None:
+                    out_coll.insert(dict(_id=k, value=v))
+                else:
+                    doc['value'] = j.execute('reduce')(k, tojs([v, doc['value']]))
+                    out_coll.save(doc)
+        elif out.keys() == ['merge']:
+            out_coll = self[out.values()[0]]
+            for k, v in reduced.iteritems():
+                out_coll.save(dict(_id=k, value=v))
+        elif out.keys() == ['replace']:
+            self._collections.pop(out.values()[0], None)
+            out_coll = self[out.values()[0]]
+            for k, v in reduced.iteritems():
+                out_coll.save(dict(_id=k, value=v))
+        elif out.keys() == ['inline']:
+            result['results'] = [
+                dict(_id=k, value=v)
+                for k,v in reduced.iteritems() ]
+        else:
+            raise TypeError, 'Unsupported out type: %s' % out.keys()
+        return result
+                
 
     def __getattr__(self, name):
         return self[name]
@@ -402,6 +475,10 @@ def update(doc, updates):
         elif k == '$push':
             for kk, vv in v.iteritems():
                 doc[kk].append(vv)
+        elif k == '$pull':
+            for kk, vv in v.iteritems():
+                doc[kk] = [
+                    vvv for vvv in doc[kk] if vvv != vv ]
         elif k == '$set':
             doc.update(v)
         elif k.startswith('$'):
