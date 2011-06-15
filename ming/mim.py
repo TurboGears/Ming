@@ -74,7 +74,11 @@ class Database(database.Database):
     def _make_collection(self):
         return Collection(self)
 
-    def command(self, command, *args, **kw):
+    def command(self, command,
+                value=1, check=True, allowable_errors=None, **kwargs):
+        if isinstance(command, basestring):
+            command = {command:value}
+            command.update(**kwargs)
         if 'filemd5' in command:
             return dict(md5='42') # completely bogus value; will it work?
         elif 'findandmodify' in command:
@@ -87,7 +91,8 @@ class Database(database.Database):
                 return dict(value=coll.find_one(dict(_id=before['_id'])))
             return dict(value=before)
         elif 'mapreduce' in command:
-            self._handle_mapreduce(*args, **kw)
+            collection = command.pop('mapreduce')
+            return self._handle_mapreduce(collection, **command)
         else:
             raise NotImplementedError, repr(command)
 
@@ -131,6 +136,7 @@ class Database(database.Database):
         result = dict()
         assert len(out) == 1
         if out.keys() == ['reduce']:
+            result['result'] = out.values()[0]
             out_coll = self[out.values()[0]]
             for k, v in reduced.iteritems():
                 doc = out_coll.find_one(dict(_id=k))
@@ -140,10 +146,12 @@ class Database(database.Database):
                     doc['value'] = j.execute('reduce')(k, tojs([v, doc['value']]))
                     out_coll.save(doc)
         elif out.keys() == ['merge']:
+            result['result'] = out.values()[0]
             out_coll = self[out.values()[0]]
             for k, v in reduced.iteritems():
                 out_coll.save(dict(_id=k, value=v))
         elif out.keys() == ['replace']:
+            result['result'] = out.values()[0]
             self._collections.pop(out.values()[0], None)
             out_coll = self[out.values()[0]]
             for k, v in reduced.iteritems():
