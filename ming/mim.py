@@ -7,7 +7,10 @@ import collections
 from datetime import datetime
 from copy import deepcopy
 
-from spidermonkey import Runtime 
+try:
+    from spidermonkey import Runtime
+except ImportError:
+    Runtime = None
 
 from ming.utils import LazyProperty
 
@@ -61,7 +64,10 @@ class Database(database.Database):
         self._name = name
         self._connection = connection
         self._collections = {}
-        self._jsruntime = Runtime()
+        if Runtime is not None:
+            self._jsruntime = Runtime()
+        else:
+            self._jsruntime = None
 
     @property
     def name(self):
@@ -98,6 +104,8 @@ class Database(database.Database):
 
     def _handle_mapreduce(self, collection,
                           query=None, map=None, reduce=None, out=None):
+        if self._jsruntime is None:
+            raise ImportError, 'Cannot import spidermonkey, required for MIM mapreduce'
         j = self._jsruntime.new_context()
         temp_coll = collections.defaultdict(list)
         def emit(k, v):
