@@ -106,7 +106,29 @@ def _process_collection_args(bases, *args):
 
     return field_index.values(), indexes
 
+class _CurriedProxyClass(type):
+
+    def __new__(meta, name, bases, dct):
+        methods = dct.pop('_proxy_methods')
+        proxy_of = dct.pop('_proxy_on')
+        proxy_args = dct.pop('_proxy_args')
+        def _proxy(name):
+            def inner(self, *args, **kwargs):
+                target = getattr(self, proxy_of)
+                method = getattr(target, name)
+                curried_args = [ getattr(self, argname) for argname in proxy_args ]
+                all_args = tuple(curried_args) + args
+                return method(*all_args, **kwargs)
+            inner.__name__ = name
+            return inner
+        for meth in methods:
+            dct[meth] = _proxy(meth)
+        return type.__new__(meta, name, bases, dct)
+
 class _ClassManager(object):
+    __metaclass__ = _CurriedProxyClass
+    _proxy_on='session'
+    _proxy_args=('cls',)
     _proxy_methods = (
         'get', 'find', 'find_by', 'remove', 'count', 'update_partial',
         'group', 'ensure_index', 'ensure_indexes', 'index_information',  'drop_indexes' )
@@ -133,6 +155,7 @@ class _ClassManager(object):
         self.bases = self._get_bases()
         self.schema = self._get_schema()
         self._before_save = before_save
+        return
 
         def _proxy(name):
             def inner(*args, **kwargs):
@@ -215,8 +238,11 @@ class _ClassManager(object):
             return self.cls(data)
         
 class _InstanceManager(object):
+    __metaclass__ = _CurriedProxyClass
     _proxy_methods = (
         'save', 'insert', 'upsert', 'delete', 'set', 'increase_field')
+    _proxy_on='session'
+    _proxy_args=('inst',)
 
     def __init__(self, mgr, inst):
         self.classmanager = mgr
@@ -225,6 +251,7 @@ class _InstanceManager(object):
         self.schema = mgr.schema
         self.collection_name = mgr.collection_name
         self.before_save = mgr.before_save
+        return
 
         def _proxy(name):
             def inner(*args, **kwargs):
