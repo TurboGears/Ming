@@ -17,7 +17,7 @@ class _DocumentMeta(type):
         clsdct = {}
         for k,v in dct.iteritems():
             if isinstance(v, Field):
-                v.name = k
+                if v.name is None: v.name = k
                 fields.append(v)
                 v = _FieldDescriptor(v)
             clsdct[k] = v
