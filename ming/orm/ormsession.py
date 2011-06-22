@@ -93,6 +93,10 @@ class ORMSession(object):
         self.uow.clear()
         self.imap.clear()
 
+    def close(self):
+        self.clear()
+        self.impl.bind.conn.end_request()
+
     def get(self, cls, idvalue):
         result = self.imap.get(cls, idvalue)
         if result is None:
@@ -178,7 +182,7 @@ class ThreadLocalORMSession(ThreadLocalProxy):
         return result
 
     def close(self):
-        self.clear()
+        self._get().close()
         super(ThreadLocalORMSession, self).close()
 
     @classmethod
