@@ -40,7 +40,7 @@ class TestDocument(TestCase):
                 session = self.MockSession
                 indexes = [ ('a',) ]
             a=Field(S.Int, if_missing=None)
-            b=Field(S.Object, dict(a=S.Int(if_missing=None)))
+            b=Field(S.Object(dict(a=S.Int(if_missing=None))))
         class TestDocNoSchema(Document):
             class __mongometa__:
                 name='test_doc'
@@ -230,7 +230,7 @@ class TestCursor(TestCase):
                 name='test_doc'
                 session = self.MockSession
             a=Field(int)
-            b=Field(S.Object, dict(a=int))
+            b=Field(S.Object(dict(a=int)))
         self.TestDoc = TestDoc
         base_iter = iter([ {}, {}, {} ])
         mongo_cursor = mock.Mock()

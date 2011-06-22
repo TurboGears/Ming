@@ -34,7 +34,7 @@ class TestSession(TestCase):
                 unique_indexes = [ ('cc'), ]
             _id=Field(S.ObjectId, if_missing=None)
             a=Field(S.Int, if_missing=None)
-            b=Field(S.Object, dict(a=S.Int(if_missing=None)))
+            b=Field(S.Object(dict(a=S.Int(if_missing=None))))
             cc=Field(dict(dd=int, ee=int))
         class TestDocNoSchema(Document):
             class __mongometa__:
@@ -154,7 +154,7 @@ class TestThreadLocalSession(TestSession):
                 unique_indexes = [ ('cc'), ]
             _id=Field(S.ObjectId, if_missing=None)
             a=Field(S.Int, if_missing=None)
-            b=Field(S.Object, dict(a=S.Int(if_missing=None)))
+            b=Field(S.Object(dict(a=S.Int(if_missing=None))))
             cc=Field(dict(dd=int, ee=int))
         class TestDocNoSchema(Document):
             class __mongometa__:
