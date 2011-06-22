@@ -33,6 +33,9 @@ class Connection(object):
     def drop_all(self):
         self._databases = {}
 
+    def end_request(self):
+        pass
+
     def _make_database(self):
         return Database(self)
 
