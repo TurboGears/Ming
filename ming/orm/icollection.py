@@ -22,7 +22,9 @@ class InstrumentedObj(dict):
     def __init__(self, impl, tracker):
         self._impl = impl
         self._tracker = tracker
-        self.update(impl)
+        dict.update(
+            self,
+            ((k,instrument(v, self._tracker)) for k,v in impl.iteritems()))
 
     def _deinstrument(self):
         return self._impl
