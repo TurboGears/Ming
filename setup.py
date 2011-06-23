@@ -1,5 +1,4 @@
 import os
-import paramiko
 
 from setuptools import setup, find_packages, Command
 
@@ -33,6 +32,7 @@ class sf_upload(Command):
         pass
 
     def run(self):
+        import paramiko
         ssh = paramiko.SSHClient()
         host = 'frs.sourceforge.net'
         username='rick446,merciless'
