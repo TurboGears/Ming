@@ -40,12 +40,17 @@ class sf_upload(Command):
         ssh.connect(host, username=username)
         sftp = ssh.open_sftp()
         sftp.chdir('/home/frs/project/m/me/merciless')
+        if os.path.exists('README'):
+            sftp.put('README', 'README')
         for cmd, _, filename in self.distribution.dist_files:
             basename = os.path.basename(filename)
             dirname = self.distribution.get_version()
             if dirname not in sftp.listdir():
                 sftp.mkdir(dirname)
+            if 'dist' not in sftp.listdir():
+                sftp.mkdir('dist')
             sftp.put(filename, '%s/%s' % (dirname, basename))
+        self.distribution.metadata.download_url += '/'.join((dirname, basename))
 
 setup(name='Ming',
       version=__version__,
@@ -67,6 +72,7 @@ setup(name='Ming',
       author='Rick Copeland',
       author_email='rick@geek.net',
       url='http://merciless.sourceforge.net',
+      download_url='http://downloads.sourceforge.net/project/merciless/',
       license='MIT',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,
