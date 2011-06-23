@@ -1,13 +1,59 @@
-from setuptools import setup, find_packages
-import sys, os
+import os
+import paramiko
+
+from setuptools import setup, find_packages, Command
+
+__version__ = 'undefined'
 
 exec open('ming/version.py')
+
+class tag(Command):
+    description = "tag a release"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        tagname = self.distribution.get_version()
+        cmd = 'git tag %s' % tagname
+        os.system(cmd)
+
+class sf_upload(Command):
+    description = "upload a release to SourceForge"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        ssh = paramiko.SSHClient()
+        host = 'frs.sourceforge.net'
+        username='rick446,merciless'
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(host, username=username)
+        sftp = ssh.open_sftp()
+        sftp.chdir('/home/frs/project/m/me/merciless')
+        for cmd, _, filename in self.distribution.dist_files:
+            basename = os.path.basename(filename)
+            dirname = self.distribution.get_version()
+            if dirname not in sftp.listdir():
+                sftp.mkdir(dirname)
+            sftp.put(filename, '%s/%s' % (dirname, basename))
 
 setup(name='Ming',
       version=__version__,
       description="Bringing order to Mongo since 2009",
       long_description="""Database mapping layer for MongoDB on Python. Includes schema enforcement and some facilities for schema migration. 
 """,
+      cmdclass = dict(
+        tag=tag, sf_upload=sf_upload),
       classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
