@@ -27,6 +27,7 @@ def configure(**kwargs):
         network_timeout=validators.Number(if_missing=None, if_empty=None)
         tz_aware=validators.Bool(if_missing=False)
         slave_okay=validators.Bool(if_missing=False)
+        max_pool_size=validators.Int(if_missing=10)
 
     config = variable_decode(kwargs)
     datastores = {}
