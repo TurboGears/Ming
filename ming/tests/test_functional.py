@@ -7,7 +7,6 @@ from collections import defaultdict
 
 import mock
 import pymongo
-from pymongo.errors import AutoReconnect
 
 from ming import Session, Field, Index, Cursor, collection
 from ming import schema as S

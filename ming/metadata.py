@@ -1,10 +1,12 @@
 from copy import copy
 
 import pymongo
+from pymongo.errors import ConnectionFailure
 
 from . import schema as S
 from .base import Object
 from .utils import fixup_index, LazyProperty
+from .exc import MongoGone
 
 class Field(object):
     '''Represents a mongo field.'''
@@ -274,6 +276,13 @@ class _ManagerDescriptor(object):
             try:
                 self.initialized = True
                 self.manager.ensure_indexes()
+            except (MongoGone, ConnectionFailure) as e:
+                if e.message == 'not master':
+                    # okay for slaves to not ensure indexes
+                    pass
+                else:
+                    # raise all other connection issues
+                    raise
             except:
                 pass
         if inst is None:
