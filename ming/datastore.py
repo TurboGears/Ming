@@ -78,7 +78,7 @@ class Engine(object):
                     self._conn = MasterSlaveConnection(master, slaves)
                 else:
                     self._conn = master
-            else:
+            elif self.slave_args:
                 self._conn = Connection(self.slave_args, slave_okay=True, **self._connect_args)
         except:
             self._log.exception('Cannot connect to %s %s' % (self.master_args, self.slave_args))
