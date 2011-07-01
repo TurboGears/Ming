@@ -23,6 +23,7 @@ def configure(**kwargs):
         slave=validators.UnicodeString(if_missing=None, if_empty=None)
         database=validators.UnicodeString(not_empty=True)
         connect_retry=validators.Number(if_missing=3, if_empty=0)
+        use_gevent = validators.Bool(if_missing=False)
         # pymongo
         network_timeout=validators.Number(if_missing=None, if_empty=None)
         tz_aware=validators.Bool(if_missing=False)

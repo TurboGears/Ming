@@ -8,18 +8,22 @@ from pymongo.connection import Connection
 from pymongo.master_slave_connection import MasterSlaveConnection
 
 from . import mim
-
+from . import async
 
 class Engine(object):
     '''Proxy for a pymongo connection, providing some url parsing'''
 
     def __init__(self, master='mongodb://localhost:27017/', slave=None,
-                 connect_retry=3, **connect_args):
+                 connect_retry=3, use_gevent=False, **connect_args):
         self._log = logging.getLogger(__name__)
         self._conn = None
         self._lock = Lock()
         self._connect_retry = connect_retry
         self._connect_args = connect_args
+        if use_gevent:
+            self.ConnectionClass = async.AsyncConnection
+        else:
+            self.ConnectionClass = Connection
         self.configure(master, slave)
 
     def __repr__(self):
@@ -60,7 +64,7 @@ class Engine(object):
         try:
             if self.master_args:
                 try:
-                    master = Connection(self.master_args, **self._connect_args)
+                    master = self.ConnectionClass(self.master_args, **self._connect_args)
                 except:
                     self._log.exception(
                         'Error connecting to master: %s', self.master_args)
@@ -68,7 +72,7 @@ class Engine(object):
                 slaves = []
                 for host in self._slave_hosts:
                     try:
-                        slaves.append(Connection(
+                        slaves.append(self.ConnectionClass(
                                 host, slave_okay=True, **self._connect_args))
                     except:
                         self._log.exception(
@@ -79,7 +83,7 @@ class Engine(object):
                 else:
                     self._conn = master
             elif self.slave_args:
-                self._conn = Connection(self.slave_args, slave_okay=True, **self._connect_args)
+                self._conn = self.ConnectionClass(self.slave_args, slave_okay=True, **self._connect_args)
         except:
             self._log.exception('Cannot connect to %s %s' % (self.master_args, self.slave_args))
         return self._conn

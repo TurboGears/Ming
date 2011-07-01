@@ -30,6 +30,27 @@ class TestIndex(TestCase):
             abc=Field(S.Int, if_missing=None)
         assert len(TestDoc.m.indexes) == 1, TestDoc.m.indexes
 
+
+class TestRenameField(TestCase):
+
+    def setUp(self):
+        self.MockSession = mock.Mock()
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.MockSession
+            _a = Field('a', S.Int, if_missing=S.Missing)
+            @property
+            def a(self):
+                native = getattr(self, '_a', None)
+                if native < 10: return native
+                return 10
+        self.TestDoc = TestDoc
+
+    def test_rename_field(self):
+        doc = self.TestDoc.make({})
+        import pdb; pdb.set_trace()
+        
 class TestDocument(TestCase):
 
     def setUp(self):
