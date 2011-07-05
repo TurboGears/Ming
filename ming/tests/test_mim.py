@@ -23,6 +23,12 @@ class TestDatastore(TestCase):
         assert 0 == f(dict(c={'$all':[2,3,4]})).count()
         assert 1 == f(dict(c={'$all':[]})).count()
 
+    def test_or(self):
+        f = self.bind.db.coll.find
+        assert 1 == f(dict({'$or': [{'c':{'$all':[1,2,3]}}]})).count()
+        assert 0 == f(dict({'$or': [{'c':{'$all':[4,2,3]}}]})).count()
+        assert 1 == f(dict({'$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count()
+
 class TestCommands(TestCase):
         
     sum_js = '''function(key,values) {

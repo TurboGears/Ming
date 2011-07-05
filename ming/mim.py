@@ -428,9 +428,22 @@ def match(spec, doc):
     '''
     try:
         for k,v in spec.iteritems():
-            op, value = _parse_query(v)
-            if not _part_match(op, value, k.split('.'), doc): return False
-        return True
+            match = False
+            if k == '$or':
+                if not isinstance(spec[k], list):
+                    raise InvalidOperation('$or clauses must be provided in a list')
+                for query in spec[k]:
+                    for k,v in query.iteritems():
+                        op, value = _parse_query(v)
+                        if _part_match(op, value, k.split('.'), doc):
+                            match = True
+            if match:
+                return True
+            else:
+                op, value = _parse_query(v)
+                if not _part_match(op, value, k.split('.'), doc):
+                    return False
+                return True
     except (AttributeError, KeyError), ex:
         return False
 
