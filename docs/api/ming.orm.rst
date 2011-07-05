@@ -17,13 +17,19 @@ Functions
 Classes
 --------
 
-.. autoclass:: MappedClass
+.. autoclass:: ming.orm.declarative.MappedClass
    :show-inheritance:
    :members:
    :inherited-members:
    :undoc-members:
    
-.. autoclass:: Query
+.. autoclass:: ming.orm.mapper._ClassQuery
+   :show-inheritance:
+   :members:
+   :inherited-members:
+   :undoc-members:
+   
+.. autoclass:: ming.orm.mapper._InstQuery
    :show-inheritance:
    :members:
    :inherited-members:

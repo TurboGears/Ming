@@ -21,38 +21,39 @@ Classes
    :undoc-members:
    
 
-.. autoclass:: Document
+.. autoclass:: ming.metadata._Document
    :show-inheritance:
    :members:
    :undoc-members:
    
-.. autoclass:: ming.base::Document.__mongometa__
-   :show-inheritance:
-   :members:
-   :undoc-members:
-
-.. autoclass:: DocumentMeta
+.. autoclass:: ming.declarative._DocumentMeta
    :show-inheritance:
    :members:
    :inherited-members:
    :undoc-members:
    
 
-.. autoclass:: Field
+.. autoclass:: ming.metadata.Field
    :show-inheritance:
    :members:
    :inherited-members:
    :undoc-members:
    
 
-.. autoclass:: Manager
+.. autoclass:: ming.metadata._ClassManager
+   :show-inheritance:
+   :members:
+   :inherited-members:
+   :undoc-members:
+   
+.. autoclass:: ming.metadata._InstanceManager
    :show-inheritance:
    :members:
    :inherited-members:
    :undoc-members:
    
 
-.. autoclass:: ManagerDescriptor
+.. autoclass:: ming.metadata._ManagerDescriptor
    :show-inheritance:
    :members:
    :inherited-members:

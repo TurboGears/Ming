@@ -10,8 +10,9 @@ session = ThreadLocalORMSession(doc_session=doc_session)
 
 #{orm-imports
 from ming import schema
-from ming.orm import MappedClass
 from ming.orm import FieldProperty, ForeignIdProperty, RelationProperty
+from ming.orm import Mapper
+from ming.orm.declarative import MappedClass
 #}
 
 class WikiPage(MappedClass):
@@ -41,7 +42,7 @@ class WikiComment(MappedClass):
 def _(): pass
     
 #{compileall
-MappedClass.compile_all()
+Mapper.compile_all()
 #}        assert False
 
 WikiPage.query.remove({})
@@ -106,11 +107,10 @@ def snippet4():
     list(results)
     
 def snippet5():
-    from ming.orm.base import mapper
+    from ming.orm import mapper
     m = mapper(WikiPage)
-    # m.doc_cls is the 'base' Ming document class
-    m.doc_cls
-
+    # m.collection is the 'base' Ming document class
+    m.collection
     # Retrieve the 'base' Ming session
     session.impl
     

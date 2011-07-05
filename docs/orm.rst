@@ -98,12 +98,125 @@ thing to notice is that we don't explicitly call the `save()` method on the
 `WikiPage`; that will be called for us automatically when we `flush()` the session:
 
 .. [[[cog interact('ming_orm_tutorial', 1) ]]]
+
+>>> wp = WikiPage(title='FirstPage',
+...               text='This is my first page')
+>>> wp
+<WikiPage text='This is my first page'
+  _id=ObjectId('4e126518fc26a23c66000001')
+  title='FirstPage'>
+>>> session
+TLProxy of <session>
+  <UnitOfWork>
+    <new>
+      <WikiPage text='This is my first page'
+          _id=ObjectId('4e126518fc26a23c66000001')
+          title='FirstPage'>
+    <clean>
+    <dirty>
+    <deleted>
+  <imap (1)>
+    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text='This is my first page'
+        _id=ObjectId('4e126518fc26a23c66000001')
+        title='FirstPage'>
+>>> session.flush()
+>>> session
+TLProxy of <session>
+  <UnitOfWork>
+    <new>
+    <clean>
+      <WikiPage text='This is my first page'
+          _id=ObjectId('4e126518fc26a23c66000001')
+          title='FirstPage'>
+    <dirty>
+    <deleted>
+  <imap (1)>
+    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text='This is my first page'
+        _id=ObjectId('4e126518fc26a23c66000001')
+        title='FirstPage'>
+>>> session.clear()
+>>> session
+TLProxy of <session>
+  <UnitOfWork>
+    <new>
+    <clean>
+    <dirty>
+    <deleted>
+  <imap (0)>
+
 .. [[[end]]]
 
 Once we have a `WikiPage` in the database, we can retrieve it using the `.query`
 attribute, modify it, and flush the modified object out to the database:
 
 .. [[[cog interact('ming_orm_tutorial', 2)]]]
+
+>>> wp = WikiPage.query.get(title='FirstPage')
+>>> session
+TLProxy of <session>
+  <UnitOfWork>
+    <new>
+    <clean>
+      <WikiPage text=u'This is my first page'
+          _id=ObjectId('4e126518fc26a23c66000001')
+          title=u'FirstPage'>
+    <dirty>
+    <deleted>
+  <imap (1)>
+    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126518fc26a23c66000001')
+        title=u'FirstPage'>
+>>> 
+>>> # Verify the IdentityMap keeps only one copy of the object
+>>> wp2 = WikiPage.query.get(title='FirstPage')
+>>> wp is wp2
+True
+>>> 
+>>> # Modify the object in memory
+>>> wp.title = 'MyFirstPage'
+>>> 
+>>> # Notice that the object has been marked dirty
+>>> session
+TLProxy of <session>
+  <UnitOfWork>
+    <new>
+    <clean>
+    <dirty>
+      <WikiPage text=u'This is my first page'
+          _id=ObjectId('4e126518fc26a23c66000001')
+          title='MyFirstPage'>
+    <deleted>
+  <imap (1)>
+    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126518fc26a23c66000001')
+        title='MyFirstPage'>
+>>> wp
+<WikiPage text=u'This is my first page'
+  _id=ObjectId('4e126518fc26a23c66000001')
+  title='MyFirstPage'>
+>>> session.flush()
+>>> 
+>>> # We can also delete objects
+>>> wp = WikiPage.query.get(title='MyFirstPage')
+>>> wp.delete()
+>>> session
+TLProxy of <session>
+  <UnitOfWork>
+    <new>
+    <clean>
+    <dirty>
+    <deleted>
+      <WikiPage text=u'This is my first page'
+          _id=ObjectId('4e126518fc26a23c66000001')
+          title='MyFirstPage'>
+  <imap (1)>
+    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126518fc26a23c66000001')
+        title='MyFirstPage'>
+>>> # Rather than flushing, we'll keep the object
+>>> #   around and just clear the session instead
+>>> session.clear()
+
 .. [[[end]]]
 
 .. _relation:
@@ -127,6 +240,77 @@ about which this comment refers.  To actually use these classes, we need to
 create some comments:
 
 .. [[[cog interact('ming_orm_tutorial', 3) ]]]
+
+>>> wp = WikiPage.query.get(title='MyFirstPage')
+>>> # Create some comments
+>>> WikiComment(page_id=wp._id,
+...             text='A comment')
+<WikiComment text='A comment'
+  _id=ObjectId('4e126518fc26a23c66000004')
+  page_id=ObjectId('4e126518fc26a23c66000001')>
+>>> WikiComment(page_id=wp._id,
+...             text='Another comment')
+<WikiComment text='Another comment'
+  _id=ObjectId('4e126518fc26a23c66000005')
+  page_id=ObjectId('4e126518fc26a23c66000001')>
+>>> session.flush()
+>>> session.clear()
+>>> # Load the original page
+>>> wp = WikiPage.query.get(title='MyFirstPage')
+>>> session
+TLProxy of <session>
+  <UnitOfWork>
+    <new>
+    <clean>
+      <WikiPage text=u'This is my first page'
+          _id=ObjectId('4e126518fc26a23c66000001')
+          title=u'MyFirstPage'>
+    <dirty>
+    <deleted>
+  <imap (1)>
+    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126518fc26a23c66000001')
+        title=u'MyFirstPage'>
+>>> # View its comments
+>>> wp.comments
+I[<WikiComment text=u'A comment'
+  _id=ObjectId('4e126518fc26a23c66000004')
+  page_id=ObjectId('4e126518fc26a23c66000001')>, <WikiComment text=u'Another comment'
+  _id=ObjectId('4e126518fc26a23c66000005')
+  page_id=ObjectId('4e126518fc26a23c66000001')>]
+>>> session
+TLProxy of <session>
+  <UnitOfWork>
+    <new>
+    <clean>
+      <WikiPage text=u'This is my first page'
+          _id=ObjectId('4e126518fc26a23c66000001')
+          title=u'MyFirstPage'>
+      <WikiComment text=u'A comment'
+          _id=ObjectId('4e126518fc26a23c66000004')
+          page_id=ObjectId('4e126518fc26a23c66000001')>
+      <WikiComment text=u'Another comment'
+          _id=ObjectId('4e126518fc26a23c66000005')
+          page_id=ObjectId('4e126518fc26a23c66000001')>
+    <dirty>
+    <deleted>
+  <imap (3)>
+    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126518fc26a23c66000001')
+        title=u'MyFirstPage'>
+    WikiComment : 4e126518fc26a23c66000004 => <WikiComment text=u'A comment'
+        _id=ObjectId('4e126518fc26a23c66000004')
+        page_id=ObjectId('4e126518fc26a23c66000001')>
+    WikiComment : 4e126518fc26a23c66000005 => <WikiComment text=u'Another comment'
+        _id=ObjectId('4e126518fc26a23c66000005')
+        page_id=ObjectId('4e126518fc26a23c66000001')>
+>>> wp.comments[0].page
+<WikiPage text=u'This is my first page'
+  _id=ObjectId('4e126518fc26a23c66000001')
+  title=u'MyFirstPage'>
+>>> wp.comments[0].page is wp
+True
+
 .. [[[end]]]
 
 And voilà, you have related objects.  Note that at present the relations between
@@ -141,6 +325,16 @@ You've already seen how to retrieve single objects from the ORM using the
 queries using the `query.find()` method:
 
 .. [[[cog interact('ming_orm_tutorial', 4) ]]]
+
+>>> wp = WikiPage.query.get(title='MyFirstPage')
+>>> results = WikiComment.query.find(dict(page_id=wp._id))
+>>> list(results)
+[<WikiComment text=u'A comment'
+  _id=ObjectId('4e126518fc26a23c66000004')
+  page_id=ObjectId('4e126518fc26a23c66000001')>, <WikiComment text=u'Another comment'
+  _id=ObjectId('4e126518fc26a23c66000005')
+  page_id=ObjectId('4e126518fc26a23c66000001')>]
+
 .. [[[end]]]
 
 Dropping Down Below the ORM
@@ -151,5 +345,15 @@ using some helper functions, so all the power of basic Ming (and MongoDB) is
 accessible at all times:
 
 .. [[[cog interact('ming_orm_tutorial', 5) ]]]
+
+>>> from ming.orm import mapper
+>>> m = mapper(WikiPage)
+>>> # m.collection is the 'base' Ming document class
+>>> m.collection
+<class 'ming.metadata.Document<wiki_page>'>
+>>> # Retrieve the 'base' Ming session
+>>> session.impl
+<ming.session.Session object at 0x24e0810>
+
 .. [[[end]]]
 

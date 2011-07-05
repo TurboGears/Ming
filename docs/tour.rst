@@ -90,13 +90,45 @@ parameters should be comma-sepearated mongodb://host:port[,host:port] if there a
     # and later access the named session with:
     Session.by_name('example')
 
-Mapping Classes
----------------
+Collection objects
+--------------------------
+
+.. sidebar:: Declarative versus Imperative
+
+   There are two styles to define your models in Ming, declarative and
+   imperative, and both styles are availabe both at the document level (which
+   this tutorial covers) and the ORM layer (covered by the ORM tutorial). Which
+   you end up using is mostly a matter of personal style. The declarative style
+   actually predated the imperative style, and the main author or Ming uses both
+   styles interchangably in application programming based on which seems more
+   convenient for the task at hand.
+
+   Due to the history of the declarative model preceding the imperative model,
+   you may notice that the documentation is skewed towards the declarative
+   model. Keep in mind that most anything you can do declaratively, you can also
+   do imperatively in Ming. Also, if you get a chance, feel free to submit
+   documentation bugs to the Ming_ project at SourceForge.
 
 Now that that boilerplate is out of the way, we can actually start writing our
-model classes.  We will start with a model representing a WikiPage::
+models.  We will start with a model representing a WikiPage. We can do that in
+"imperative" mode as follows::
 
-    from ming import Field, Document, schema
+    from ming import collection, Field, Document, schema
+
+    WikiPage = collection(
+        'wiki_page', session,
+        Field('_id', schema.ObjectId),
+        Field('title', str),
+        Field('text', str))
+
+Here, we define a `WikiPage` Python class with three fields, `_id`, `title`, and
+`text`.  We also bind the `WikiPage` to the `session` we defined earlier and the
+`wiki_page` name. 
+
+If you prefer a "declarative" style, Ming also provides the following syntax::
+
+    from ming import Field, schema
+    from ming.declarative import Document
 
     class WikiPage(Document):
 
@@ -108,25 +140,24 @@ model classes.  We will start with a model representing a WikiPage::
         title = Field(str)
         text = Field(str)
 
-The first thing you'll notice about the code is the :class:`Document <ming.base.Document>` import -- all Ming
-models are descendants of the `Document` class.  The next thing you'll notice is
-the :class:`__mongometa__ <ming.base.Document.__mongometa__>` inner class.  This is where you'll give Ming information on
-how to map the class.  (We group all the collection-oriented information under
-:class:`__mongometa__ <ming.base.Document.__mongometa__>` in order to minimize the chances of namespace conflicts.)  In the
-:class:`__mongometa__ <ming.base.Document.__mongometa__>` class, we define the session for this class (the single, global
-session that we're using) as well as the name of the collection in which to store
-instances of this class (in this case, `'wiki_page'`).
+Here, rather than use the `collection()` function, we are defining the class
+directly, grouping some of the metadata used by ming into a `__mongometa__` class
+in order to reduce namespace conflicts. Note that we don't have to provide the
+name of our various `Field` instances as strings here since they already have
+names implied by their names as class attributes. If we want to map a document field
+to a *different* class attribute, we can do so using the following syntax::
+
+    _renamed_field = Field('renamed_field', str)
+
+This is sometimes useful for "privatizing" document members that we wish to wrap
+in `@property` decorators or other access controls.
 
 .. sidebar:: Methods
 
     We can add our own methods to the WikiPage class, too.  However, the `make()`
-    method is reserved for object construction and validation  See the `Bad Data`_ section.
+    method is reserved for object construction and validation  See the `Bad
+    Data`_ section.
 
-The next part of the `WikiPage` declaration is the actual schema information.
-Ming provides a class :class:`Field <ming.base.Field>` which you use to define the schema for this
-object.  In this case, we are declaring that a `WikiPage` has exactly three
-properties.  `title` and `text` are both strings (unicode, technically), and
-`_id` is a pymongo_ ObjectId.
 
 Using Ming Objects to Represent Mongo Records
 ---------------------------------------------
@@ -426,3 +457,4 @@ do the following::
 .. _virtualenv: http://pypi.python.org/pypi/virtualenv
 .. _SQLAlchemy: http://www.sqlalchemy.org/
 .. _pymongo: http://api.mongodb.org/python/current/api/
+.. _Ming: http://sf.net/projects/merciless
