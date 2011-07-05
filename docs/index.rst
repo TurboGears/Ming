@@ -11,7 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
    :glob:
-   
+
+   news   
    tour
    orm
    api/*
