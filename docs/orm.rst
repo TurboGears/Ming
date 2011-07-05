@@ -103,21 +103,21 @@ thing to notice is that we don't explicitly call the `save()` method on the
 ...               text='This is my first page')
 >>> wp
 <WikiPage text='This is my first page'
-  _id=ObjectId('4e126518fc26a23c66000001')
+  _id=ObjectId('4e126629fc26a23cf5000001')
   title='FirstPage'>
 >>> session
 TLProxy of <session>
   <UnitOfWork>
     <new>
       <WikiPage text='This is my first page'
-          _id=ObjectId('4e126518fc26a23c66000001')
+          _id=ObjectId('4e126629fc26a23cf5000001')
           title='FirstPage'>
     <clean>
     <dirty>
     <deleted>
   <imap (1)>
-    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text='This is my first page'
-        _id=ObjectId('4e126518fc26a23c66000001')
+    WikiPage : 4e126629fc26a23cf5000001 => <WikiPage text='This is my first page'
+        _id=ObjectId('4e126629fc26a23cf5000001')
         title='FirstPage'>
 >>> session.flush()
 >>> session
@@ -126,13 +126,13 @@ TLProxy of <session>
     <new>
     <clean>
       <WikiPage text='This is my first page'
-          _id=ObjectId('4e126518fc26a23c66000001')
+          _id=ObjectId('4e126629fc26a23cf5000001')
           title='FirstPage'>
     <dirty>
     <deleted>
   <imap (1)>
-    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text='This is my first page'
-        _id=ObjectId('4e126518fc26a23c66000001')
+    WikiPage : 4e126629fc26a23cf5000001 => <WikiPage text='This is my first page'
+        _id=ObjectId('4e126629fc26a23cf5000001')
         title='FirstPage'>
 >>> session.clear()
 >>> session
@@ -158,13 +158,13 @@ TLProxy of <session>
     <new>
     <clean>
       <WikiPage text=u'This is my first page'
-          _id=ObjectId('4e126518fc26a23c66000001')
+          _id=ObjectId('4e126629fc26a23cf5000001')
           title=u'FirstPage'>
     <dirty>
     <deleted>
   <imap (1)>
-    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
-        _id=ObjectId('4e126518fc26a23c66000001')
+    WikiPage : 4e126629fc26a23cf5000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126629fc26a23cf5000001')
         title=u'FirstPage'>
 >>> 
 >>> # Verify the IdentityMap keeps only one copy of the object
@@ -183,16 +183,16 @@ TLProxy of <session>
     <clean>
     <dirty>
       <WikiPage text=u'This is my first page'
-          _id=ObjectId('4e126518fc26a23c66000001')
+          _id=ObjectId('4e126629fc26a23cf5000001')
           title='MyFirstPage'>
     <deleted>
   <imap (1)>
-    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
-        _id=ObjectId('4e126518fc26a23c66000001')
+    WikiPage : 4e126629fc26a23cf5000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126629fc26a23cf5000001')
         title='MyFirstPage'>
 >>> wp
 <WikiPage text=u'This is my first page'
-  _id=ObjectId('4e126518fc26a23c66000001')
+  _id=ObjectId('4e126629fc26a23cf5000001')
   title='MyFirstPage'>
 >>> session.flush()
 >>> 
@@ -207,11 +207,11 @@ TLProxy of <session>
     <dirty>
     <deleted>
       <WikiPage text=u'This is my first page'
-          _id=ObjectId('4e126518fc26a23c66000001')
+          _id=ObjectId('4e126629fc26a23cf5000001')
           title='MyFirstPage'>
   <imap (1)>
-    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
-        _id=ObjectId('4e126518fc26a23c66000001')
+    WikiPage : 4e126629fc26a23cf5000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126629fc26a23cf5000001')
         title='MyFirstPage'>
 >>> # Rather than flushing, we'll keep the object
 >>> #   around and just clear the session instead
@@ -246,13 +246,13 @@ create some comments:
 >>> WikiComment(page_id=wp._id,
 ...             text='A comment')
 <WikiComment text='A comment'
-  _id=ObjectId('4e126518fc26a23c66000004')
-  page_id=ObjectId('4e126518fc26a23c66000001')>
+  _id=ObjectId('4e126629fc26a23cf5000004')
+  page_id=ObjectId('4e126629fc26a23cf5000001')>
 >>> WikiComment(page_id=wp._id,
 ...             text='Another comment')
 <WikiComment text='Another comment'
-  _id=ObjectId('4e126518fc26a23c66000005')
-  page_id=ObjectId('4e126518fc26a23c66000001')>
+  _id=ObjectId('4e126629fc26a23cf5000005')
+  page_id=ObjectId('4e126629fc26a23cf5000001')>
 >>> session.flush()
 >>> session.clear()
 >>> # Load the original page
@@ -263,50 +263,50 @@ TLProxy of <session>
     <new>
     <clean>
       <WikiPage text=u'This is my first page'
-          _id=ObjectId('4e126518fc26a23c66000001')
+          _id=ObjectId('4e126629fc26a23cf5000001')
           title=u'MyFirstPage'>
     <dirty>
     <deleted>
   <imap (1)>
-    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
-        _id=ObjectId('4e126518fc26a23c66000001')
+    WikiPage : 4e126629fc26a23cf5000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126629fc26a23cf5000001')
         title=u'MyFirstPage'>
 >>> # View its comments
 >>> wp.comments
 I[<WikiComment text=u'A comment'
-  _id=ObjectId('4e126518fc26a23c66000004')
-  page_id=ObjectId('4e126518fc26a23c66000001')>, <WikiComment text=u'Another comment'
-  _id=ObjectId('4e126518fc26a23c66000005')
-  page_id=ObjectId('4e126518fc26a23c66000001')>]
+  _id=ObjectId('4e126629fc26a23cf5000004')
+  page_id=ObjectId('4e126629fc26a23cf5000001')>, <WikiComment text=u'Another comment'
+  _id=ObjectId('4e126629fc26a23cf5000005')
+  page_id=ObjectId('4e126629fc26a23cf5000001')>]
 >>> session
 TLProxy of <session>
   <UnitOfWork>
     <new>
     <clean>
       <WikiPage text=u'This is my first page'
-          _id=ObjectId('4e126518fc26a23c66000001')
+          _id=ObjectId('4e126629fc26a23cf5000001')
           title=u'MyFirstPage'>
       <WikiComment text=u'A comment'
-          _id=ObjectId('4e126518fc26a23c66000004')
-          page_id=ObjectId('4e126518fc26a23c66000001')>
+          _id=ObjectId('4e126629fc26a23cf5000004')
+          page_id=ObjectId('4e126629fc26a23cf5000001')>
       <WikiComment text=u'Another comment'
-          _id=ObjectId('4e126518fc26a23c66000005')
-          page_id=ObjectId('4e126518fc26a23c66000001')>
+          _id=ObjectId('4e126629fc26a23cf5000005')
+          page_id=ObjectId('4e126629fc26a23cf5000001')>
     <dirty>
     <deleted>
   <imap (3)>
-    WikiPage : 4e126518fc26a23c66000001 => <WikiPage text=u'This is my first page'
-        _id=ObjectId('4e126518fc26a23c66000001')
+    WikiPage : 4e126629fc26a23cf5000001 => <WikiPage text=u'This is my first page'
+        _id=ObjectId('4e126629fc26a23cf5000001')
         title=u'MyFirstPage'>
-    WikiComment : 4e126518fc26a23c66000004 => <WikiComment text=u'A comment'
-        _id=ObjectId('4e126518fc26a23c66000004')
-        page_id=ObjectId('4e126518fc26a23c66000001')>
-    WikiComment : 4e126518fc26a23c66000005 => <WikiComment text=u'Another comment'
-        _id=ObjectId('4e126518fc26a23c66000005')
-        page_id=ObjectId('4e126518fc26a23c66000001')>
+    WikiComment : 4e126629fc26a23cf5000004 => <WikiComment text=u'A comment'
+        _id=ObjectId('4e126629fc26a23cf5000004')
+        page_id=ObjectId('4e126629fc26a23cf5000001')>
+    WikiComment : 4e126629fc26a23cf5000005 => <WikiComment text=u'Another comment'
+        _id=ObjectId('4e126629fc26a23cf5000005')
+        page_id=ObjectId('4e126629fc26a23cf5000001')>
 >>> wp.comments[0].page
 <WikiPage text=u'This is my first page'
-  _id=ObjectId('4e126518fc26a23c66000001')
+  _id=ObjectId('4e126629fc26a23cf5000001')
   title=u'MyFirstPage'>
 >>> wp.comments[0].page is wp
 True
@@ -330,10 +330,10 @@ queries using the `query.find()` method:
 >>> results = WikiComment.query.find(dict(page_id=wp._id))
 >>> list(results)
 [<WikiComment text=u'A comment'
-  _id=ObjectId('4e126518fc26a23c66000004')
-  page_id=ObjectId('4e126518fc26a23c66000001')>, <WikiComment text=u'Another comment'
-  _id=ObjectId('4e126518fc26a23c66000005')
-  page_id=ObjectId('4e126518fc26a23c66000001')>]
+  _id=ObjectId('4e126629fc26a23cf5000004')
+  page_id=ObjectId('4e126629fc26a23cf5000001')>, <WikiComment text=u'Another comment'
+  _id=ObjectId('4e126629fc26a23cf5000005')
+  page_id=ObjectId('4e126629fc26a23cf5000001')>]
 
 .. [[[end]]]
 
@@ -353,7 +353,7 @@ accessible at all times:
 <class 'ming.metadata.Document<wiki_page>'>
 >>> # Retrieve the 'base' Ming session
 >>> session.impl
-<ming.session.Session object at 0x24e0810>
+<ming.session.Session object at 0x25b4810>
 
 .. [[[end]]]
 

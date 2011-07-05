@@ -27,6 +27,9 @@ help:
 	@echo "  linkcheck to check all external links for integrity"
 	@echo "  doctest   to run all doctests embedded in the documentation (if enabled)"
 
+upload: html
+	rsync -cavz _build/html/* rick446,merciless@web.sourceforge.net:htdocs
+
 clean:
 	cog.py -I src -r -x $$(find . -name \*.rst)
 	-rm -rf $(BUILDDIR)/*

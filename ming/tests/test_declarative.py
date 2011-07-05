@@ -48,8 +48,14 @@ class TestRenameField(TestCase):
         self.TestDoc = TestDoc
 
     def test_rename_field(self):
-        doc = self.TestDoc.make({})
-        import pdb; pdb.set_trace()
+        doc = self.TestDoc.make(dict(a=5))
+        assert doc == { 'a': 5 }
+        assert doc.a == 5
+        assert doc._a == 5
+        doc = self.TestDoc.make(dict(a=50))
+        assert doc == { 'a': 50 }
+        assert doc.a == 10
+        assert doc._a == 50
         
 class TestDocument(TestCase):
 
