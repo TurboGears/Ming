@@ -18,6 +18,38 @@ class LazyProperty(object):
         result = obj.__dict__[self.__name__] = self._func(obj)
         return result
 
+class ContextualProxy(object):
+    _registry = {}
+
+    def __init__(self, cls, context, *args, **kwargs):
+        self._cls = cls
+        self._context = context
+        self._args = args
+        self._kwargs = kwargs
+
+    def _get(self):
+        ctx = self._context()
+        try:
+            return self._registry[ctx]
+        except KeyError:
+            result = self._cls(*self._args, **self._kwargs)
+            self._registry[ctx] = result
+            return result
+
+    def __getattr__(self, name):
+        return getattr(self._get(), name)
+
+    def __repr__(self):
+        return 'CProxy of %r' % self._get()
+
+    def close(self):
+        ctx = self._context()
+        try:
+            del self._registry[ctx]
+        except AttributeError:
+            pass
+        
+
 class ThreadLocalProxy(object):
 
     def __init__(self, cls, *args, **kwargs):

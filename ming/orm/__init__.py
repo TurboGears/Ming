@@ -4,3 +4,4 @@ from ming.orm.mapper import mapper, Mapper
 from ming.orm.property import FieldProperty, RelationProperty, ForeignIdProperty
 
 from ming.orm.ormsession import ORMSession, ThreadLocalORMSession
+from ming.orm.ormsession import ContextualORMSession

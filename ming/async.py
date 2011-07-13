@@ -1,7 +1,8 @@
+import os
 import logging
 
 import pymongo
-
+import gevent
 from gevent.queue import Queue, Empty
 from gevent.local import local
 
@@ -47,17 +48,18 @@ class AsyncPool(object):
             self.log.debug('Checkout socket')
         except Empty:
             self.local.sock = self.socket_factory()
-            self.log.debug('Create socket')
+            self.log.debug('Create socket in greenlet %s', gevent.getcurrent())
         return self.local.sock
 
     def return_socket(self):
-        if self.local.sock is None:
+        if getattr(self.local, 'sock', None) is None:
             self.log.debug('No socket to return')
             return
         if self.sockets.qsize() < self.pool_size:
-            self.log.debug('Return socket')
+            self.log.debug('Checkin socket')
             self.sockets.put(self.local.sock)
         else:
+            import pdb; pdb.set_trace()
             self.log.debug('Close socket')
             self.local.sock.close()
         self.local.sock = None

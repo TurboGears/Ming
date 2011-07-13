@@ -1,5 +1,7 @@
+from collections import defaultdict
+
 from ming.session import Session
-from ming.utils import ThreadLocalProxy, indent
+from ming.utils import ThreadLocalProxy, ContextualProxy, indent
 from .base import state, ObjectState, session
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
@@ -195,6 +197,34 @@ class ThreadLocalORMSession(ThreadLocalProxy):
         for sess in cls._session_registry.itervalues():
             sess.close()
 
+class ContextualORMSession(ContextualProxy):
+    _session_registry = defaultdict(dict)
+
+    def __init__(self, context, *args, **kwargs):
+        ContextualProxy.__init__(self, ORMSession, context, *args, **kwargs)
+        self._context = context
+
+    def _get(self):
+        result = super(ContextualORMSession, self)._get()
+        self._session_registry[self._context()][id(self)] = self
+        return result
+
+    def close(self):
+        self._get().close()
+        super(ContextualORMSession, self).close()
+        self._session_registry[self._context()].pop(id(self))
+
+    @classmethod
+    def flush_all(cls, context):
+        for sess in cls._session_registry[context].itervalues():
+            sess.flush()
+
+    @classmethod
+    def close_all(cls, context):
+        for sess in cls._session_registry[context].itervalues():
+            sess.close()
+        del cls._session_registry[context]
+            
 class ORMCursor(object):
 
     def __init__(self, session, cls, ming_cursor, refresh=False):
