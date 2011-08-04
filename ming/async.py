@@ -30,14 +30,14 @@ class AsyncConnection(pymongo.Connection):
         
 class AsyncPool(object):
 
-    __slots__ = ["sockets", "socket_factory", "pool_size", "log" ]
-    local = local()
+    __slots__ = ["sockets", "socket_factory", "pool_size", "log", "local" ]
 
     def __init__(self, socket_factory, pool_size):
         self.pool_size = pool_size
         self.socket_factory = socket_factory
         self.sockets = Queue()
         self.log = logging.getLogger('ming.async.AsyncPool')
+        self.local = local()
 
     def socket(self):
         if getattr(self.local, 'sock', None) is not None:
@@ -59,7 +59,6 @@ class AsyncPool(object):
             self.log.debug('Checkin socket')
             self.sockets.put(self.local.sock)
         else:
-            import pdb; pdb.set_trace()
             self.log.debug('Close socket')
             self.local.sock.close()
         self.local.sock = None

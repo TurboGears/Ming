@@ -503,6 +503,10 @@ def update(doc, updates):
         elif k == '$push':
             for kk, vv in v.iteritems():
                 doc[kk].append(vv)
+        elif k == '$addToSet':
+            for kk, vv in v.iteritems():
+                if vv not in doc[kk]:
+                    doc[kk].append(vv)
         elif k == '$pull':
             for kk, vv in v.iteritems():
                 doc[kk] = [
