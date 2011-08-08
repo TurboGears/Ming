@@ -112,21 +112,21 @@ class SchemaItem(object):
         '''
         if isinstance(field, list):
             if len(field) == 0:
-                field = Array(Anything())
+                field = Array(Anything(), *args, **kwargs)
             elif len(field) == 1:
-                field = Array(field[0])
+                field = Array(field[0], *args, **kwargs)
             else:
                 raise ValueError, 'Array must have 0-1 elements'
         elif isinstance(field, dict):
-            field = Object(field)
+            field = Object(field, *args, **kwargs)
         elif field is None:
-            field = Anything()
+            field = Anything(*args, **kwargs)
         elif field in SHORTHAND:
             field = SHORTHAND[field]
         if isinstance(field, type):
             field = field(*args, **kwargs)
         if not isinstance(field, SchemaItem):
-            field = Value(field)
+            field = Value(field, *args, **kwargs)
         return field
 
 class Migrate(SchemaItem):
