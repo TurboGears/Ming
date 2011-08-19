@@ -93,10 +93,16 @@ class Database(database.Database):
         elif 'findandmodify' in command:
             coll = self._collections[command['findandmodify']]
             before = coll.find_one(command['query'], sort=command.get('sort'))
+            upsert = False
             if before is None:
-                raise OperationFailure, 'No matching object found'
+                upsert = True
+                if command.get('upsert'):
+                    before = dict(command['query'])
+                    coll.insert(before)
+                else:
+                    raise OperationFailure, 'No matching object found'
             coll.update(command['query'], command['update'])
-            if command.get('new', False):
+            if command.get('new', False) or upsert:
                 return dict(value=coll.find_one(dict(_id=before['_id'])))
             return dict(value=before)
         elif 'mapreduce' in command:
@@ -499,7 +505,7 @@ def update(doc, updates):
     for k, v in updates.iteritems():
         if k == '$inc':
             for kk, vv in v.iteritems():
-                doc[kk] += vv
+                doc[kk] = doc.get(kk, 0) + vv
         elif k == '$push':
             for kk, vv in v.iteritems():
                 doc[kk].append(vv)

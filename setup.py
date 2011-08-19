@@ -30,7 +30,7 @@ setup(name='Ming',
           # -*- Extra requirements: -*-
         "mock >= 0.6.0",
         "FormEncode >= 1.2.1",
-        "pymongo >= 1.9",
+        "pymongo>=1.9,<2.0",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
       ],
       entry_points="""
