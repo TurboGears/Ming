@@ -8,7 +8,6 @@ from pymongo.connection import Connection
 from pymongo.master_slave_connection import MasterSlaveConnection
 
 from . import mim
-from . import async
 
 class Engine(object):
     '''Proxy for a pymongo connection, providing some url parsing'''
@@ -21,6 +20,7 @@ class Engine(object):
         self._connect_retry = connect_retry
         self._connect_args = connect_args
         if use_gevent:
+            from . import async
             self.ConnectionClass = async.AsyncConnection
         else:
             self.ConnectionClass = Connection
