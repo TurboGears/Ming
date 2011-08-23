@@ -92,7 +92,7 @@ class DataStore(object):
     '''Engine bound to a particular database'''
 
     def __init__(self, master=None, slave=None, connect_retry=3,
-                 bind=None, database=None, **connect_args):
+                 bind=None, database=None, authenticate=None, **connect_args):
         '''
         :param master: connection URL(s) - mongodb://host:port[,host:port]
         :type master: string
@@ -109,6 +109,7 @@ class DataStore(object):
             bind = Engine(master, slave, connect_retry, **connect_args)
         self.bind = bind
         self.database = database
+        self.authenticate = authenticate
 
     def __repr__(self):
         return 'DataStore(%r, %s)' % (self.bind, self.database)
@@ -119,7 +120,10 @@ class DataStore(object):
 
     @property
     def db(self):
-        return getattr(self.bind.conn, self.database, None)
+        db = getattr(self.bind.conn, self.database, None)
+        if db and self.authenticate:
+            db.authenticate(**self.authenticate)
+        return db
 
 class ShardedDataStore(object):
     _lock = Lock()

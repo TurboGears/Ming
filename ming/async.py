@@ -8,7 +8,7 @@ from gevent.local import local
 class AsyncConnection(pymongo.Connection):
 
     def __init__(self, *args, **kwargs):
-        super(AsyncConnection, self).__init__(*args, **kwargs)
+        super(AsyncConnection, self).__init__(_connect=False, *args, **kwargs)
         self._Connection__pool = AsyncPool(
             self._Connection__connect,
             self._Connection__max_pool_size)

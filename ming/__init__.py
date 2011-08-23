@@ -18,10 +18,15 @@ def configure(**kwargs):
     from formencode.variabledecode import variable_decode
     from formencode import schema, validators
 
+    class AuthenticateSchema(schema.Schema):
+        name=validators.UnicodeString(not_empty=True)
+        password=validators.UnicodeString(not_empty=True)
+
     class DatastoreSchema(schema.Schema):
         master=validators.UnicodeString(if_missing=None, if_empty=None)
         slave=validators.UnicodeString(if_missing=None, if_empty=None)
         database=validators.UnicodeString(not_empty=True)
+        authenticate=AuthenticateSchema(if_missing=None)
         connect_retry=validators.Number(if_missing=3, if_empty=0)
         use_gevent = validators.Bool(if_missing=False)
         # pymongo
