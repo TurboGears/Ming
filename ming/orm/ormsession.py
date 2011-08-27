@@ -187,6 +187,10 @@ class ThreadLocalORMSession(ThreadLocalProxy):
         self._get().close()
         super(ThreadLocalORMSession, self).close()
 
+    def mapper(self, cls, collection, **kwargs):
+        return mapper(
+            cls, collection=collection, session=self, **kwargs)
+    
     @classmethod
     def flush_all(cls):
         for sess in cls._session_registry.itervalues():
@@ -209,10 +213,14 @@ class ContextualORMSession(ContextualProxy):
         self._session_registry[self._context()][id(self)] = self
         return result
 
+    def mapper(self, cls, collection, **kwargs):
+        return mapper(
+            cls, collection=collection, session=self, **kwargs)
+    
     def close(self):
         self._get().close()
         super(ContextualORMSession, self).close()
-        self._session_registry[self._context()].pop(id(self))
+        self._session_registry[self._context()].pop(id(self), None)
 
     @classmethod
     def flush_all(cls, context):
@@ -221,7 +229,7 @@ class ContextualORMSession(ContextualProxy):
 
     @classmethod
     def close_all(cls, context):
-        for sess in cls._session_registry[context].itervalues():
+        for sess in cls._session_registry[context].values():
             sess.close()
         del cls._session_registry[context]
             
