@@ -5,7 +5,6 @@ import sys
 import itertools
 import collections
 from datetime import datetime
-from copy import deepcopy
 
 try:
     from spidermonkey import Runtime
@@ -229,20 +228,16 @@ class Collection(collection.Collection):
         def _gen():
             for doc in self._data.itervalues():
                 if match(spec, doc): yield doc
-        result = _gen()
-        if sort:
-            if isinstance(sort, dict): sort = sort.items()
-            for key, direction in reversed(sort):
-                result = sorted(
-                    result,
-                    key=lambda x:x[key],
-                    reverse=(direction==-1))
-        return result
+        return _gen()
 
     def find(self, spec=None, fields=None, as_class=dict, **kwargs):
         if spec is None:
             spec = {}
-        return Cursor(lambda:self._find(spec, **kwargs), fields=fields, as_class=as_class)
+        sort = kwargs.pop('sort', None)
+        cur = Cursor(lambda:self._find(spec, **kwargs), fields=fields, as_class=as_class)
+        if sort:
+            cur = cur.sort(sort)
+        return cur
 
     def find_one(self, spec, **kwargs):
         for x in self.find(spec, **kwargs):
@@ -260,7 +255,7 @@ class Collection(collection.Collection):
                 if safe: raise OperationFailure('duplicate ID on insert')
                 continue
             self._index(doc)
-            self._data[_id] = deepcopy(doc)
+            self._data[_id] = bcopy(doc)
         return _id
 
     def save(self, doc, safe=False):
@@ -289,7 +284,7 @@ class Collection(collection.Collection):
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
             self._index(doc) 
-            self._data[_id] = deepcopy(doc)
+            self._data[_id] = bcopy(doc)
             return _id
 
     def remove(self, spec=None, **kwargs):
@@ -376,7 +371,7 @@ class Cursor(object):
 
     def next(self):
         value = self.iterator.next()
-        value = deepcopy(value)
+        value = bcopy(value)
         if self._fields:
             value = dict((k, value[k]) for k in self._fields)
         return self._as_class(value)
@@ -422,7 +417,7 @@ class Cursor(object):
 def cursor_comparator(keys):
     def comparator(a, b):
         for k,d in keys:
-            part = cmp(a.get(k), b.get(k))
+            part = cmp(_lookup(a, k, None), _lookup(b, k, None))
             if part: return part * d
         return 0
     return comparator
@@ -467,9 +462,13 @@ def _part_match(op, value, key_parts, doc, allow_list_compare=True):
     else:
         return _part_match(op, value, key_parts[1:], doc.get(key_parts[0], ()))
 
-def _lookup(doc, k):
-    for part in k.split('.'):
-        doc = doc[part]
+def _lookup(doc, k, default=()):
+    try:
+        for part in k.split('.'):
+            doc = doc[part]
+    except KeyError:
+        if default != (): return default
+        raise
     return doc
 
 def compare(op, a, b):
@@ -498,7 +497,7 @@ def update(doc, updates):
     newdoc = {}
     for k, v in updates.iteritems():
         if k.startswith('$'): continue
-        newdoc[k] = deepcopy(v)
+        newdoc[k] = bcopy(v)
     if newdoc:
         doc.clear()
         doc.update(newdoc)
@@ -532,3 +531,10 @@ def validate(doc):
             
 def bson_safe(obj):
     bson.BSON.encode(obj)
+
+def bcopy(obj):
+    if isinstance(obj, dict):
+        return bson.BSON.encode(obj).decode()
+    else:
+        return obj
+        
