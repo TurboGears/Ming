@@ -92,18 +92,55 @@ The only real differences here are that rather than inheriting from
 :class:`ming.orm.property.FieldProperty`.  (You might alwo notice the
 `RelationProperty`; we will cover in :ref:`relation`.)  
 
+Creating Objects
+------------------
+
 Once we have the boilerplate out of
 the way, we can create instances of the `WikiPage` as any other Python class.  One
 thing to notice is that we don't explicitly call the `save()` method on the
 `WikiPage`; that will be called for us automatically when we `flush()` the session:
 
+.. code-block:: python
+
+    wp = WikiPage(title='FirstPage', text='This is my first page')
+    session.flush()
+
+The previous two lines will just create a new `WikiPage` and store it inside the
+ORM Unit of Work. As soon as we flush our session the Unit of Work is processed
+and all the changes will be reflected on the database itself.
+
+By default the session will keep track of the objects that has already seen and
+that are currently in clean state. This means that they have not been modified
+since the last flush to the session. If you want to trash away those objects from
+the session itself you can call the `clear` method
+
+.. code-block:: python
+
+    session.clear()
+
+Clearing the session gives you a brand new session, so
+keep in mind that after clearing it, it won't have track
+anymore of the previous items that were created. While it is possible
+to flush the session multiple times, it is common practice in
+web applications to clear it only once at the end of the request.
+
 .. [[[cog interact('ming_orm_tutorial', 1) ]]]
 .. [[[end]]]
+
+Querying the ORM
+----------------
 
 Once we have a `WikiPage` in the database, we can retrieve it using the `.query`
 attribute, modify it, and flush the modified object out to the database:
 
 .. [[[cog interact('ming_orm_tutorial', 2)]]]
+.. [[[end]]]
+
+You've already seen how to retrieve single objects from the ORM using the
+`query.get()` method on `MappedClass` objects.  You can also perform regular Ming
+queries using the `query.find()` method:
+
+.. [[[cog interact('ming_orm_tutorial', 4) ]]]
 .. [[[end]]]
 
 .. _relation:
@@ -131,17 +168,41 @@ create some comments:
 
 And voilà, you have related objects.  Note that at present the relations between
 objects are read-only, so if you want to make or break a relationship, you must
-do it by setting the `ForeignIdProperty`.  
+do it by setting the `ForeignIdProperty`.
 
-Querying the ORM
-----------------
+Ensuring Indexing
+--------------------
 
-You've already seen how to retrieve single objects from the ORM using the
-`query.get()` method on `MappedClass` objects.  You can also perform regular Ming
-queries using the `query.find()` method:
+The ORM layer permits to ensure indexes over the collections by using the
+`__mongometa__` attribute. You can enforce both unique indexing and non-unique
+indexing.
 
-.. [[[cog interact('ming_orm_tutorial', 4) ]]]
-.. [[[end]]]
+For example you can use this to ensure that it won't be possible to duplicate
+an object multiple times with the same name
+
+.. code-block:: python
+
+    class Permission(MappedClass):
+        class __mongometa__:
+            session = session
+            name = 'permissions'
+            unique_indexes = [('permission_name',),]
+
+        _id = FieldProperty(s.ObjectId)
+        permission_name = FieldProperty(s.String)
+        description = FieldProperty(s.String)
+        groups = FieldProperty(s.Array(str))
+
+To apply the specified indexes you can then iterate over all the mappers and
+call `ensure_indexes` over the mapped collection.
+
+.. code-block:: python
+
+    for mapper in ming.orm.Mapper.all_mappers():
+        mainsession.ensure_indexes(mapper.collection)
+
+This needs to be performed each time you change the indexes or the database.
+It is common pratice to ensure all the indexes at application startup.
 
 Dropping Down Below the ORM
 ---------------------------
