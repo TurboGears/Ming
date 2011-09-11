@@ -13,14 +13,13 @@ class ORMProperty(object):
 
     def __init__(self):
         self.name = None
-        self.cls = None
 
     def __get__(self, instance, cls=None):
         raise NotImplementedError, '__get__'
 
     def __set__(self, instance, value):
         raise TypeError, '%r is a read-only property on %r' % (
-            self.name, self.cls)
+            self.name, self.mapper)
 
     def compile(self, mapper):
         pass
@@ -139,9 +138,9 @@ class RelationProperty(ORMProperty):
     @LazyProperty
     def join(self):
         from .mapper import mapper
-        cls = self.cls
+        cls = self.mapper.mapped_class
         rel = self.related
-        own_mapper = mapper(self.cls)
+        own_mapper = self.mapper
         own_props = [ p for p in own_mapper.all_properties()
                       if isinstance(p, ForeignIdProperty)
                       and issubclass(rel, p.related) ]
@@ -172,7 +171,6 @@ class RelationProperty(ORMProperty):
             return '<Missing>'
 
     def __get__(self, instance, cls=None):
-        self.cls = cls
         if instance is None: return self
         if self.fetch:
             st = state(instance)
@@ -182,6 +180,9 @@ class RelationProperty(ORMProperty):
             return result
         else:
             return self.join.iterator(instance)
+
+    def __set__(self, instance, value):
+        self.join.set(instance, value)
 
 class ManyToOneJoin(object):
 
@@ -194,6 +195,9 @@ class ManyToOneJoin(object):
 
     def iterator(self, instance):
         return [ self.load(instance) ]
+
+    def set(self, instance, value):
+        self.prop.__set__(instance, value._id)
 
 class OneToManyJoin(object):
 
@@ -209,6 +213,9 @@ class OneToManyJoin(object):
         key_value = instance._id
         return self.rel_cls.query.find({self.prop.name:key_value})
         return [ self.load(instance) ]
+
+    def set(self, instance, value):
+        raise TypeError, 'read-only'
 
 class OneToManyTracker(object):
     __slots__ = ('state',)
