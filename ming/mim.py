@@ -374,7 +374,7 @@ class Cursor(object):
         value = bcopy(value)
         if self._fields:
             value = dict((k, value[k]) for k in self._fields)
-        return self._as_class(value)
+        return wrap_as_class(value, self._as_class)
 
     def sort(self, key_or_list, direction=ASCENDING):
         if not self._safe_to_chain:
@@ -538,3 +538,12 @@ def bcopy(obj):
     else:
         return obj
         
+def wrap_as_class(value, as_class):
+    if isinstance(value, dict):
+        return as_class(dict(
+                (k, wrap_as_class(v, as_class))
+                for k,v in value.items()))
+    elif isinstance(value, list):
+        return [ wrap_as_class(v, as_class) for v in value ]
+    else:
+        return value
