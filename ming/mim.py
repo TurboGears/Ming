@@ -485,7 +485,14 @@ def compare(op, a, b):
         else:
             return a == b
     if op == '$ne': return a != b
-    if op == '$in': return a in b
+    if op == '$in':
+        if isinstance(a, list):
+            for ele in a:
+                if ele in b:
+                    return True
+            return False
+        else:
+            return a in b
     if op == '$nin': return a not in b
     if op == '$exists':
         return a != () if b else a == ()
