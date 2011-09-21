@@ -104,7 +104,7 @@ def _process_collection_args(bases, *args):
         elif isinstance(a, Index):
             indexes.append(a)
         else:
-            raise TypeError, "don't know what to do with %r" % a
+            raise TypeError, "don't know what to do with %r" % (a,)
 
     return field_index.values(), indexes
 

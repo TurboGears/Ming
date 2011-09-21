@@ -1,3 +1,4 @@
+import os
 import logging
 
 import pymongo
@@ -29,35 +30,56 @@ class AsyncConnection(pymongo.Connection):
         
 class AsyncPool(object):
 
-    __slots__ = ["sockets", "socket_factory", "pool_size", "log", "local" ]
+    __slots__ = ["sockets", "socket_factory", "pool_size", "log", "local", "pid" ]
 
     def __init__(self, socket_factory, pool_size):
+        self.pid = os.getpid()
         self.pool_size = pool_size
         self.socket_factory = socket_factory
         self.sockets = Queue()
         self.log = logging.getLogger('ming.async.AsyncPool')
         self.local = local()
 
+    def _get_sock(self):
+        return getattr(self.local, 'sock', None)
+    def _set_sock(self, value):
+        self.local.sock = value
+    sock = property(_get_sock, _set_sock)
+
     def socket(self):
-        if getattr(self.local, 'sock', None) is not None:
-            self.log.debug('Return existing socket')
-            return self.local.sock
+        pid = os.getpid()
+
+        if pid != self.pid:
+            self.sock = None
+            self.sockets = Queue()
+            self.pid = pid
+
+        if self.sock is not None:
+            self.log.debug('Return existing socket to greenlet %s', gevent.getcurrent() )
+            return self.sock
+        gl = gevent.getcurrent()
         try:
-            self.local.sock = self.sockets.get_nowait()
-            self.log.debug('Checkout socket')
+            self.sock = self.sockets.get_nowait()
+            self.log.debug('Checkout socket %s to greenlet %s',
+                           self.sock, gl )
         except Empty:
-            self.local.sock = self.socket_factory()
-            self.log.debug('Create socket in greenlet %s', gevent.getcurrent())
-        return self.local.sock
+            self.sock = self.socket_factory()
+            self.log.debug('Create socket in greenlet %s', gl)
+        self.sock.last_greenlet = gl
+        return self.sock
 
     def return_socket(self):
-        if getattr(self.local, 'sock', None) is None:
-            self.log.debug('No socket to return')
+        if self.sock is None:
+            self.log.debug('No socket to return from greenlet %s', gevent.getcurrent() )
             return
         if self.sockets.qsize() < self.pool_size:
-            self.log.debug('Checkin socket')
-            self.sockets.put(self.local.sock)
+            gl = gevent.getcurrent()
+            self.log.debug('Checkin socket %s from greenlet %s',
+                           self.sock, gl)
+            self.sockets.put(self.sock)
+            self.sock = None
         else:
-            self.log.debug('Close socket')
-            self.local.sock.close()
+            self.log.debug('Close socket in greenlet %s', gevent.getcurrent() )
+            self.sock.close()
+            self.sock = None
         self.local.sock = None
