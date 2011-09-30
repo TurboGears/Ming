@@ -28,7 +28,7 @@ setup(name='Ming',
       zip_safe=True,
       install_requires=[
           # -*- Extra requirements: -*-
-        "mock >=0.6.0,<0.8.0",
+        "mock >=0.6.0,<0.7.99",
         "FormEncode >= 1.2.1",
         "pymongo>=1.9,<2.0",
         "PasteScript", # used by flyway
