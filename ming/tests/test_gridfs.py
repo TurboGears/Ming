@@ -1,6 +1,7 @@
 '''
-Test the new functional syntax for collection definition
+Test the gridfs support
 '''
+import time
 
 from unittest import TestCase
 from collections import defaultdict
@@ -76,6 +77,7 @@ class TestFS(TestCase):
 
     def test_get_version(self):
         self.TestFS.m.put('test.txt', 'The quick brown fox')
+        time.sleep(0.01)
         self.TestFS.m.put('test.txt', 'jumped over the lazy dog')
         self.assertEqual(
             self.TestFS.m.get_last_version('test.txt').read(),

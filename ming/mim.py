@@ -363,7 +363,7 @@ class Cursor(object):
         if self._skip is not None:
             result = itertools.islice(result, self._skip, sys.maxint)
         if self._limit is not None:
-            result = itertools.islice(result, self._limit)
+            result = itertools.islice(result, abs(self._limit))
         return iter(result)
 
     def count(self):
@@ -390,11 +390,8 @@ class Cursor(object):
                 keys.append(t)
             else:
                 keys.append(t, ASCENDING)
-        return Cursor(
-            self._iterator_gen,
-            sort=keys,
-            skip=self._skip,
-            limit=self._limit)
+        self._sort = keys
+        return self
 
     def all(self):
         return list(self._iterator_gen())
@@ -402,20 +399,14 @@ class Cursor(object):
     def skip(self, skip):
         if not self._safe_to_chain:
             raise InvalidOperation('cannot set options after executing query')
-        return Cursor(
-            self._iterator_gen,
-            sort=self._sort,
-            skip=skip,
-            limit=self._limit)
+        self._skip = skip
+        return self
 
     def limit(self, limit):
         if not self._safe_to_chain:
             raise InvalidOperation('cannot set options after executing query')
-        return Cursor(
-            self._iterator_gen,
-            sort=self._sort,
-            skip=self._skip,
-            limit=limit)
+        self._limit = limit
+        return self
 
 def cursor_comparator(keys):
     def comparator(a, b):
