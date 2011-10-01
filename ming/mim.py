@@ -239,9 +239,12 @@ class Collection(collection.Collection):
             cur = cur.sort(sort)
         return cur
 
-    def find_one(self, spec, **kwargs):
-        for x in self.find(spec, **kwargs):
-            return x
+    def find_one(self, spec_or_id=None, *args, **kwargs):
+        if spec_or_id is not None and not isinstance(spec_or_id, dict):
+            spec_or_id = {"_id": spec_or_id}
+        for result in self.find(spec_or_id, *args, **kwargs):
+            return result
+        return None
 
     def insert(self, doc_or_docs, safe=False):
         if not isinstance(doc_or_docs, list):

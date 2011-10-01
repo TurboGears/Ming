@@ -52,6 +52,16 @@ class Index(object):
         return self.index_spec == o.index_spec and self.unique == o.unique
 
 def collection(*args, **kwargs):
+    fields, indexes, collection_name, bases, session = _process_collection_args(
+        args, kwargs)
+    dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
+    cls = type('Document<%s>' % collection_name, bases, dct)
+    m = _ClassManager(
+        cls, collection_name, session, fields, indexes, **kwargs)
+    cls.m = _ManagerDescriptor(m)
+    return cls
+
+def _process_collection_args(args, kwargs):
     if len(args) < 1:
         raise TypeError, 'collection() takes at least one argument'
     if isinstance(args[0], (basestring, type(None))):
@@ -79,15 +89,6 @@ def collection(*args, **kwargs):
         'collection_name', collection_name)
     session =  kwargs.pop(
         'session', session)
-    fields, indexes = _process_collection_args(bases, *args)
-    dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
-    cls = type('Document<%s>' % collection_name, bases, dct)
-    m = _ClassManager(
-        cls, collection_name, session, fields, indexes, **kwargs)
-    cls.m = _ManagerDescriptor(m)
-    return cls
-
-def _process_collection_args(bases, *args):
     field_index = {}
     indexes = []
     for b in reversed(bases):
@@ -106,14 +107,15 @@ def _process_collection_args(bases, *args):
         else:
             raise TypeError, "don't know what to do with %r" % (a,)
 
-    return field_index.values(), indexes
+    return field_index.values(), indexes, collection_name, bases, session
 
 class _CurriedProxyClass(type):
 
     def __new__(meta, name, bases, dct):
-        methods = dct.pop('_proxy_methods')
-        proxy_of = dct.pop('_proxy_on')
-        proxy_args = dct.pop('_proxy_args')
+        methods = dct['_proxy_methods']
+        proxy_of = dct['_proxy_on']
+        proxy_args = dct['_proxy_args']
+                    
         def _proxy(name):
             def inner(self, *args, **kwargs):
                 target = getattr(self, proxy_of)
@@ -125,7 +127,34 @@ class _CurriedProxyClass(type):
             return inner
         for meth in methods:
             dct[meth] = _proxy(meth)
-        return type.__new__(meta, name, bases, dct)
+        cls = type.__new__(meta, name, bases, dct)
+        return cls
+
+class _InstanceManager(object):
+    __metaclass__ = _CurriedProxyClass
+    _proxy_methods = (
+        'save', 'insert', 'upsert', 'delete', 'set', 'increase_field')
+    _proxy_on='session'
+    _proxy_args=('inst',)
+
+    def __init__(self, mgr, inst):
+        self.classmanager = mgr
+        self.session = mgr.session
+        self.inst = inst
+        self.schema = mgr.schema
+        self.collection_name = mgr.collection_name
+        self.before_save = mgr.before_save
+        return
+
+        def _proxy(name):
+            def inner(*args, **kwargs):
+                method = getattr(self.session, name)
+                return method(self.inst, *args, **kwargs)
+            inner.__name__ = name
+            return inner
+
+        for method_name in self._proxy_methods:
+            setattr(self, method_name, _proxy(method_name))
 
 class _ClassManager(object):
     __metaclass__ = _CurriedProxyClass
@@ -134,10 +163,12 @@ class _ClassManager(object):
     _proxy_methods = (
         'get', 'find', 'find_by', 'remove', 'count', 'update_partial',
         'group', 'ensure_index', 'ensure_indexes', 'index_information',  'drop_indexes' )
+    InstanceManagerClass=_InstanceManager
 
     def __init__(
         self, cls, collection_name, session, fields, indexes, 
-        polymorphic_on=None, polymorphic_identity=None, polymorphic_registry=None,
+        polymorphic_on=None, polymorphic_identity=None,
+        polymorphic_registry=None,
         version_of=None, migrate=None,
         before_save=None):
         self.cls = cls
@@ -239,32 +270,6 @@ class _ClassManager(object):
         else:
             return self.cls(data)
         
-class _InstanceManager(object):
-    __metaclass__ = _CurriedProxyClass
-    _proxy_methods = (
-        'save', 'insert', 'upsert', 'delete', 'set', 'increase_field')
-    _proxy_on='session'
-    _proxy_args=('inst',)
-
-    def __init__(self, mgr, inst):
-        self.classmanager = mgr
-        self.session = mgr.session
-        self.inst = inst
-        self.schema = mgr.schema
-        self.collection_name = mgr.collection_name
-        self.before_save = mgr.before_save
-        return
-
-        def _proxy(name):
-            def inner(*args, **kwargs):
-                method = getattr(self.session, name)
-                return method(self.inst, *args, **kwargs)
-            inner.__name__ = name
-            return inner
-
-        for method_name in self._proxy_methods:
-            setattr(self, method_name, _proxy(method_name))
-
 class _ManagerDescriptor(object):
 
     def __init__(self, manager):
@@ -288,7 +293,7 @@ class _ManagerDescriptor(object):
         if inst is None:
             return self.manager
         else:
-            return _InstanceManager(self.manager, inst)
+            return self.manager.InstanceManagerClass(self.manager, inst)
 
 class _FieldDescriptor(object):
 
