@@ -282,7 +282,7 @@ class _ManagerDescriptor(object):
                 self.initialized = True
                 self.manager.ensure_indexes()
             except (MongoGone, ConnectionFailure) as e:
-                if e.message == 'not master':
+                if e.args[0] == 'not master':
                     # okay for slaves to not ensure indexes
                     pass
                 else:
