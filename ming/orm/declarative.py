@@ -35,6 +35,7 @@ class _MappedClassMeta(type):
         properties = {}
         include_properties = getattr(mm, 'include_properties', [])
         exclude_properties = getattr(mm, 'exclude_properties', [])
+        extensions = getattr(mm, 'extensions', [])
         for k,v in dct.iteritems():
             if isinstance(v, ORMProperty):
                 v.name = k
@@ -45,7 +46,8 @@ class _MappedClassMeta(type):
         mapper(cls, collection_class, mm.session,
                properties=properties,
                include_properties=include_properties,
-               exclude_properties=exclude_properties)
+               exclude_properties=exclude_properties,
+               extensions=extensions)
         return cls
         
     @classmethod

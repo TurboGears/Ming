@@ -2,7 +2,7 @@ from copy import copy
 from ming.base import Object
 from ming.utils import wordwrap
 
-from .base import ObjectState, state
+from .base import ObjectState, state, with_hooks
 from .property import FieldProperty
 
 def mapper(cls, collection=None, session=None, **kwargs):
@@ -36,6 +36,8 @@ class Mapper(object):
         properties = kwargs.pop('properties', {})
         include_properties = kwargs.pop('include_properties', None)
         exclude_properties = kwargs.pop('exclude_properties', [])
+        extensions = kwargs.pop('extensions', [])
+        self.extensions = [e(self) for e in extensions]
         if kwargs:
             raise TypeError, 'Unknown kwd args: %r' % kwargs
         self._instrument_class(properties, include_properties, exclude_properties)
@@ -44,22 +46,26 @@ class Mapper(object):
         return '<Mapper %s:%s>' % (
             self.mapped_class.__name__, self.collection.m.collection_name)
 
+    @with_hooks('insert')
     def insert(self, obj, state, **kwargs):
         state.document.m.insert(validate=False)
         self.session.save(obj)
         state.status = state.clean
 
+    @with_hooks('update')
     def update(self, obj, state, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
         doc.m.save(validate=False, **kwargs)
         self.session.save(obj)
         state.status = state.clean
 
+    @with_hooks('delete')
     def delete(self, obj, state, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
         doc.m.delete(**kwargs)
         self.session.expunge(obj)
 
+    @with_hooks('remove')
     def remove(self, *args, **kwargs):
         self.collection.m.remove(*args, **kwargs)
 
@@ -183,6 +189,36 @@ class Mapper(object):
                 return hasattr(self_, name)
         return _Instrumentation
 
+
+class MapperExtension(object):
+    """Base implementation for customizing Mapper behavior."""
+    def __init__(self, mapper):
+        self.mapper = mapper
+    def before_insert(mapper, instance, state):
+        """Receive an object instance and its current state before that
+        instance is inserted into its collection."""
+        pass
+    def after_insert(mapper, instance, state):
+        """Receive an object instance and its current state after that
+        instance is inserted into its collection."""
+        pass
+    def before_update(mapper, instance, state):
+        """Receive an object instance and its current state before that
+        instance is updated."""
+        pass
+    def after_update(mapper, instance, state):
+        """Receive an object instance and its current state after that
+        instance is updated."""
+        pass
+    def before_delete(mapper, instance, state):
+        """Receive an object instance and its current state before that
+        instance is deleted."""
+        pass
+    def after_delete(mapper, instance, state):
+        """Receive an object instance and its current state after that
+        instance is deleted."""
+    def before_remove(self, *args, **kwargs): pass
+    def after_remove(self, *args, **kwargs): pass
 
 class _ORMDecoration(object):
 

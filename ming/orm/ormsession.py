@@ -2,34 +2,11 @@ from collections import defaultdict
 
 from ming.session import Session
 from ming.utils import ThreadLocalProxy, ContextualProxy, indent
-from .base import state, ObjectState, session
+from .base import state, ObjectState, session, with_hooks
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
 
-class with_hooks(object):
-    'Decorator to use for Session extensions'
-
-    def __init__(self, hook_name):
-        self.hook_name = hook_name
-
-    def __call__(self, func):
-        before_meth = 'before_' + self.hook_name
-        after_meth = 'after_' + self.hook_name
-        def before(session, *args, **kwargs):
-            for e in session.extensions:
-                getattr(e, before_meth)(*args, **kwargs)
-        def after(session, *args, **kwargs):
-            for e in session.extensions:
-                getattr(e, after_meth)(*args, **kwargs)
-        def inner(session, *args, **kwargs):
-            before(session, *args, **kwargs)
-            result = func(session, *args, **kwargs)
-            after(session, *args, **kwargs)
-            return result
-        inner.__name__ = func.__name__
-        inner.__doc__ = 'Hook wraper around\n' + repr(func.__doc__)
-        return inner
 
 class ORMSession(object):
 

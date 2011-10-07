@@ -170,6 +170,74 @@ And voilà, you have related objects.  Note that at present the relations betwee
 objects are read-only, so if you want to make or break a relationship, you must
 do it by setting the `ForeignIdProperty`.
 
+ORM Event Interfaces
+--------------------
+
+This section describes the various categories of events which can be intercepted within the Ming ORM.
+
+Mapper Events
+=============
+
+.. module:: ming.orm.mapper
+
+To use MapperExtension, make your own subclass of it and just send it off to a mapper:
+
+.. code-block:: python
+
+    from ming.orm.mapper import MapperExtension
+    class MyExtension(MapperExtension):
+        def after_insert(self, obj, st):
+            print "instance %s after insert !" % obj
+
+    class MyMappedClass(MappedClass):
+        class __mongometa__:
+            session = session
+            name = 'my_mapped_class'
+            extensions = [ MyExtension ]
+
+Multiple extensions will be chained together and processed in order;
+
+.. code-block:: python
+
+    extensions = [ext1, ext2, ext3]
+
+.. autoclass:: MapperExtension
+    :members:
+
+Session Events
+==============
+
+.. module:: ming.orm.ormsession
+
+The SessionExtension applies plugin points for Session objects:
+
+.. code-block:: python
+
+    from ming.orm.base import state
+    from ming.orm.ormsession import SessionExtension
+
+    class MySessionExtension(SessionExtension):
+        def __init__(self, session):
+            SessionExtension.__init__(self, session)
+            self.objects_added = []
+            self.objects_modified = []
+            self.objects_deleted = []
+
+        def before_flush(self, obj=None):
+            if obj is None:
+                self.objects_added = list(self.session.uow.new)
+                self.objects_modified = list(self.session.uow.dirty)
+                self.objects_deleted = list(self.session.uow.deleted)
+            # do something
+
+    ORMSession = ThreadLocalORMSession(session,
+                                       extensions=[ProjectSessionExtension])
+
+The same SessionExtension instance can be used with any number of sessions.
+
+.. autoclass:: SessionExtension
+    :members:
+
 Ensuring Indexing
 --------------------
 

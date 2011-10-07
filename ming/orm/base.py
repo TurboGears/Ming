@@ -11,6 +11,30 @@ def session(v):
     else:
         return session(type(v))
 
+class with_hooks(object):
+    'Decorator to use for Session/Mapper extensions'
+
+    def __init__(self, hook_name):
+        self.hook_name = hook_name
+
+    def __call__(self, func):
+        before_meth = 'before_' + self.hook_name
+        after_meth = 'after_' + self.hook_name
+        def before(obj, *args, **kwargs):
+            for e in obj.extensions:
+                getattr(e, before_meth)(*args, **kwargs)
+        def after(obj, *args, **kwargs):
+            for e in obj.extensions:
+                getattr(e, after_meth)(*args, **kwargs)
+        def inner(obj, *args, **kwargs):
+            before(obj, *args, **kwargs)
+            result = func(obj, *args, **kwargs)
+            after(obj, *args, **kwargs)
+            return result
+        inner.__name__ = func.__name__
+        inner.__doc__ = 'Hook wraper around\n' + repr(func.__doc__)
+        return inner
+
 class ObjectState(object):
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 

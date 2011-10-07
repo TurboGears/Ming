@@ -7,6 +7,7 @@ from ming.orm import ORMSession, Mapper
 from ming.orm import FieldProperty, RelationProperty, ForeignIdProperty
 from ming.orm.declarative import MappedClass
 from ming.orm import state, mapper
+from ming.orm import MapperExtension, SessionExtension
 
 class TestIndex(TestCase):
 
@@ -67,6 +68,45 @@ class TestRelation(TestCase):
         self.assertRaises(TypeError, clearchildren)
         self.assertRaises(TypeError, parent.children.append, children[0])
         self.assertRaises(TypeError, setchild)
+
+class TestBasicMapperExtension(TestCase):
+    def setUp(self):
+        self.datastore = DS.DataStore(
+            'mim:///', database='test_db')
+        self.session = ORMSession(bind=self.datastore)
+        class BasicMapperExtension(MapperExtension):
+            def after_insert(self, instance, state):
+                assert 'clean'==state.status
+            def before_insert(self, instance, state):
+                assert 'new'==state.status
+            def before_update(self, instance, state):
+                assert 'dirty'==state.status
+            def after_update(self, instance, state):
+                assert 'clean'==state.status
+        class Basic(MappedClass):
+            class __mongometa__:
+                name='basic'
+                session = self.session
+                extensions = [BasicMapperExtension]
+            _id = FieldProperty(S.ObjectId)
+            a = FieldProperty(int)
+            b = FieldProperty([int])
+            c = FieldProperty(dict(
+                    d=int, e=int))
+        Mapper.compile_all()
+        self.Basic = Basic
+        self.session.remove(self.Basic)
+
+    def tearDown(self):
+        self.session.clear()
+        self.datastore.conn.drop_all()
+
+    def test_mapper_extension(self):
+        doc = self.Basic()
+        doc.a = 5
+        self.session.flush()
+        doc.a = 6
+        self.session.flush()
 
 class TestBasicMapping(TestCase):
     
