@@ -2,11 +2,10 @@ from collections import defaultdict
 
 from ming.session import Session
 from ming.utils import ThreadLocalProxy, ContextualProxy, indent
-from .base import state, ObjectState, session, with_hooks
+from .base import state, ObjectState, session, with_hooks, call_hook
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
-
 
 class ORMSession(object):
 
@@ -21,6 +20,9 @@ class ORMSession(object):
         self.imap = IdentityMap()
         self.extensions = [ e(self) for e in extensions ]
         self.autoflush = False
+
+    def register_extension(self, extension):
+        self.extensions.append(extension(self))
 
     @classmethod
     def by_name(cls, name):
@@ -89,7 +91,9 @@ class ORMSession(object):
         m = mapper(cls)
         # args = map(deinstrument, args)
         ming_cursor = m.collection.m.find(*args, **kwargs)
-        return ORMCursor(self, cls, ming_cursor, refresh=refresh)
+        orm_cursor = ORMCursor(self, cls, ming_cursor, refresh=refresh)
+        call_hook(self, 'cursor_created', orm_cursor, 'find', cls, *args, **kwargs)
+        return orm_cursor
 
     def find_and_modify(self, cls, *args, **kwargs):
         if self.autoflush:
@@ -149,16 +153,25 @@ class SessionExtension(object):
     def before_flush(self, obj=None): pass
     def after_flush(self, obj=None): pass
 
+    def cursor_created(self, cursor, action, *args, **kw): pass
+    def before_cursor_next(self, cursor): pass
+    def after_cursor_next(self, cursor): pass
+
 class ThreadLocalORMSession(ThreadLocalProxy):
     _session_registry = ThreadLocalProxy(dict)
 
     def __init__(self, *args, **kwargs):
+        if not kwargs.has_key('extensions'):
+            kwargs['extensions'] = []
         ThreadLocalProxy.__init__(self, ORMSession, *args, **kwargs)
 
     def _get(self):
         result = super(ThreadLocalORMSession, self)._get()
         self._session_registry.__setitem__(id(self), self)
         return result
+
+    def register_extension(self, extension):
+        self._kwargs['extensions'].append(extension)
 
     def close(self):
         self._get().close()
@@ -225,10 +238,14 @@ class ORMCursor(object):
     def __len__(self):
         return self.count()
 
+    @property
+    def extensions(self):
+        return self.session.extensions
+
     def count(self):
         return self.ming_cursor.count()
 
-    def next(self):
+    def _next_impl(self):
         doc = self.ming_cursor.next()
         obj = self.session.imap.get(self.cls, doc['_id'])
         if obj is None:
@@ -247,21 +264,36 @@ class ORMCursor(object):
             self.session.save(obj)
         return obj
 
+    def next(self):
+        call_hook(self, 'before_cursor_next', self)
+        try:
+            return self._next_impl()
+        finally:
+            call_hook(self, 'after_cursor_next', self)
+
     def limit(self, limit):
-        return ORMCursor(self.session, self.cls,
-                         self.ming_cursor.limit(limit))
+        orm_cursor = ORMCursor(self.session, self.cls,
+                               self.ming_cursor.limit(limit))
+        call_hook(self, 'cursor_created', orm_cursor, 'limit', self, limit)
+        return orm_cursor
 
     def skip(self, skip):
-        return ORMCursor(self.session, self.cls,
-                         self.ming_cursor.skip(skip))
+        orm_cursor = ORMCursor(self.session, self.cls,
+                               self.ming_cursor.skip(skip))
+        call_hook(self, 'cursor_created', orm_cursor, 'skip', self, skip)
+        return orm_cursor
 
     def hint(self, index_or_name):
-        return ORMCursor(self.session, self.cls,
-                         self.ming_cursor.hint(index_or_name))
+        orm_cursor = ORMCursor(self.session, self.cls,
+                               self.ming_cursor.hint(index_or_name))
+        call_hook(self, 'cursor_created', orm_cursor, 'hint', self, index_or_name)
+        return orm_cursor
 
     def sort(self, *args, **kwargs):
-        return ORMCursor(self.session, self.cls,
-                         self.ming_cursor.sort(*args, **kwargs))
+        orm_cursor = ORMCursor(self.session, self.cls,
+                               self.ming_cursor.sort(*args, **kwargs))
+        call_hook(self, 'cursor_created', orm_cursor, 'sort', self, *args, **kwargs)
+        return orm_cursor
 
     def one(self):
         try:
@@ -282,5 +314,3 @@ class ORMCursor(object):
 
     def all(self):
         return list(self)
-
-    

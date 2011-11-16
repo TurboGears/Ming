@@ -209,7 +209,8 @@ Session Events
 
 .. module:: ming.orm.ormsession
 
-The SessionExtension applies plugin points for Session objects:
+The SessionExtension applies plugin points for Session objects
+and ORMCursor objects:
 
 .. code-block:: python
 
@@ -234,6 +235,10 @@ The SessionExtension applies plugin points for Session objects:
                                        extensions=[ProjectSessionExtension])
 
 The same SessionExtension instance can be used with any number of sessions.
+It is possible to register extensions on an already created ORMSession using
+the `register_extension(extension)` method of the session itself. 
+Even calling register_extension it is possible to register the extensions only
+before using the session for the first time.
 
 .. autoclass:: SessionExtension
     :members:
