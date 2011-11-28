@@ -161,8 +161,7 @@ class ThreadLocalORMSession(ThreadLocalProxy):
     _session_registry = ThreadLocalProxy(dict)
 
     def __init__(self, *args, **kwargs):
-        if not kwargs.has_key('extensions'):
-            kwargs['extensions'] = []
+        kwargs.setdefault('extensions', [])
         ThreadLocalProxy.__init__(self, ORMSession, *args, **kwargs)
 
     def _get(self):
