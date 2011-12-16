@@ -266,6 +266,25 @@ an object multiple times with the same name
         description = FieldProperty(s.String)
         groups = FieldProperty(s.Array(str))
 
+If you want more control over your indexes, you can use custom_indexes directly within
+`__mongometa__`, this will allow you to explicitly set unique and/or sparse index
+flags that same way you could if you were directly calling ensureIndex in the MongoDB
+shell. For example, if you had a field like email that you wanted to be unique, but
+also allowed to be null
+
+.. code-block:: python
+
+    class User(MappedClass):
+        class __mongometa__:
+	    session = session
+	    name = 'users'
+	    custom_indexes = [
+		dict(fields=('email',), unique=True, sparse=True)
+	    ]
+
+	_id = FieldProperty(s.ObjectId)
+	email = FieldProperty(s.String)
+
 To apply the specified indexes you can then iterate over all the mappers and
 call `ensure_indexes` over the mapped collection.
 

@@ -89,7 +89,8 @@ class Session(object):
 
     def ensure_indexes(self, cls):
         for idx in cls.m.indexes:
-            self.ensure_index(cls, idx.index_spec, unique=idx.unique)
+            self.ensure_index(cls, idx.index_spec, unique=idx.unique,
+                    sparse=idx.sparse)
 
     def group(self, cls, *args, **kwargs):
         return self._impl(cls).group(*args, **kwargs)

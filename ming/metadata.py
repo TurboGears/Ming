@@ -22,11 +22,16 @@ class Field(object):
             raise TypeError, 'Field() takes 1 or 2 argments, not %s' % len(args)
         self.index = kwargs.pop('index', False)
         self.unique = kwargs.pop('unique', False)
+        self.sparse = kwargs.pop('sparse', False)
         self.schema = S.SchemaItem.make(self.type, **kwargs)
 
     def __repr__(self):
         if self.unique:
             flags = 'index unique'
+            if self.sparse:
+                flags += ' sparse'
+        elif self.sparse:
+            flags = 'index sparse'
         elif self.index:
             flags = 'index'
         else:
@@ -39,17 +44,18 @@ class Index(object):
         self.fields = fields
         self.direction = kwargs.pop('direction', pymongo.ASCENDING)
         self.unique = kwargs.pop('unique', False)
+        self.sparse = kwargs.pop('sparse', False)
         self.index_spec = fixup_index(fields, self.direction)
         self.name = 'idx_' + '_'.join('%s_%d' % t for t in self.index_spec)
         if kwargs: raise TypeError, 'unknown kwargs: %r' % kwargs
 
     def __repr__(self):
         specs = [ '%s:%s' % t  for t in self.index_spec ]
-        return '<Index (%s) unique=%s>' % (
-            ','.join(specs), self.unique)
+        return '<Index (%s) unique=%s sparse=%s>' % (
+            ','.join(specs), self.unique, self.sparse)
 
     def __eq__(self, o):
-        return self.index_spec == o.index_spec and self.unique == o.unique
+        return self.index_spec == o.index_spec and self.unique == o.unique and self.sparse == o.sparse
 
 def collection(*args, **kwargs):
     fields, indexes, collection_name, bases, session = _process_collection_args(
@@ -80,7 +86,7 @@ def _process_collection_args(args, kwargs):
         bases = tuple(args[0])
         args = args[1:]
         collection_name = bases[-1].m.collection_name
-        session = bases[-1].m.session        
+        session = bases[-1].m.session
     else:
         raise TypeError, (
             'collection(name, session, ...) and collection(base_class) are the'
@@ -99,7 +105,12 @@ def _process_collection_args(args, kwargs):
         if isinstance(a, Field):
             field_index[a.name] = a
             if a.unique:
-                indexes.append(Index(a.name, unique=True))
+                if a.sparse:
+                    indexes.append(Index(a.name, unique=True, sparse=True))
+                else:
+                    indexes.append(Index(a.name, unique=True))
+            elif a.sparse:
+                indexes.append(Index(a.name, unique=False, sparse=True))
             elif a.index:
                 indexes.append(Index(a.name))
         elif isinstance(a, Index):
