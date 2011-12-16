@@ -7,12 +7,9 @@ from unittest import TestCase
 from collections import defaultdict
 
 import mock
-import pymongo
 
 from ming import datastore
 from ming import fs, Session
-from ming import schema as S
-from ming  import Field
 
 def mock_datastore():
     ds = mock.Mock()
@@ -41,14 +38,14 @@ class TestFS(TestCase):
             fp.write(' jumped over the lazy dog')
         assert self.TestFS.m.exists(filename='test.txt')
         self.assertEqual(fp.filename, 'test.txt')
-        self.assertEqual(fp.mime_type, 'text/plain')
+        self.assertEqual(fp.content_type, 'text/plain')
         fp = self.TestFS.m.get_last_version(filename='test.txt')
         self.assertEqual(
             fp.read(), 'The quick brown fox jumped over the lazy dog')
         self.assertEqual(self.TestFS.m.find().count(), 1)
         fobj = self.TestFS.m.get()
         self.assertEqual(fobj.filename, 'test.txt')
-        self.assertEqual(fobj.mime_type, 'text/plain')
+        self.assertEqual(fobj.content_type, 'text/plain')
         self.assertEqual(fobj.length, 44)
         fobj.m.delete()
         assert not self.TestFS.m.exists(filename='test.txt')
@@ -60,7 +57,7 @@ class TestFS(TestCase):
             fp.write('The quick brown fox')
             fp.write(' jumped over the lazy dog')
         self.assertEqual(fp.filename, 'test.ming')
-        self.assertEqual(fp.mime_type, 'application/octet-stream')
+        self.assertEqual(fp.content_type, 'application/octet-stream')
 
     def test_put(self):
         self.TestFS.m.put('test.txt', 'The quick brown fox')

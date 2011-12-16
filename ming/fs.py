@@ -1,8 +1,10 @@
 import mimetypes
+from datetime import datetime
 
 import gridfs
 
 from ming.utils import LazyProperty
+from ming import schema as S
 from ming.metadata import Field, _FieldDescriptor
 from ming.metadata import _ClassManager, _InstanceManager
 from ming.metadata import _ManagerDescriptor
@@ -11,15 +13,16 @@ from ming.metadata import _process_collection_args
 def filesystem(*args, **kwargs):
     fields, indexes, collection_name, bases, session = _process_collection_args(
         args, kwargs)
-    dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
-    if 'filename' not in dct:
-        f = Field('filename', str, index=True)
-        fields.append(f)
-        dct['filename'] = _FieldDescriptor(f)
-    if 'contentType' not in dct:
-        f = Field('contentType', str, index=True)
-        fields.append(f)
-        dct['contentType'] = _FieldDescriptor(f)
+    field_index = dict((f.name, f) for f in fields)
+    field_index.setdefault(
+        'filename', Field('filename', str, index=True))
+    field_index.setdefault(
+        'content_type', Field('contentType', str, index=True))
+    field_index.setdefault('_id', Field('_id', S.ObjectId()))
+    field_index.setdefault('chunkSize', Field('chunkSize', int))
+    field_index.setdefault('length', Field('length', int))
+    field_index.setdefault('uploadDate', Field('uploadDate', datetime))
+    dct = dict((k, _FieldDescriptor(f)) for k,f in field_index.items())
         
     cls = type('Filesystem<%s>' % collection_name, bases, dct)
     m = _FSClassManager(
