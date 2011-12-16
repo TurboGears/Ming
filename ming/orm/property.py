@@ -85,6 +85,27 @@ class FieldProperty(ORMProperty):
         st.document[self.name] = value
         st.soil()
 
+
+class FieldPropertyWithMissingNone(FieldProperty):
+    """A class like FieldProperty with one exception.
+    If you use if_missing=S.Missing with FieldPropertyWithMissingNone
+    when a value in Mongo is not present, instead of Ming throwing
+    an AttributeError, Ming will return a value of None for that attribute.
+    """
+    def __get__(self, instance, cls=None):
+        if instance is None: return self
+        st = state(instance)
+        try:
+            return instrument(st.document[self.name], st.tracker)
+        except KeyError:
+            value = self.field.schema.validate(S.Missing)
+            if value is S.Missing:
+                return None
+            else:
+                st.document[self.name] = value
+            return value
+
+
 class ForeignIdProperty(FieldProperty):
 
     def __init__(self, related, *args, **kwargs):

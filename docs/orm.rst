@@ -270,7 +270,7 @@ If you want more control over your indexes, you can use custom_indexes directly 
 `__mongometa__`, this will allow you to explicitly set unique and/or sparse index
 flags that same way you could if you were directly calling ensureIndex in the MongoDB
 shell. For example, if you had a field like email that you wanted to be unique, but
-also allowed to be null
+also allow for it to be Missing
 
 .. code-block:: python
 
@@ -283,7 +283,31 @@ also allowed to be null
 	    ]
 
 	_id = FieldProperty(s.ObjectId)
-	email = FieldProperty(s.String)
+	email = FieldProperty(s.String, if_missing=s.Missing)
+
+Now when accessing instances of User, if email is Missing and you attempt to use the
+User.email attribute Ming, will throw an AttributeError as it ensures that only
+properties that are not Missing are mapped as attributes to the class.
+
+This brings us to the :class:`ming.orm.property.FieldPropertyWithMissingNone`
+property type. This allows you to mimic the behavior that you commonly find in a SQL
+solution. An indexed and unique field that is also allowed to be NULL
+or in this case Missing. A classic example would be a product database where you
+want to enter in products but don't have SKU numbers for them yet. Now your product listing
+can still call product.sku without throwing an AttributeError.
+
+.. code-block:: python
+
+    class Product(MappedClass):
+        class __mongometa__:
+	    session = session
+	    name = 'products'
+	    custom_indexes = [
+	        dict(fields=('sku',), unique=True, sparse=True)
+	    ]
+
+	_id = FieldProperty(s.ObjectId)
+	sku = FieldPropertyWithMissingNone(str, if_missing=s.Missing)
 
 To apply the specified indexes you can then iterate over all the mappers and
 call `ensure_indexes` over the mapped collection.

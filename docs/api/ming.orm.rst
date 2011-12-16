@@ -40,6 +40,12 @@ Classes
    :members:
    :inherited-members:
    :undoc-members:
+
+.. autoclass:: FieldPropertyWithMissingNone
+   :show-inheritance:
+   :members:
+   :inherited-members:
+   :undoc-members:
    
 .. autoclass:: RelationProperty
    :show-inheritance:

@@ -5,6 +5,7 @@ from ming import datastore as DS
 from ming import Session
 from ming.orm import ORMSession, Mapper
 from ming.orm import FieldProperty, RelationProperty, ForeignIdProperty
+from ming.orm import FieldPropertyWithMissingNone
 from ming.orm.declarative import MappedClass
 from ming.orm import state, mapper
 from ming.orm import MapperExtension, SessionExtension
@@ -123,6 +124,8 @@ class TestBasicMapping(TestCase):
             b = FieldProperty([int])
             c = FieldProperty(dict(
                     d=int, e=int))
+            d = FieldPropertyWithMissingNone(str, if_missing=S.Missing)
+            e = FieldProperty(str, if_missing=S.Missing)
         Mapper.compile_all()
         self.Basic = Basic
         self.session.remove(self.Basic)
@@ -152,6 +155,8 @@ class TestBasicMapping(TestCase):
     def test_mapped_object(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.assertEqual(doc.a, doc['a'])
+        self.assertEqual(doc.d, None)
+        self.assertRaises(AttributeError, getattr, doc, 'e')
         self.assertRaises(AttributeError, getattr, doc, 'foo')
         self.assertRaises(KeyError, doc.__getitem__, 'foo')
         doc['a'] = 5
