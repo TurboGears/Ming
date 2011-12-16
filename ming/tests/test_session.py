@@ -107,11 +107,11 @@ class TestSession(TestCase):
             impl.ensure_index.call_args_list, [
                 (
                     ([ ('b', pymongo.ASCENDING), ('c', pymongo.ASCENDING) ],),
-                    {'unique':False} ),
+                    {'unique':False, 'sparse':False} ),
 
                 (
                     ([ ('cc', pymongo.ASCENDING) ],),
-                    {'unique':True} ),
+                    {'unique':True, 'sparse':False} ),
                 ])
 
         doc = self.TestDocNoSchema(dict(_id=1, a=5))

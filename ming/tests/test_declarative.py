@@ -128,6 +128,7 @@ class TestDocument(TestCase):
 class TestIndexes(TestCase):
 
     def setUp(self):
+        self.maxDiff = None
         class MyDoc(Document):
             class __mongometa__:
                 session = Session()
@@ -138,11 +139,17 @@ class TestIndexes(TestCase):
                 unique_indexes = [
                     ('test1',),
                 ]
+                custom_indexes = [
+                    dict(fields=('test7',), unique=True, sparse=True),
+                    dict(fields=('test8',), unique=False, sparse=True)
+                ]
                 schema = dict(
                     _id = S.ObjectId,
                     test1 = str,
                     test2 = str,
                     test3 = int,
+                    test7 = str,
+                    test8 = int,
                 )
         self.MyDoc = MyDoc
 
@@ -150,19 +157,32 @@ class TestIndexes(TestCase):
     def test_ensure_indexes(self, ensure_index):
         # make sure the manager constructor calls ensure_index with the right stuff
         self.MyDoc.m
-        
+
         args = ensure_index.call_args_list
         self.assert_(
-            ((self.MyDoc, [('test1', pymongo.ASCENDING), ('test2', pymongo.ASCENDING)]), {'unique':False})
+            ((self.MyDoc, [('test1', pymongo.ASCENDING), ('test2',
+                pymongo.ASCENDING)]), {'unique':False, 'sparse':False})
             in args,
             args
         )
         self.assert_(
-            ((self.MyDoc, [('test1',pymongo.ASCENDING)]), {'unique':True})
+            ((self.MyDoc, [('test1',pymongo.ASCENDING)]), {'unique':True,
+                'sparse':False})
             in args,
             args
         )
-
+        self.assert_(
+            ((self.MyDoc, [('test7',pymongo.ASCENDING)]), {'unique':True,
+                'sparse':True})
+            in args,
+            args
+        )
+        self.assert_(
+            ((self.MyDoc, [('test8',pymongo.ASCENDING)]), {'unique':False,
+                'sparse':True})
+            in args,
+            args
+        )
     @mock.patch('ming.session.Session.ensure_index')
     def test_ensure_indexes_slave(self, ensure_index):
         # on a slave, an error will be thrown, but it should be swallowed
@@ -202,6 +222,8 @@ class TestIndexes(TestCase):
             list(MyGrandChild.m.indexes),
             [ Index('test1', 'test2'),
               Index('test1', unique=True),
+              Index('test7', unique=True, sparse=True),
+              Index('test8', unique=False, sparse=True),
               Index('test3'),
               Index('test4', unique=True),
               Index('test5'),

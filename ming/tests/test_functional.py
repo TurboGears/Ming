@@ -103,12 +103,13 @@ class TestIndexes(TestCase):
         self.assert_(
             ((self.MyDoc,
               [('test1', pymongo.DESCENDING), ('test2', pymongo.DESCENDING)]),
-             {'unique':False})
+              {'unique':False, 'sparse':False})
             in args,
             args
         )
         self.assert_(
-            ((self.MyDoc, [('test1',pymongo.ASCENDING)]), {'unique':True})
+            ((self.MyDoc, [('test1',pymongo.ASCENDING)]), {'unique':True,
+                'sparse':False})
             in args,
             args
         )
