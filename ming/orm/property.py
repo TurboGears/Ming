@@ -85,6 +85,11 @@ class FieldProperty(ORMProperty):
         st.document[self.name] = value
         st.soil()
 
+    def __delete__(self, instance, cls=None):
+        st = state(instance)
+        del st.document[self.name]
+
+
 
 class FieldPropertyWithMissingNone(FieldProperty):
     """A class like FieldProperty with one exception.

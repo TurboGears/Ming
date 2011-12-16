@@ -159,6 +159,16 @@ class TestBasicMapping(TestCase):
         self.assertRaises(AttributeError, getattr, doc, 'e')
         self.assertRaises(AttributeError, getattr, doc, 'foo')
         self.assertRaises(KeyError, doc.__getitem__, 'foo')
+
+        doc['d'] = 'test'
+        self.assertEqual(doc.d, doc['d'])
+        doc['e'] = 'test'
+        self.assertEqual(doc.e, doc['e'])
+        del doc.d
+        self.assertEqual(doc.d, None)
+        del doc.e
+        self.assertRaises(AttributeError, getattr, doc, 'e')
+
         doc['a'] = 5
         self.assertEqual(doc.a, doc['a'])
         self.assertEqual(doc.a, 5)
