@@ -199,6 +199,8 @@ class TestIndexes(TestCase):
                          self.MyDoc.__mongometa__.indexes)
         self.assertEqual(MyChild.__mongometa__.unique_indexes,
                          self.MyDoc.__mongometa__.unique_indexes)
+        self.assertEqual(MyChild.__mongometa__.custom_indexes,
+                         self.MyDoc.__mongometa__.custom_indexes)
 
     def test_index_inheritance_both(self):
         class MyChild(self.MyDoc):
@@ -209,6 +211,7 @@ class TestIndexes(TestCase):
                 unique_indexes = [
                     ('test4',),
                 ]
+                custom_indexes = []
         class MyGrandChild(MyChild):
             class __mongometa__:
                 indexes = [

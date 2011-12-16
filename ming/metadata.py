@@ -108,7 +108,7 @@ def _process_collection_args(args, kwargs):
                 if a.sparse:
                     indexes.append(Index(a.name, unique=True, sparse=True))
                 else:
-                    indexes.append(Index(a.name, unique=True))
+                    indexes.append(Index(a.name, unique=True, sparse=False))
             elif a.sparse:
                 indexes.append(Index(a.name, unique=False, sparse=True))
             elif a.index:
