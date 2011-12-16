@@ -13,9 +13,13 @@ def filesystem(*args, **kwargs):
         args, kwargs)
     dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
     if 'filename' not in dct:
-        dct['filename'] = _FieldDescriptor(Field(str, index=True))
-    if 'mime_type' not in dct:
-        dct['filename'] = _FieldDescriptor(Field(str, index=True))
+        f = Field('filename', str, index=True)
+        fields.append(f)
+        dct['filename'] = _FieldDescriptor(f)
+    if 'contentType' not in dct:
+        f = Field('contentType', str, index=True)
+        fields.append(f)
+        dct['contentType'] = _FieldDescriptor(f)
         
     cls = type('Filesystem<%s>' % collection_name, bases, dct)
     m = _FSClassManager(
@@ -62,7 +66,7 @@ class _FSClassManager(_ClassManager):
             return 'application/octet-stream'
             
     def new_file(self, filename, **kwargs):
-        kwargs.setdefault('mime_type', self._guess_type(filename))
+        kwargs.setdefault('contentType', self._guess_type(filename))
         obj = self.fs.new_file(filename=filename, **kwargs)
         return _ClosingProxy(obj)
         
@@ -70,7 +74,7 @@ class _FSClassManager(_ClassManager):
         return self.fs.exists(*args, **kwargs)
 
     def put(self, filename, data, **kwargs):
-        kwargs.setdefault('mime_type', self._guess_type(filename))
+        kwargs.setdefault('contentType', self._guess_type(filename))
         return self.fs.put(data, filename=filename, **kwargs)
 
     def get_file(self, file_id):
