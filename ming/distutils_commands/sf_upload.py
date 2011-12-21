@@ -1,5 +1,6 @@
 import os
 import string
+from getpass import getpass
 
 from setuptools import Command
 
@@ -28,9 +29,32 @@ class sf_upload(Command):
         host = 'frs.sourceforge.net'
         username='%s,%s' % (self.sf_user, self.sf_project)
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(host, username=username,
-                    key_filename=self.sf_prikey,
-                    look_for_keys=False)
+        pkey = None
+        if self.sf_prikey:
+            for ktype in paramiko.RSAKey, paramiko.DSSKey:
+                try:
+                    pkey = ktype.from_private_key_file(self.sf_prikey)
+                except paramiko.PasswordRequiredException:
+                    pkey = ktype.from_private_key_file(
+                        self.sf_prikey, getpass('Password for %s: ' % self.sf_prikey))
+                except paramiko.SSHException:
+                    pass
+        if pkey:
+            ssh.connect(
+                host,
+                username=username,
+                pkey=pkey,
+                look_for_keys=False,
+                allow_agent=False)
+        else:
+            ssh.connect(
+                host,
+                username=username,
+                password=getpass('Password:'),
+                pkey=pkey,
+                look_for_keys=False,
+                allow_agent=False)
+            
         sftp = ssh.open_sftp()
         shortname = self.sf_project
         release = self.distribution.get_version()

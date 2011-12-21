@@ -100,6 +100,7 @@ class ORMSession(object):
             self.flush()
         m = mapper(cls)
         obj = self.impl.find_and_modify(m.collection, *args, **kwargs)
+        if obj is None: return None
         cursor = ORMCursor(self, cls, iter([ obj ]), refresh=True)
         result = cursor.first()
         state(result).status = ObjectState.clean

@@ -107,6 +107,7 @@ class Session(object):
                 [('findandmodify', cls.m.collection_name)]
                 + options.items())
         bson = db.command(cmd)
+        if bson['value'] is None: return None
         return cls.make(bson['value'])
 
     def _prep_save(self, doc, validate):

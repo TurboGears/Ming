@@ -268,7 +268,7 @@ class Object(FancySchemaItem):
     def _validate(self, d, allow_extra=False, strip_extra=False):
         from . import base
         result = base.Object()
-        if not isinstance(d, dict): raise Invalid('notdict' % d, d, None)
+        if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
         error_dict = {}
         check_extra = True
         to_set = []
