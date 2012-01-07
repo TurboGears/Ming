@@ -1,3 +1,5 @@
+import logging
+
 from copy import copy
 
 import pymongo
@@ -7,6 +9,8 @@ from . import schema as S
 from .base import Object
 from .utils import fixup_index, LazyProperty
 from .exc import MongoGone
+
+log = logging.getLogger(__name__)
 
 class Field(object):
     '''Represents a mongo field.'''
@@ -287,11 +291,23 @@ class _ManagerDescriptor(object):
         self.manager = manager
         self.initialized = False
 
+    def _ensure_indexes(self,):
+        session = self.manager.session
+        if session is None: return
+        if session.bind is None: return
+        collection = session.db[self.manager.collection_name]
+        for idx in self.manager.indexes:
+            print collection, idx
+            collection.ensure_index(
+                idx.index_spec,
+                unique=idx.unique,
+                sparse=idx.sparse)
+        self.initialized = True
+
     def __get__(self, inst, cls=None):
-        if not self.initialized and self.manager.session:
+        if not self.initialized:
             try:
-                self.initialized = True
-                self.manager.ensure_indexes()
+                self._ensure_indexes()
             except (MongoGone, ConnectionFailure) as e:
                 if e.args[0] == 'not master':
                     # okay for slaves to not ensure indexes
@@ -299,8 +315,6 @@ class _ManagerDescriptor(object):
                 else:
                     # raise all other connection issues
                     raise
-            except:
-                pass
         if inst is None:
             return self.manager
         else:
