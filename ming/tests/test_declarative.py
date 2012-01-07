@@ -35,6 +35,7 @@ class TestRenameField(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         class TestDoc(Document):
             class __mongometa__:
                 name='test_doc'
@@ -61,6 +62,7 @@ class TestDocument(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         class TestDoc(Document):
             class __mongometa__:
                 name='test_doc'
@@ -129,9 +131,11 @@ class TestIndexes(TestCase):
 
     def setUp(self):
         self.maxDiff = None
+        self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         class MyDoc(Document):
             class __mongometa__:
-                session = Session()
+                session = self.MockSession
                 name = 'test_some_indexes'
                 indexes = [
                     ('test1', 'test2'),
@@ -153,39 +157,30 @@ class TestIndexes(TestCase):
                 )
         self.MyDoc = MyDoc
 
-    @mock.patch('ming.session.Session.ensure_index')
-    def test_ensure_indexes(self, ensure_index):
+    def test_ensure_indexes(self):
         # make sure the manager constructor calls ensure_index with the right stuff
         self.MyDoc.m
-
+        collection = self.MockSession.db[self.MyDoc.m.collection_name]
+        ensure_index = collection.ensure_index
         args = ensure_index.call_args_list
-        self.assert_(
-            ((self.MyDoc, [('test1', pymongo.ASCENDING), ('test2',
-                pymongo.ASCENDING)]), {'unique':False, 'sparse':False})
-            in args,
-            args
-        )
-        self.assert_(
-            ((self.MyDoc, [('test1',pymongo.ASCENDING)]), {'unique':True,
-                'sparse':False})
-            in args,
-            args
-        )
-        self.assert_(
-            ((self.MyDoc, [('test7',pymongo.ASCENDING)]), {'unique':True,
-                'sparse':True})
-            in args,
-            args
-        )
-        self.assert_(
-            ((self.MyDoc, [('test8',pymongo.ASCENDING)]), {'unique':False,
-                'sparse':True})
-            in args,
-            args
-        )
-    @mock.patch('ming.session.Session.ensure_index')
-    def test_ensure_indexes_slave(self, ensure_index):
+        for a in args:
+            print a
+        indexes = [
+            ( ([ ('test1', pymongo.ASCENDING), ('test2', pymongo.ASCENDING) ],),
+              dict(unique=False, sparse=False) ),
+            ( ([ ('test1', pymongo.ASCENDING) ], ),
+              dict(unique=True, sparse=False) ),
+            ( ( [ ('test7', pymongo.ASCENDING) ],),
+              dict(unique=True, sparse=True) ),
+            ( ( [ ('test8', pymongo.ASCENDING) ],),
+              dict(unique=False, sparse=True) ) ]
+        for i in indexes:
+            self.assert_(i in args, args)
+
+    def test_ensure_indexes_slave(self):
         # on a slave, an error will be thrown, but it should be swallowed
+        collection = self.MockSession.db[self.MyDoc.m.collection_name]
+        ensure_index = collection.ensure_index
         ensure_index.side_effect = AutoReconnect('not master')
         self.MyDoc.m
         assert ensure_index.called
@@ -277,6 +272,7 @@ class TestCursor(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         class TestDoc(Document):
             class __mongometa__:
                 name='test_doc'
@@ -334,6 +330,7 @@ class TestPolymorphic(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         class Base(Document):
             class __mongometa__:
                 name='test_doc'
@@ -400,6 +397,7 @@ class TestMigration(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
 
         class TestDoc(Document):
             class __mongometa__:

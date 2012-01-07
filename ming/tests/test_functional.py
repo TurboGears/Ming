@@ -25,6 +25,7 @@ class TestDocument(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         self.TestDoc = collection(
             'test_doc', self.MockSession,
             Field('a', int, if_missing=None, index=True),
@@ -83,9 +84,10 @@ class TestDocument(TestCase):
 class TestIndexes(TestCase):
 
     def setUp(self):
-        self.session = Session()
+        self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         self.MyDoc = collection(
-            'test_some_indexes', self.session,
+            'test_some_indexes', self.MockSession,
             Field('_id', S.ObjectId),
             Field('test1', str, index=True, unique=True),
             Field('test2'),
@@ -98,27 +100,24 @@ class TestIndexes(TestCase):
         # make sure the manager constructor calls ensure_index with the right
         # stuff
         self.MyDoc.m
-        
+        collection = self.MockSession.db[self.MyDoc.m.collection_name]
+        ensure_index = collection.ensure_index
         args = ensure_index.call_args_list
-        self.assert_(
-            ((self.MyDoc,
-              [('test1', pymongo.DESCENDING), ('test2', pymongo.DESCENDING)]),
-              {'unique':False, 'sparse':False})
-            in args,
-            args
-        )
-        self.assert_(
-            ((self.MyDoc, [('test1',pymongo.ASCENDING)]), {'unique':True,
-                'sparse':False})
-            in args,
-            args
-        )
+        indexes = [
+            ( ([ ('test1', pymongo.DESCENDING), ('test2', pymongo.DESCENDING) ],),
+              dict(unique=False, sparse=False) ),
+            ( ([ ('test1', pymongo.ASCENDING) ], ),
+              dict(unique=True, sparse=False) ), ]
+        for i in indexes:
+            self.assert_(i in args, args)
 
 
     @mock.patch('ming.session.Session.ensure_index')
     def test_ensure_indexes_slave(self, ensure_index):
         # on a slave, an error will be thrown, but it should be swallowed
         self.MyDoc.m
+        collection = self.MockSession.db[self.MyDoc.m.collection_name]
+        ensure_index = collection.ensure_index
         assert ensure_index.called
 
     def test_index_inheritance_child_none(self):
@@ -152,18 +151,18 @@ class TestIndexes(TestCase):
 
     def test_index_inheritance_neither(self):
         NoIndexDoc = collection(
-            'test123', self.session,
+            'test123', self.MockSession,
             Field('_id', S.ObjectId),
             Field('test1', str),
             Field('test2', str),
             Field('test3', str))
-        StillNone = collection('still_none', NoIndexDoc)
+        StillNone = collection(NoIndexDoc)
 
         self.assertEqual(list(StillNone.m.indexes), [])
 
     def test_index_inheritance_parent_none(self):
         NoIndexDoc = collection(
-            'test123', self.session,
+            'test123', self.MockSession,
             Field('_id', S.ObjectId),
             Field('test1', str),
             Field('test2', str),
@@ -180,6 +179,7 @@ class TestCursor(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         self.TestDoc = collection(
             'test_doc', self.MockSession,
             Field('a', int),
@@ -234,6 +234,7 @@ class TestPolymorphic(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         self.Base = collection(
             'test_doc', self.MockSession,
             Field('type', str),
@@ -284,6 +285,7 @@ class TestMigration(TestCase):
 
     def setUp(self):
         self.MockSession = mock.Mock()
+        self.MockSession.db = mock.MagicMock()
         TestDoc_old = collection(
             'test_doc', self.MockSession,
             Field('version', 1),

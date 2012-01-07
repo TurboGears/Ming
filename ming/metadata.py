@@ -291,13 +291,12 @@ class _ManagerDescriptor(object):
         self.manager = manager
         self.initialized = False
 
-    def _ensure_indexes(self,):
+    def _ensure_indexes(self):
         session = self.manager.session
         if session is None: return
         if session.bind is None: return
         collection = session.db[self.manager.collection_name]
         for idx in self.manager.indexes:
-            print collection, idx
             collection.ensure_index(
                 idx.index_spec,
                 unique=idx.unique,
