@@ -102,13 +102,9 @@ class Session(object):
         if query is None: query = {}
         if sort is None: sort = {}
         options = dict(kw, query=query, sort=sort, new=new)
-        db = self._impl(cls).database
-        cmd = SON(
-                [('findandmodify', cls.m.collection_name)]
-                + options.items())
-        bson = db.command(cmd)
-        if bson['value'] is None: return None
-        return cls.make(bson['value'])
+        bson = self._impl(cls).find_and_modify(**options)
+        if bson is None: return None
+        return cls.make(bson)
 
     def _prep_save(self, doc, validate):
         hook = doc.m.before_save
