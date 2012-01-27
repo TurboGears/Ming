@@ -214,7 +214,7 @@ class ContextualORMSession(ContextualProxy):
 
     @classmethod
     def flush_all(cls, context):
-        for sess in cls._session_registry[context].itervalues():
+        for sess in cls._session_registry[context].values():
             sess.flush()
 
     @classmethod
