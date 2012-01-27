@@ -206,7 +206,7 @@ class Database(database.Database):
 class Collection(collection.Collection):
 
     def __init__(self, database, name):
-        self._name = name
+        self._name = self.__name = name
         self._database = database
         self._data = {}
         self._unique_indexes = {}
@@ -245,6 +245,22 @@ class Collection(collection.Collection):
         for result in self.find(spec_or_id, *args, **kwargs):
             return result
         return None
+
+    def find_and_modify(self, query=None, update=None, upsert=False, **kwargs):
+        if query is None: query = {}
+        before = self.find_one(query, sort=kwargs.get('sort'))
+        upserted = False
+        if before is None:
+            upserted = True
+            if upsert:
+                before = dict(query)
+                self.insert(before)
+            else:
+                raise OperationFailure, 'No matching object found'
+        self.update(query, update)
+        if kwargs.get('new', False) or upserted:
+            return self.find_one(dict(_id=before['_id']))
+        return before
 
     def insert(self, doc_or_docs, safe=False):
         if not isinstance(doc_or_docs, list):
@@ -300,7 +316,8 @@ class Collection(collection.Collection):
                 new_data[id] = doc
         self._data = new_data
 
-    def ensure_index(self, key_or_list, unique=False, ttl=300, name=None, background=None):
+    def ensure_index(self, key_or_list, unique=False, ttl=300,
+                     name=None, background=None, sparse=False):
         if isinstance(key_or_list, list):
             keys = tuple(k[0] for k in key_or_list)
         else:
