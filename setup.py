@@ -32,7 +32,7 @@ setup(name='Ming',
         "FormEncode >= 1.2.1",
         "pymongo>=2.0",
         "PasteScript", # used by flyway
-        "webob",
+        "WebOb",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
       ],
       entry_points="""
