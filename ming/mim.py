@@ -32,6 +32,11 @@ class Connection(object):
     def drop_all(self):
         self._databases = {}
 
+    def clear_all(self):
+        '''Remove all data, but keep the indexes'''
+        for db in self._databases.values():
+            db.clear()
+
     def end_request(self):
         pass
 
@@ -203,6 +208,10 @@ class Database(database.Database):
     def drop_collection(self, name):
         del self._collections[name]
 
+    def clear(self):
+        for coll in self._collections.values():
+            coll.clear()
+
 class Collection(collection.Collection):
 
     def __init__(self, database, name):
@@ -211,6 +220,11 @@ class Collection(collection.Collection):
         self._data = {}
         self._unique_indexes = {}
         self._indexes = {}
+
+    def clear(self):
+        self._data = {}
+        for ui in self._unique_indexes.values():
+            ui.clear()
 
     @property
     def name(self):
