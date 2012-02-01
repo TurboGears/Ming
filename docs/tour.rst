@@ -99,7 +99,7 @@ Collection objects
    imperative, and both styles are availabe both at the document level (which
    this tutorial covers) and the ORM layer (covered by the ORM tutorial). Which
    you end up using is mostly a matter of personal style. The declarative style
-   actually predated the imperative style, and the main author or Ming uses both
+   actually predated the imperative style, and the main author of Ming uses both
    styles interchangably in application programming based on which seems more
    convenient for the task at hand.
 
