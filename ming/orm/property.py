@@ -59,6 +59,8 @@ class FieldProperty(ORMProperty):
     def __get__(self, instance, cls=None):
         if instance is None: return self
         st = state(instance)
+        if not st.options.instrument:
+            return st.document[self.name]
         try:
             return instrument(st.document[self.name], st.tracker)
         except KeyError:
@@ -100,6 +102,8 @@ class FieldPropertyWithMissingNone(FieldProperty):
     def __get__(self, instance, cls=None):
         if instance is None: return self
         st = state(instance)
+        if not st.options.instrument:
+            return st.document[self.name]
         try:
             return instrument(st.document[self.name], st.tracker)
         except KeyError:

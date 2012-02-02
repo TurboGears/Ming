@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from ming.session import Session
 from ming.utils import ThreadLocalProxy, ContextualProxy, indent
+from ming.base import Object
 from .base import state, ObjectState, session, with_hooks, call_hook
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
@@ -222,7 +223,7 @@ class ContextualORMSession(ContextualProxy):
         for sess in cls._session_registry[context].values():
             sess.close()
         del cls._session_registry[context]
-            
+
 class ORMCursor(object):
 
     def __init__(self, session, cls, ming_cursor, refresh=False):
@@ -230,7 +231,9 @@ class ORMCursor(object):
         self.cls = cls
         self.mapper = mapper(cls)
         self.ming_cursor = ming_cursor
-        self.refresh = refresh
+        self._options = Object(
+            refresh=refresh,
+            instrument=True)
 
     def __iter__(self):
         return self
@@ -249,9 +252,9 @@ class ORMCursor(object):
         doc = self.ming_cursor.next()
         obj = self.session.imap.get(self.cls, doc['_id'])
         if obj is None:
-            obj = self.mapper.create(doc)
+            obj = self.mapper.create(doc, self._options)
             state(obj).status = ObjectState.clean
-        elif self.refresh:
+        elif self._options.refresh:
             # Refresh object
             state(obj).document.update(doc)
             state(obj).status = ObjectState.clean
@@ -270,6 +273,12 @@ class ORMCursor(object):
             return self._next_impl()
         finally:
             call_hook(self, 'after_cursor_next', self)
+
+    def options(self, **kwargs):
+        orm_cursor = ORMCursor(self.session, self.cls,self.ming_cursor)
+        orm_cursor._options = Object(self._options, **kwargs)
+        call_hook(self, 'cursor_created', orm_cursor, 'options', self, **kwargs)
+        return orm_cursor
 
     def limit(self, limit):
         orm_cursor = ORMCursor(self.session, self.cls,

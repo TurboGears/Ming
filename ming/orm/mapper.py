@@ -38,6 +38,7 @@ class Mapper(object):
         exclude_properties = kwargs.pop('exclude_properties', [])
         extensions = kwargs.pop('extensions', [])
         self.extensions = [e(self) for e in extensions]
+        self.options = Object(kwargs.pop('options', dict(refresh=False, instrument=True)))
         if kwargs:
             raise TypeError, 'Unknown kwd args: %r' % kwargs
         self._instrument_class(properties, include_properties, exclude_properties)
@@ -69,10 +70,10 @@ class Mapper(object):
     def remove(self, *args, **kwargs):
         self.collection.m.remove(*args, **kwargs)
 
-    def create(self, doc):
+    def create(self, doc, options):
         doc = self.collection.make(doc)
         mapper = self.by_collection(type(doc))
-        return mapper._from_doc(doc)
+        return mapper._from_doc(doc, Object(self.options, **options))
 
     def base_mappers(self):
         for base in self.mapped_class.__bases__:
@@ -126,9 +127,9 @@ class Mapper(object):
     def update_partial(self, *args, **kwargs):
         self.collection.m.update_partial(*args, **kwargs)
 
-    def _from_doc(self, doc):
+    def _from_doc(self, doc, options):
         obj = self.mapped_class.__new__(self.mapped_class)
-        obj.__ming__ = _ORMDecoration(self, obj)
+        obj.__ming__ = _ORMDecoration(self, obj, options)
         st = state(obj)
         st.original_document = doc
         st.document = self.collection.m.schema.validate(doc)
@@ -222,10 +223,10 @@ class MapperExtension(object):
 
 class _ORMDecoration(object):
 
-    def __init__(self, mapper, instance):
+    def __init__(self, mapper, instance, options):
         self.mapper = mapper
         self.instance = instance
-        self.state = ObjectState()
+        self.state = ObjectState(options)
         self.state.document = Object()
         self.state.original_document = Object()
 
@@ -312,7 +313,7 @@ class _InitDecorator(object):
 
     def saving_init(self, self_):
         def __init__(*args, **kwargs):
-            self_.__ming__ = _ORMDecoration(self.mapper, self_)
+            self_.__ming__ = _ORMDecoration(self.mapper, self_, Object(self.mapper.options))
             self.func(self_, *args, **kwargs)
             self.save(self_)
         return __init__

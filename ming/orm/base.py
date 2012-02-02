@@ -36,12 +36,13 @@ class with_hooks(object):
 class ObjectState(object):
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 
-    def __init__(self):
+    def __init__(self, options):
         self._status = self.new
         self.original_document = None # unvalidated, as loaded from mongodb
         self.document = None
         self.extra_state = {}
         self.tracker = _DocumentTracker(self)
+        self.options = options
 
     def soil(self):
         if self.status == self.clean:

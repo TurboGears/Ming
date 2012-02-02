@@ -5,8 +5,10 @@ from mock import Mock
 from ming import datastore as DS
 from ming import schema as S
 from ming import collection, Field, Session
+from ming.base import Object
 from ming.orm import ORMSession, mapper, state, Mapper
 from ming.orm import ForeignIdProperty, RelationProperty
+from ming.orm.icollection import InstrumentedList, InstrumentedObj
 
 class TestBasicMapping(TestCase):
     
@@ -30,6 +32,47 @@ class TestBasicMapping(TestCase):
     def tearDown(self):
         self.session.clear()
         self.datastore.conn.drop_all()
+
+    def test_disable_instrument(self):
+        # Put a doc in the DB
+        self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
+        self.session.flush()
+        # Load back with instrumentation
+        self.session.clear()
+        obj = self.Basic.query.find().options(instrument=True).first()
+        self.assertEqual(type(obj.b), InstrumentedList)
+        self.assertEqual(type(obj.c), InstrumentedObj)
+        # Load back without instrumentation
+        self.session.clear()
+        obj = self.Basic.query.find().options(instrument=False).first()
+        self.assertEqual(type(obj.b), list)
+        self.assertEqual(type(obj.c), Object)
+
+    def test_enable_instrument(self):
+        session = Session(bind=self.datastore)
+        basic1 = collection(
+            'basic1', session,
+            Field('_id', S.ObjectId),
+            Field('a', int),
+            Field('b', [int]),
+            Field('c', dict(
+                    d=int, e=int)))
+        class Basic1(object):
+            pass                    
+        self.session.mapper(Basic1, basic1, options=dict(instrument=False))
+        # Put a doc in the DB
+        Basic1(a=1, b=[2,3], c=dict(d=4, e=5))
+        self.session.flush()
+        # Load back with instrumentation
+        self.session.clear()
+        obj = Basic1.query.find().options(instrument=True).first()
+        self.assertEqual(type(obj.b), InstrumentedList)
+        self.assertEqual(type(obj.c), InstrumentedObj)
+        # Load back without instrumentation
+        self.session.clear()
+        obj = Basic1.query.find().options(instrument=False).first()
+        self.assertEqual(type(obj.b), list)
+        self.assertEqual(type(obj.c), Object)
 
     def test_repr(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4,e=5))
