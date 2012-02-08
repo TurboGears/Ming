@@ -384,6 +384,8 @@ class Array(FancySchemaItem):
         if d is None:
             d = []
         try:
+            if not isinstance(d, (list, tuple)):
+                raise Invalid('Not a list or tuple', d, None)
             for value in d:
                 try:
                     value = self.field_type.validate(value)
