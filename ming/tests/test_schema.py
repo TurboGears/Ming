@@ -1,4 +1,5 @@
 from unittest import TestCase, main
+from datetime import datetime
 
 import ming.datastore
 from ming import Document, Field
@@ -42,6 +43,16 @@ class TestSchemaItem(TestCase):
         self.assertEqual(S.Anything, si_any.field_type.__class__)
         self.assertEqual(S.Int, si_int.field_type.__class__)
         self.assertRaises(ValueError, S.SchemaItem.make, [int, str])
+
+    def test_dict_is_not_array(self):
+        si = S.SchemaItem.make([])
+        self.assertRaises(S.Invalid, si.validate, {})
+
+    def test_round_microseconds(self):
+        si = S.SchemaItem.make(datetime)
+        self.assertEqual(
+            datetime(2012,2,8,12,42,14),
+            si.validate(datetime(2012,2,8,12,42,14,123456)))
 
     def test_migrate(self):
         si = S.Migrate(int, str, str)

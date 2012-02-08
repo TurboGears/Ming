@@ -27,6 +27,7 @@ class TestBasicMapping(TestCase):
         class Basic(object):
             pass                    
         self.session.mapper(Basic, basic)
+        self.basic = basic
         self.Basic = Basic
 
     def tearDown(self):
@@ -109,8 +110,11 @@ class TestBasicMapping(TestCase):
     def test_mapper(self):
         m = mapper(self.Basic)
         assert repr(m) == '<Mapper Basic:basic>'
-        doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
-        self.session.flush()
+        self.datastore.db.basic.insert(dict(
+                a=1, b=[2,3], c=dict(d=4, e=5), f='unknown'))
+        print list(self.datastore.db.basic.find())
+        obj = self.Basic.query.find().options(instrument=False).first()
+        print obj
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 1)
         m.remove({})

@@ -469,7 +469,8 @@ class DateTime(DateTimeTZ):
         if not isinstance(value, self.type):
             raise Invalid('%s is not a %r' % (value, self.type),
                           value, None)
-        return value.replace(tzinfo=None)
+        value = value.replace(microsecond=0,tzinfo=None)
+        return value
 class Bool(ParticularScalar):
     type=bool
 class Binary(ParticularScalar):
