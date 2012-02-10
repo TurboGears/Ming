@@ -37,9 +37,10 @@ class ObjectState(object):
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 
     def __init__(self, options):
-        self._status = self.new
+        self.status = self.new
         self.original_document = None # unvalidated, as loaded from mongodb
         self.document = None
+        self.i_document = {}
         self.extra_state = {}
         self.tracker = _DocumentTracker(self)
         self.options = options
@@ -49,21 +50,32 @@ class ObjectState(object):
             self.status = self.dirty
 
     def validate(self, schema):
-        status = self._status
+        status = self.status
         self.document = schema.validate(self.document)
-        self._status = status
+        self.status = status
 
     def clone(self):
         return deepcopy(self.document)
 
-    def _get_status(self):
-        return self._status
-    def _set_status(self, value):
-        self._status = value
-    status = property(_get_status, _set_status)
-
     def __repr__(self):
         return '<ObjectState status=%s>' % self.status
+
+    def instrumented(self, name):
+        try:
+            return self.i_document[name]
+        except KeyError:
+            from .icollection import instrument
+            result = instrument(self.document[name], self.tracker)
+            self.i_document[name] = result
+        return result
+
+    def set(self, name, value):
+        self.document[name] = value
+        self.i_document.pop(name, None)
+
+    def delete(self, name):
+        del self.document[name]
+        self.i_document.pop(name, None)
 
 class _DocumentTracker(object):
     __slots__ = ('state',)

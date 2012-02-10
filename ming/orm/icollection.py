@@ -1,10 +1,11 @@
 def instrument(obj, tracker):
-    if hasattr(obj, '_ming_instrumentation'):
-        return obj
-    elif isinstance(obj, dict):
-        return InstrumentedObj(obj, tracker)
-    elif isinstance(obj, list):
-        return InstrumentedList(obj, tracker)
+    if isinstance(obj, (dict, list)):
+        if hasattr(obj, '_ming_instrumentation'):
+            return obj
+        if isinstance(obj, dict):
+            return InstrumentedObj(obj, tracker)
+        else:
+            return InstrumentedList(obj, tracker)
     else:
         return obj
 

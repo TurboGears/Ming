@@ -62,7 +62,7 @@ class FieldProperty(ORMProperty):
         if not st.options.instrument:
             return st.document[self.name]
         try:
-            return instrument(st.document[self.name], st.tracker)
+            return st.instrumented(self.name) 
         except KeyError:
             value = self.field.schema.validate(S.Missing)
             if value is S.Missing:
@@ -84,13 +84,12 @@ class FieldProperty(ORMProperty):
         st = state(instance)
         value = deinstrument(value)
         value = self.field.schema.validate(value)
-        st.document[self.name] = value
+        st.set(self.name, value)
         st.soil()
 
     def __delete__(self, instance, cls=None):
         st = state(instance)
-        del st.document[self.name]
-
+        st.delete(self.name)
 
 
 class FieldPropertyWithMissingNone(FieldProperty):
@@ -105,7 +104,7 @@ class FieldPropertyWithMissingNone(FieldProperty):
         if not st.options.instrument:
             return st.document[self.name]
         try:
-            return instrument(st.document[self.name], st.tracker)
+            return st.instrumented(self.name)
         except KeyError:
             value = self.field.schema.validate(S.Missing)
             if value is S.Missing:
