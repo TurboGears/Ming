@@ -256,7 +256,7 @@ class ORMCursor(object):
             state(obj).status = ObjectState.clean
         elif self._options.refresh:
             # Refresh object
-            state(obj).document.update(doc)
+            state(obj).update(doc)
             state(obj).status = ObjectState.clean
         else:
             # Never refresh objects from the DB unless explicitly requested

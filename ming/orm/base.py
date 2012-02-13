@@ -69,6 +69,10 @@ class ObjectState(object):
             self.i_document[name] = result
         return result
 
+    def update(self, *a, **kw):
+        self.document.update(*a, **kw)
+        self.i_document = {}
+
     def set(self, name, value):
         self.document[name] = value
         self.i_document.pop(name, None)
