@@ -234,6 +234,9 @@ class Collection(collection.Collection):
     def database(self):
         return self._database
 
+    def drop(self):
+        self._database.drop_collection(self._name)
+
     def __getattr__(self, name):
         return self._database['%s.%s' % (self.name, name)]
 
