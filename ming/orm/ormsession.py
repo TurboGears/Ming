@@ -196,6 +196,7 @@ class ContextualORMSession(ContextualProxy):
     _session_registry = defaultdict(dict)
 
     def __init__(self, context, *args, **kwargs):
+        kwargs.setdefault('extensions', [])
         ContextualProxy.__init__(self, ORMSession, context, *args, **kwargs)
         self._context = context
 

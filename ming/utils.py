@@ -19,13 +19,13 @@ class LazyProperty(object):
         return result
 
 class ContextualProxy(object):
-    _registry = {}
 
     def __init__(self, cls, context, *args, **kwargs):
         self._cls = cls
         self._context = context
         self._args = args
         self._kwargs = kwargs
+        self._registry = {}
 
     def _get(self):
         ctx = self._context()
@@ -48,7 +48,6 @@ class ContextualProxy(object):
             del self._registry[ctx]
         except AttributeError:
             pass
-        
 
 class ThreadLocalProxy(object):
 
