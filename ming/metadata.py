@@ -225,6 +225,10 @@ class _ClassManager(object):
         return self.field_index.values()
 
     @property
+    def collection(self):
+        return self.session.db[self.collection_name]
+
+    @property
     def polymorphic_registry(self):
         if self._polymorphic_registry is not None: return self._polymorphic_registry
         for b in self.bases:
@@ -295,7 +299,7 @@ class _ManagerDescriptor(object):
         session = self.manager.session
         if session is None: return
         if session.bind is None: return
-        collection = session.db[self.manager.collection_name]
+        collection = self.manager.collection
         for idx in self.manager.indexes:
             collection.ensure_index(
                 idx.index_spec,
