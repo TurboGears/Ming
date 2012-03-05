@@ -469,7 +469,9 @@ class DateTime(DateTimeTZ):
         if not isinstance(value, self.type):
             raise Invalid('%s is not a %r' % (value, self.type),
                           value, None)
-        value = value.replace(microsecond=value.microsecond//1000, tzinfo=None)
+        # Truncate microseconds and keep milliseconds only (mimics BSON datetime)
+        value = value.replace(microsecond=(value.microsecond // 1000) * 1000,
+                              tzinfo=None)
         return value
 class Bool(ParticularScalar):
     type=bool

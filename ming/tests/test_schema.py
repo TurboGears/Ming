@@ -51,7 +51,7 @@ class TestSchemaItem(TestCase):
     def test_truncate_microseconds(self):
         si = S.SchemaItem.make(datetime)
         self.assertEqual(
-            datetime(2012,2,8,12,42,14,123),
+            datetime(2012,2,8,12,42,14,123000),
             si.validate(datetime(2012,2,8,12,42,14,123456)))
 
     def test_migrate(self):
