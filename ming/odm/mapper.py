@@ -116,6 +116,12 @@ class Mapper(object):
         for m in cls.all_mappers():
             m.compile()
 
+    @classmethod
+    def clear_all(cls):
+        for m in cls.all_mappers():
+            m._compiled = False
+        cls._all_mappers = []
+
     def compile(self):
         if self._compiled: return
         self._compiled = True
