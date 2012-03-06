@@ -21,10 +21,12 @@ def filesystem(*args, **kwargs):
     field_index.setdefault('_id', Field('_id', S.ObjectId()))
     field_index.setdefault('chunkSize', Field('chunkSize', int))
     field_index.setdefault('length', Field('length', int))
+    field_index.setdefault('md5', Field('md5', str))
     field_index.setdefault('uploadDate', Field('uploadDate', datetime))
     dct = dict((k, _FieldDescriptor(f)) for k,f in field_index.items())
         
     cls = type('Filesystem<%s>' % collection_name, bases, dct)
+    fields = field_index.values()
     m = _FSClassManager(
         cls, collection_name, session, fields, indexes, **kwargs)
     cls.m = _ManagerDescriptor(m)
