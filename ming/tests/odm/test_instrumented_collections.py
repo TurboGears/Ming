@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from mock import Mock
 
-from ming.orm.icollection import instrument, deinstrument, InstrumentedObj
+from ming.odm.icollection import instrument, deinstrument, InstrumentedObj
 
 class TestICollection(TestCase):
 

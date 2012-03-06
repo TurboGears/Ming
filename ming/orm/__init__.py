@@ -1,8 +1,5 @@
-from ming.orm.base import state, session
-from ming.orm.mapper import mapper, Mapper, MapperExtension
-
-from ming.orm.property import RelationProperty, ForeignIdProperty
-from ming.orm.property import FieldProperty, FieldPropertyWithMissingNone
-
-from ming.orm.ormsession import ORMSession, ThreadLocalORMSession, SessionExtension
-from ming.orm.ormsession import ContextualORMSession
+import warnings
+warnings.warn(
+    'ming.orm is deprecated. Please use ming.odm instead',
+    DeprecationWarning)
+from ming.odm import *

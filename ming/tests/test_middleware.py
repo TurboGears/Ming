@@ -6,17 +6,17 @@ from webob import exc
 from ming import schema as S
 from ming import datastore as DS
 from ming import Session
-from ming.orm import ThreadLocalORMSession
-from ming.orm import FieldProperty, Mapper
-from ming.orm.declarative import MappedClass
-from ming.orm.middleware import MingMiddleware
+from ming.odm import ThreadLocalODMSession
+from ming.odm import FieldProperty, Mapper
+from ming.odm.declarative import MappedClass
+from ming.odm.middleware import MingMiddleware
 
 class TestRelation(TestCase):
 
     def setUp(self):
         self.datastore = DS.DataStore(
             'mim:///', database='test_db')
-        self.session = ThreadLocalORMSession(Session(bind=self.datastore))
+        self.session = ThreadLocalODMSession(Session(bind=self.datastore))
         class Parent(MappedClass):
             class __mongometa__:
                 name='parent'

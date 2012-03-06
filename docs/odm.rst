@@ -1,5 +1,5 @@
 =======================
-Ming ORM Layer Tutorial
+Ming ODM Layer Tutorial
 =======================
 
 .. [[[cog from cog_utils import interact]]]
@@ -10,15 +10,15 @@ Introduction
 
 In addition to the basic interface documented in :doc:`tour`, Ming provides a
 higher-level abstraction for modeling objects in MongoDB.  This higher-layer
-abstraction will be referred in this document as the ORM since it is implemented
+abstraction will be referred in this document as the ODM since it is implemented
 in the "spirit" of object-relational mappers such as `SQLAlchemy
 <http://sqlalchemy.org>`_.
 
-The ORM provides several features beyond those provided by the basic Ming
+The ODM provides several features beyond those provided by the basic Ming
 modules:
 
 unit-of-work pattern
-    Using ORM-enabled sessions allows you to operate on in-memory objects
+    Using ODM-enabled sessions allows you to operate on in-memory objects
     exclusively until you are ready to "flush" all changes to the database.
     Although MongoDB doesn't provide transactions, the unit-of-work (UOW) pattern
     provides some of the benefits of transactions by delaying writes until you
@@ -33,63 +33,63 @@ identity map
 
 relations between objects
     Although MongoDB is non-relational, it is still useful to represent
-    relationships between documents in the database.  The ORM layer in Ming
+    relationships between documents in the database.  The ODM layer in Ming
     provides the ability to model one-to-many relationships between documents as
     straightforward properties on Python objects.
 
-The ORM Session
+The ODM Session
 ---------------
 
 In basic Ming, the session is only responsible for attaching model classes to the
-actual MongoDB datastore.  In the ORM, however, the session is responsible for
+actual MongoDB datastore.  In the ODM, however, the session is responsible for
 this as well as maintaining the unit of work, identity map, and relations between
-objects.  The ORM session itself is not designed to be thread-safe, so Ming
+objects.  The ODM session itself is not designed to be thread-safe, so Ming
 provides a thread-local version of the session for safe operation in a
 multithreaded environment.  We will be using the thread-local session for this
 tutorial:
 
-.. include:: src/ming_orm_tutorial.py
+.. include:: src/ming_odm_tutorial.py
    :literal:
    :start-after: #{initial-imports
    :end-before: #}
 
-The code above creates a thread-local ORM-aware session that we will use when
+The code above creates a thread-local ODM-aware session that we will use when
 defining our model classes.  
 
 Mapping Classes
 ---------------
 
 In base Ming, the mapped classes were descended from the :class:`ming.base.Document`
-class, itself a subclass of :class:`dict`.  In the ORM layer, mapped classes are
-descended from :class:`ming.orm.mapped_class.MappedClass`, which is *not*
+class, itself a subclass of :class:`dict`.  In the ODM layer, mapped classes are
+descended from :class:`ming.odm.mapped_class.MappedClass`, which is *not*
 descended from :class:`dict`, to emphasize the difference between a mapped class
 (which may contain relations to other objects) and a MongoDB document (which may
 not).  For this tutorial, we will be modifying the Wiki example in :doc:`tour` to
-use the ORM.  First, we need a few more imports:
+use the ODM.  First, we need a few more imports:
 
-.. include:: src/ming_orm_tutorial.py
+.. include:: src/ming_odm_tutorial.py
    :literal:
-   :start-after: #{orm-imports
+   :start-after: #{odm-imports
    :end-before: #}
 
 Now, we can define our model:
 
-.. literalinclude:: src/ming_orm_tutorial.py
+.. literalinclude:: src/ming_odm_tutorial.py
    :pyobject: WikiPage
 
 At the end of the model file, you should call `compile_all()` on the
-`MappedClass` to ensure that Ming has full information on all mapped classes:
+`MappedClass` to ensure that Ming has full infodmation on all mapped classes:
 
-.. include:: src/ming_orm_tutorial.py
+.. include:: src/ming_odm_tutorial.py
    :literal:
    :start-after: #{compileall
    :end-before: #}
 
 The only real differences here are that rather than inheriting from
 :class:`ming.base.Document`, we are inheriting from
-:class:`ming.orm.mapped_class.MappedClass`, and rather than using a
+:class:`ming.odm.mapped_class.MappedClass`, and rather than using a
 :class:`ming.base.Field`, we are using a
-:class:`ming.orm.property.FieldProperty`.  (You might alwo notice the
+:class:`ming.odm.property.FieldProperty`.  (You might alwo notice the
 `RelationProperty`; we will cover in :ref:`relation`.)  
 
 Creating Objects
@@ -106,7 +106,7 @@ thing to notice is that we don't explicitly call the `save()` method on the
     session.flush()
 
 The previous two lines will just create a new `WikiPage` and store it inside the
-ORM Unit of Work. As soon as we flush our session the Unit of Work is processed
+ODM Unit of Work. As soon as we flush our session the Unit of Work is processed
 and all the changes will be reflected on the database itself.
 
 By default the session will keep track of the objects that has already seen and
@@ -124,23 +124,23 @@ anymore of the previous items that were created. While it is possible
 to flush the session multiple times, it is common practice in
 web applications to clear it only once at the end of the request.
 
-.. [[[cog interact('ming_orm_tutorial', 1) ]]]
+.. [[[cog interact('ming_odm_tutorial', 1) ]]]
 .. [[[end]]]
 
-Querying the ORM
+Querying the ODM
 ----------------
 
 Once we have a `WikiPage` in the database, we can retrieve it using the `.query`
 attribute, modify it, and flush the modified object out to the database:
 
-.. [[[cog interact('ming_orm_tutorial', 2)]]]
+.. [[[cog interact('ming_odm_tutorial', 2)]]]
 .. [[[end]]]
 
-You've already seen how to retrieve single objects from the ORM using the
-`query.get()` method on `MappedClass` objects.  You can also perform regular Ming
+You've already seen how to retrieve single objects from the ODM using the
+`query.get()` method on `MappedClass` objects.  You can also perfodm regular Ming
 queries using the `query.find()` method:
 
-.. [[[cog interact('ming_orm_tutorial', 4) ]]]
+.. [[[cog interact('ming_odm_tutorial', 4) ]]]
 .. [[[end]]]
 
 .. _relation:
@@ -148,10 +148,10 @@ queries using the `query.find()` method:
 Relating Classes
 ----------------
 
-The real power of the ORM comes in being able to view related classes.  Suppose
+The real power of the ODM comes in being able to view related classes.  Suppose
 we wish to represent comments on a `WikiPage`:
 
-.. literalinclude:: src/ming_orm_tutorial.py
+.. literalinclude:: src/ming_odm_tutorial.py
    :pyobject: WikiComment
 
 Here, we have defined a `ForeignIdProperty` `page_id` to reference the original
@@ -163,28 +163,28 @@ related class.  In this case, we will use the property `page` to access the page
 about which this comment refers.  To actually use these classes, we need to
 create some comments:
 
-.. [[[cog interact('ming_orm_tutorial', 3) ]]]
+.. [[[cog interact('ming_odm_tutorial', 3) ]]]
 .. [[[end]]]
 
 And voilà, you have related objects.  Note that at present the relations between
 objects are read-only, so if you want to make or break a relationship, you must
 do it by setting the `ForeignIdProperty`.
 
-ORM Event Interfaces
+ODM Event Interfaces
 --------------------
 
-This section describes the various categories of events which can be intercepted within the Ming ORM.
+This section describes the various categories of events which can be intercepted within the Ming ODM.
 
 Mapper Events
 =============
 
-.. module:: ming.orm.mapper
+.. module:: ming.odm.mapper
 
 To use MapperExtension, make your own subclass of it and just send it off to a mapper:
 
 .. code-block:: python
 
-    from ming.orm.mapper import MapperExtension
+    from ming.odm.mapper import MapperExtension
     class MyExtension(MapperExtension):
         def after_insert(self, obj, st):
             print "instance %s after insert !" % obj
@@ -207,15 +207,15 @@ Multiple extensions will be chained together and processed in order;
 Session Events
 ==============
 
-.. module:: ming.orm.ormsession
+.. module:: ming.odm.odmsession
 
 The SessionExtension applies plugin points for Session objects
-and ORMCursor objects:
+and ODMCursor objects:
 
 .. code-block:: python
 
-    from ming.orm.base import state
-    from ming.orm.ormsession import SessionExtension
+    from ming.odm.base import state
+    from ming.odm.odmsession import SessionExtension
 
     class MySessionExtension(SessionExtension):
         def __init__(self, session):
@@ -231,11 +231,11 @@ and ORMCursor objects:
                 self.objects_deleted = list(self.session.uow.deleted)
             # do something
 
-    ORMSession = ThreadLocalORMSession(session,
+    ODMSession = ThreadLocalODMSession(session,
                                        extensions=[ProjectSessionExtension])
 
 The same SessionExtension instance can be used with any number of sessions.
-It is possible to register extensions on an already created ORMSession using
+It is possible to register extensions on an already created ODMSession using
 the `register_extension(extension)` method of the session itself. 
 Even calling register_extension it is possible to register the extensions only
 before using the session for the first time.
@@ -246,7 +246,7 @@ before using the session for the first time.
 Ensuring Indexing
 --------------------
 
-The ORM layer permits to ensure indexes over the collections by using the
+The ODM layer permits to ensure indexes over the collections by using the
 `__mongometa__` attribute. You can enforce both unique indexing and non-unique
 indexing.
 
@@ -289,7 +289,7 @@ Now when accessing instances of User, if email is Missing and you attempt to use
 User.email attribute Ming, will throw an AttributeError as it ensures that only
 properties that are not Missing are mapped as attributes to the class.
 
-This brings us to the :class:`ming.orm.property.FieldPropertyWithMissingNone`
+This brings us to the :class:`ming.odm.property.FieldPropertyWithMissingNone`
 property type. This allows you to mimic the behavior that you commonly find in a SQL
 solution. An indexed and unique field that is also allowed to be NULL
 or in this case Missing. A classic example would be a product database where you
@@ -314,19 +314,19 @@ call `ensure_indexes` over the mapped collection.
 
 .. code-block:: python
 
-    for mapper in ming.orm.Mapper.all_mappers():
+    for mapper in ming.odm.Mapper.all_mappers():
         mainsession.ensure_indexes(mapper.collection)
 
-This needs to be performed each time you change the indexes or the database.
+This needs to be perfodmed each time you change the indexes or the database.
 It is common pratice to ensure all the indexes at application startup.
 
-Dropping Down Below the ORM
+Dropping Down Below the ODM
 ---------------------------
 
-You can also access the underlying Ming `Document` and (non-ORM) `Session` by
+You can also access the underlying Ming `Document` and (non-ODM) `Session` by
 using some helper functions, so all the power of basic Ming (and MongoDB) is
 accessible at all times:
 
-.. [[[cog interact('ming_orm_tutorial', 5) ]]]
+.. [[[cog interact('ming_odm_tutorial', 5) ]]]
 .. [[[end]]]
 

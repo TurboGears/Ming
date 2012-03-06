@@ -1,6 +1,6 @@
 import logging
 
-from ming.orm import ORMSession
+from ming.odm import ODMSession
 
 from .model import MigrationInfo
 from .migrate import Migration
@@ -16,7 +16,7 @@ def run_migration(datastore, target_versions, dry_run):
     # Get the migration status of the db
     session = MigrationInfo.__mongometa__.session
     session.bind = datastore
-    ormsession = ORMSession(session)
+    odmsession = ODMSession(session)
     info = MigrationInfo.m.get()
     if info is None:
         info = MigrationInfo.make({})
@@ -26,7 +26,7 @@ def run_migration(datastore, target_versions, dry_run):
         islatest = ' (LATEST)' if v == latest_versions[k] else ''
         log.info('Target %s=%s%s (current=%s)', k, v, islatest, cur)
     # Create a migration plan
-    plan = list(plan_migration(session, ormsession, info, target_versions))
+    plan = list(plan_migration(session, odmsession, info, target_versions))
     # Execute (or print) the plan
     for step in plan:
         log.info('Migrate %r', step)
@@ -60,12 +60,12 @@ def set_status(datastore, target_versions):
     info.versions.update(target_versions)
     info.m.save()
 
-def plan_migration(session, ormsession, info, target):
+def plan_migration(session, odmsession, info, target):
     '''Return the optimal list of graph.MigrationSteps to run in order to
     satisfy the target requirements'''
     global MIGRATION_GRAPH
     if MIGRATION_GRAPH is None:
-        migrations = dict((k, v(session, ormsession))
+        migrations = dict((k, v(session, odmsession))
                           for k,v in Migration.migrations_registry.iteritems())
         MIGRATION_GRAPH = graph.MigrationGraph(migrations)
     else:

@@ -38,7 +38,7 @@ setup(name='Ming',
       entry_points="""
       # -*- Entry points: -*-
       [paste.filter_factory]
-      ming_autoflush=ming.orm.middleware:make_ming_autoflush_middleware
+      ming_autoflush=ming.odm.middleware:make_ming_autoflush_middleware
 
       [flyway.test_migrations]
       a = flyway.tests.migrations_a

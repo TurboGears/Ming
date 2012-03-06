@@ -1,3 +1,10 @@
+0.3
+
+* Renamed ming.orm to ming.odm
+* Lots of bug fixes
+* Add gridfs support to Ming
+* Add contextual ODM session
+
 0.2.1
 
 * Added support for pymongo 1.7+

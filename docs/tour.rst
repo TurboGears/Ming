@@ -97,7 +97,7 @@ Collection objects
 
    There are two styles to define your models in Ming, declarative and
    imperative, and both styles are availabe both at the document level (which
-   this tutorial covers) and the ORM layer (covered by the ORM tutorial). Which
+   this tutorial covers) and the ODM layer (covered by the ODM tutorial). Which
    you end up using is mostly a matter of personal style. The declarative style
    actually predated the imperative style, and the main author of Ming uses both
    styles interchangably in application programming based on which seems more

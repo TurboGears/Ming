@@ -14,7 +14,7 @@ Contents:
 
    news   
    tour
-   orm
+   odm
    api/*
 
 Miscellaneous Links of Interest

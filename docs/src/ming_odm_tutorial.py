@@ -1,18 +1,18 @@
 #{initial-imports
 from ming import Session
 from ming.datastore import DataStore
-from ming.orm import ThreadLocalORMSession
+from ming.odm import ThreadLocalODMSession
 
-bind = DataStore('mongodb://localhost:27017/', database='orm_tutorial')
+bind = DataStore('mongodb://localhost:27017/', database='odm_tutorial')
 doc_session = Session(bind)
-session = ThreadLocalORMSession(doc_session=doc_session)
+session = ThreadLocalODMSession(doc_session=doc_session)
 #}
 
-#{orm-imports
+#{odm-imports
 from ming import schema
-from ming.orm import FieldProperty, ForeignIdProperty, RelationProperty
-from ming.orm import Mapper
-from ming.orm.declarative import MappedClass
+from ming.odm import FieldProperty, ForeignIdProperty, RelationProperty
+from ming.odm import Mapper
+from ming.odm.declarative import MappedClass
 #}
 
 class WikiPage(MappedClass):
@@ -107,7 +107,7 @@ def snippet4():
     list(results)
     
 def snippet5():
-    from ming.orm import mapper
+    from ming.odm import mapper
     m = mapper(WikiPage)
     # m.collection is the 'base' Ming document class
     m.collection

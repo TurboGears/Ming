@@ -3,12 +3,12 @@ from unittest import TestCase
 from ming import schema as S
 from ming import datastore as DS
 from ming import Session
-from ming.orm import ORMSession, Mapper
-from ming.orm import FieldProperty, RelationProperty, ForeignIdProperty
-from ming.orm import FieldPropertyWithMissingNone
-from ming.orm.declarative import MappedClass
-from ming.orm import state, mapper
-from ming.orm import MapperExtension, SessionExtension
+from ming.odm import ODMSession, Mapper
+from ming.odm import FieldProperty, RelationProperty, ForeignIdProperty
+from ming.odm import FieldPropertyWithMissingNone
+from ming.odm.declarative import MappedClass
+from ming.odm import state, mapper
+from ming.odm import MapperExtension, SessionExtension
 
 class TestIndex(TestCase):
 
@@ -26,7 +26,7 @@ class TestRelation(TestCase):
     def setUp(self):
         self.datastore = DS.DataStore(
             'mim:///', database='test_db')
-        self.session = ORMSession(bind=self.datastore)
+        self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
             class __mongometa__:
                 name='parent'
@@ -74,7 +74,7 @@ class TestBasicMapperExtension(TestCase):
     def setUp(self):
         self.datastore = DS.DataStore(
             'mim:///', database='test_db')
-        self.session = ORMSession(bind=self.datastore)
+        self.session = ODMSession(bind=self.datastore)
         class BasicMapperExtension(MapperExtension):
             def after_insert(self, instance, state):
                 assert 'clean'==state.status
@@ -114,7 +114,7 @@ class TestBasicMapping(TestCase):
     def setUp(self):
         self.datastore = DS.DataStore(
             'mim:///', database='test_db')
-        self.session = ORMSession(bind=self.datastore)
+        self.session = ODMSession(bind=self.datastore)
         class Basic(MappedClass):
             class __mongometa__:
                 name='basic'
@@ -235,11 +235,11 @@ class TestPolymorphic(TestCase):
     def setUp(self):
         self.bind = DS.DataStore(master='mim:///', database='test_db')
         self.doc_session = Session(self.bind)
-        self.orm_session = ORMSession(self.doc_session)
+        self.odm_session = ODMSession(self.doc_session)
         class Base(MappedClass):
             class __mongometa__:
                 name='test_doc'
-                session = self.orm_session
+                session = self.odm_session
                 polymorphic_on='type'
                 polymorphic_identity='base'
             _id = FieldProperty(S.ObjectId)
@@ -256,10 +256,10 @@ class TestPolymorphic(TestCase):
 
     def test_polymorphic(self):
         self.Base(a=1)
-        self.orm_session.flush()
+        self.odm_session.flush()
         self.Derived(a=2,b=2)
-        self.orm_session.flush()
-        self.orm_session.clear()
+        self.odm_session.flush()
+        self.odm_session.clear()
         q = self.Base.query.find()
         r = sorted(q.all())
         assert r[0].__class__ is self.Base

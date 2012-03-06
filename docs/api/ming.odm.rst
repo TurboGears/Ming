@@ -1,8 +1,8 @@
-:mod:`ming.orm` module
+:mod:`ming.odm` module
 ======================
 
 
-.. automodule:: ming.orm
+.. automodule:: ming.odm
 
 
 Functions
@@ -17,19 +17,19 @@ Functions
 Classes
 --------
 
-.. autoclass:: ming.orm.declarative.MappedClass
+.. autoclass:: ming.odm.declarative.MappedClass
    :show-inheritance:
    :members:
    :inherited-members:
    :undoc-members:
    
-.. autoclass:: ming.orm.mapper._ClassQuery
+.. autoclass:: ming.odm.mapper._ClassQuery
    :show-inheritance:
    :members:
    :inherited-members:
    :undoc-members:
    
-.. autoclass:: ming.orm.mapper._InstQuery
+.. autoclass:: ming.odm.mapper._InstQuery
    :show-inheritance:
    :members:
    :inherited-members:
@@ -59,13 +59,13 @@ Classes
    :inherited-members:
    :undoc-members:
    
-.. autoclass:: ORMSession
+.. autoclass:: ODMSession
    :show-inheritance:
    :members:
    :inherited-members:
    :undoc-members:
    
-.. autoclass:: ThreadLocalORMSession
+.. autoclass:: ThreadLocalODMSession
    :show-inheritance:
    :members:
    :inherited-members:

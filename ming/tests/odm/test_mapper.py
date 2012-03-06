@@ -6,9 +6,9 @@ from ming import datastore as DS
 from ming import schema as S
 from ming import collection, Field, Session
 from ming.base import Object
-from ming.orm import ORMSession, mapper, state, Mapper
-from ming.orm import ForeignIdProperty, RelationProperty
-from ming.orm.icollection import InstrumentedList, InstrumentedObj
+from ming.odm import ODMSession, mapper, state, Mapper
+from ming.odm import ForeignIdProperty, RelationProperty
+from ming.odm.icollection import InstrumentedList, InstrumentedObj
 
 class TestBasicMapping(TestCase):
     
@@ -16,7 +16,7 @@ class TestBasicMapping(TestCase):
         self.datastore = DS.DataStore(
             'mim:///', database='test_db')
         session = Session(bind=self.datastore)
-        self.session = ORMSession(session)
+        self.session = ODMSession(session)
         basic = collection(
             'basic', session,
             Field('_id', S.ObjectId),
@@ -171,7 +171,7 @@ class TestRelation(TestCase):
         self.datastore = DS.DataStore(
             'mim:///', database='test_db')
         session = Session(bind=self.datastore)
-        self.session = ORMSession(session)
+        self.session = ODMSession(session)
         class Parent(object): pass
         class Child(object): pass
         parent = collection(
@@ -221,7 +221,7 @@ class TestPolymorphic(TestCase):
         self.datastore = DS.DataStore(
             'mim:///', database='test_db')
         session = Session(bind=self.datastore)
-        self.session = ORMSession(session)
+        self.session = ODMSession(session)
         base = collection(
             'test_doc', session,
             Field('_id', S.ObjectId),
