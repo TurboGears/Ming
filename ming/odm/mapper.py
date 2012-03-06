@@ -48,27 +48,25 @@ class Mapper(object):
             self.mapped_class.__name__, self.collection.m.collection_name)
 
     @with_hooks('insert')
-    def insert(self, obj, state, **kwargs):
-        state.document.m.insert(validate=False)
-        self.session.save(obj)
+    def insert(self, obj, state, session, **kwargs):
+        doc = self.collection(state.document, skip_from_bson=True)
+        session.impl.insert(doc, validate=False)
         state.status = state.clean
 
     @with_hooks('update')
-    def update(self, obj, state, **kwargs):
+    def update(self, obj, state, session, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
-        doc.m.save(validate=False, **kwargs)
-        self.session.save(obj)
+        session.impl.save(doc, validate=False)
         state.status = state.clean
 
     @with_hooks('delete')
-    def delete(self, obj, state, **kwargs):
+    def delete(self, obj, state, session, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
-        doc.m.delete(**kwargs)
-        self.session.expunge(obj)
+        session.impl.delete(doc)
 
     @with_hooks('remove')
-    def remove(self, *args, **kwargs):
-        self.collection.m.remove(*args, **kwargs)
+    def remove(self, session, *args, **kwargs):
+        session.impl.remove(self.collection, *args, **kwargs)
 
     def create(self, doc, options):
         doc = self.collection.make(doc)
@@ -124,8 +122,8 @@ class Mapper(object):
         for p in self.properties:
             p.compile(self)
     
-    def update_partial(self, *args, **kwargs):
-        self.collection.m.update_partial(*args, **kwargs)
+    def update_partial(self, session, *args, **kwargs):
+        session.impl.update_partial(self.collection, *args, **kwargs)
 
     def _from_doc(self, doc, options):
         obj = self.mapped_class.__new__(self.mapped_class)
@@ -134,7 +132,7 @@ class Mapper(object):
         st.original_document = doc
         st.document = self.collection.m.schema.validate(doc)
         st.status = st.new
-        self.session.save(obj)
+        # self.session.save(obj)
         return obj
 
     def _instrument_class(self, properties, include_properties, exclude_properties):
@@ -315,7 +313,8 @@ class _InitDecorator(object):
         def __init__(*args, **kwargs):
             self_.__ming__ = _ORMDecoration(self.mapper, self_, Object(self.mapper.options))
             self.func(self_, *args, **kwargs)
-            self.save(self_)
+            if self.mapper.session:
+                self.save(self_)
         return __init__
 
     def save(self, obj):

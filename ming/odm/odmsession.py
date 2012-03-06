@@ -61,15 +61,15 @@ class ODMSession(object):
 
     @with_hooks('insert')
     def insert_now(self, obj, st, **kwargs):
-        mapper(obj).insert(obj, st, **kwargs)
+        mapper(obj).insert(obj, st, self, **kwargs)
 
     @with_hooks('update')
     def update_now(self, obj, st, **kwargs):
-        mapper(obj).update(obj, st, **kwargs)
+        mapper(obj).update(obj, st, self, **kwargs)
 
     @with_hooks('delete')
     def delete_now(self, obj, st, **kwargs):
-        mapper(obj).delete(obj, st, **kwargs)
+        mapper(obj).delete(obj, st, self, **kwargs)
         
     def clear(self):
         self.uow.clear()
@@ -91,7 +91,7 @@ class ODMSession(object):
             self.flush()
         m = mapper(cls)
         # args = map(deinstrument, args)
-        ming_cursor = m.collection.m.find(*args, **kwargs)
+        ming_cursor = self.impl.find(m.collection, *args, **kwargs)
         odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh)
         call_hook(self, 'cursor_created', odm_cursor, 'find', cls, *args, **kwargs)
         return odm_cursor
@@ -110,11 +110,11 @@ class ODMSession(object):
     @with_hooks('remove')
     def remove(self, cls, *args, **kwargs):
         m = mapper(cls)
-        m.remove(*args, **kwargs)
+        m.remove(self, *args, **kwargs)
 
     def update(self, cls, spec, fields, **kwargs):
         m = mapper(cls)
-        m.update_partial(spec, fields, **kwargs)
+        m.update_partial(self, spec, fields, **kwargs)
 
     def update_if_not_modified(self, obj, fields, upsert=False):
         self.update(obj.__class__, state(obj).original_document, fields, upsert)
@@ -255,6 +255,7 @@ class ODMCursor(object):
         if obj is None:
             obj = self.mapper.create(doc, self._options)
             state(obj).status = ObjectState.clean
+            self.session.save(obj)
         elif self._options.refresh:
             # Refresh object
             state(obj).update(doc)
@@ -263,7 +264,7 @@ class ODMCursor(object):
             # Never refresh objects from the DB unless explicitly requested
             pass
         other_session = session(obj)
-        if other_session != self:
+        if other_session is not None and other_session != self:
             other_session.expunge(obj)
             self.session.save(obj)
         return obj

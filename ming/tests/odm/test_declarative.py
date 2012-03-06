@@ -76,13 +76,13 @@ class TestBasicMapperExtension(TestCase):
             'mim:///', database='test_db')
         self.session = ODMSession(bind=self.datastore)
         class BasicMapperExtension(MapperExtension):
-            def after_insert(self, instance, state):
+            def after_insert(self, instance, state, session):
                 assert 'clean'==state.status
-            def before_insert(self, instance, state):
+            def before_insert(self, instance, state, session):
                 assert 'new'==state.status
-            def before_update(self, instance, state):
+            def before_update(self, instance, state, session):
                 assert 'dirty'==state.status
-            def after_update(self, instance, state):
+            def after_update(self, instance, state, session):
                 assert 'clean'==state.status
         class Basic(MappedClass):
             class __mongometa__:
@@ -182,7 +182,7 @@ class TestBasicMapping(TestCase):
         self.session.flush()
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 1)
-        m.remove({})
+        self.session.remove(self.Basic, {})
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 0)
 

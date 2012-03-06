@@ -117,7 +117,7 @@ class TestBasicMapping(TestCase):
         print obj
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 1)
-        m.remove({})
+        self.session.remove(self.Basic, {})
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 0)
 
