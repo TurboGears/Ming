@@ -1,6 +1,17 @@
 Ming News / Release Notes
 =====================================
 
+0.3 (March 6, 2012)
+------------------------------------------------
+
+Lots of snapshot releases, and finally a backwards-breaking change. The biggest change
+is the renaming of the ORM to be the ODM.
+
+* Renamed ming.orm to ming.odm
+* Lots of bug fixes
+* Add gridfs support to Ming
+* Add contextual ODM session
+
 0.2.1
 ----------
 
