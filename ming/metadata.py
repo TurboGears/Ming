@@ -65,7 +65,12 @@ def collection(*args, **kwargs):
     fields, indexes, collection_name, bases, session = _process_collection_args(
         args, kwargs)
     dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
-    cls = type('Document<%s>' % collection_name, bases, dct)
+    if 'polymorphic_identity' in kwargs:
+        clsname = 'Document<%s:%s>' % (
+            collection_name, kwargs['polymorphic_identity'])
+    else:
+        clsname = 'Document<%s>' % collection_name
+    cls = type(clsname, bases, dct)
     m = _ClassManager(
         cls, collection_name, session, fields, indexes, **kwargs)
     cls.m = _ManagerDescriptor(m)
