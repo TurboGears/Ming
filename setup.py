@@ -27,13 +27,15 @@ setup(name='Ming',
       include_package_data=True,
       zip_safe=True,
       install_requires=[
-          # -*- Extra requirements: -*-
-        "mock >=0.6.0",
         "FormEncode >= 1.2.1",
         "pymongo>=2.0",
         "PasteScript", # used by flyway
         "WebOb",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
+        # tests:
+        "mock >=0.6.0",
+        "nose",
+        "webtest",
       ],
       entry_points="""
       # -*- Entry points: -*-
