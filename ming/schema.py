@@ -324,6 +324,17 @@ class Document(Object):
         self.polymorphic_on = self.polymorphic_registry = None
         self.managed_class=None
 
+    def get_polymorphic_cls(self, data):
+        if self.polymorphic_registry:
+            disc = data.get(self.polymorphic_on, Missing)
+            if disc is Missing:
+                mm = self.managed_class.m
+                disc = getattr(mm, 'polymorphic_identity', Missing)
+            if disc is not Missing:
+                cls = self.polymorphic_registry[disc]
+            return cls
+        return self.managed_class
+
     def validate(self, value, **kw):
         try:
             return super(Document, self).validate(value, **kw)
@@ -335,15 +346,7 @@ class Document(Object):
             raise
 
     def _validate(self, d, allow_extra=False, strip_extra=False):
-        cls = self.managed_class
-        if self.polymorphic_registry:
-            disc = d.get(self.polymorphic_on, Missing)
-            if disc is Missing:
-                mm = self.managed_class.m
-                disc = getattr(mm, 'polymorphic_identity', Missing)
-            if disc is not Missing:
-                cls = self.polymorphic_registry[disc]
-                d[self.polymorphic_on] = disc
+        cls = self.get_polymorphic_cls(d)
         if cls is None or cls == self.managed_class:
             result = cls.__new__(cls)
             result.update(super(Document, self)._validate(d, allow_extra, strip_extra))

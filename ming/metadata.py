@@ -348,6 +348,7 @@ class _FieldDescriptor(object):
         del inst[self.name]
         
 class _Document(Object):
+    _lazy_options = None
 
     def __init__(self, data=None, skip_from_bson=False):
         if data is None:
@@ -357,7 +358,9 @@ class _Document(Object):
         dict.update(self, data)
 
     @classmethod
-    def make(cls, data, allow_extra=False, strip_extra=True):
+    def make(cls, data, **kwargs):
         'Kind of a virtual constructor'
-        return cls.m.make(data, allow_extra=allow_extra, strip_extra=strip_extra)
+        return cls.m.make(data, **kwargs)
+
+            
 
