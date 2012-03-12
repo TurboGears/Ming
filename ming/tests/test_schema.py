@@ -25,6 +25,8 @@ class TestQuerySafety(TestCase):
         assert  r == [ dict(a=2, _id='foo') ], r
         r = self.Doc.m.find(allow_extra=True).all()
         assert  r == [ dict(a=2, _id='foo') ], r
+        r = self.Doc.m.get(_id='foo')
+        assert  r == dict(a=2, _id='foo'), r
 
     def test_extra_fields_not_stripped(self):
         r = self.Doc.m.find(strip_extra=False).all()

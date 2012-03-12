@@ -52,7 +52,7 @@ class Session(object):
     def get(self, cls, **kwargs):
         bson = self._impl(cls).find_one(kwargs)
         if bson is None: return None
-        return cls.make(bson)
+        return cls.make(bson, allow_extra=True, strip_extra=True)
 
     def find(self, cls, *args, **kwargs):
         allow_extra=kwargs.pop('allow_extra', True)
