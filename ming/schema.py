@@ -88,7 +88,7 @@ class SchemaItem(object):
     raising an Invalid exception if the object is invalid.  If it returns
     Missing, the field will be stripped from its parent object.'''
 
-    def validate(self, d):
+    def validate(self, d, **kw):
         'convert/validate an object or raise an Invalid exception'
         raise NotImplementedError, 'validate'
 
@@ -170,7 +170,7 @@ class Migrate(SchemaItem):
 class Deprecated(SchemaItem):
     '''Used for deprecated fields -- they will be stripped from the object.
     '''
-    def validate(self, value):
+    def validate(self, value, **kw):
         if value is not Missing:
             # log.debug('Stripping deprecated field value %r', value)
             pass
@@ -250,6 +250,11 @@ class Object(FancySchemaItem):
         FancySchemaItem.__init__(self, required, if_missing)
         self.fields = dict((name, SchemaItem.make(field))
                            for name, field in fields.iteritems())
+        if len(self.fields) == 1:
+            name, field = self.fields.items()[0]
+            if not isinstance(name, str):
+                self._validate = lambda d, **kw: (
+                    self._validate_homogenous(name, field, d, **kw))
 
     def __repr__(self):
         l = [ super(Object, self).__repr__() ]
@@ -265,34 +270,46 @@ class Object(FancySchemaItem):
             for k,v in self.fields.iteritems()
             if isinstance(k, basestring))
 
+    def _validate_homogenous(self, name, field, d, **kw):
+        from . import base
+        name_validator = SchemaItem.make(name)
+        to_set = []
+        errors = []
+        for k,v in d.iteritems():
+            try:
+                k = name_validator.validate(k, **kw)
+                v = field.validate(v, **kw)
+                to_set.append((k,v))
+            except Invalid, inv:
+                errors.append((name, inv))
+        if errors:
+            error_dict = dict(errors)
+            msg = '\n'.join('%s:%s' % t for t in error_dict.iteritems())
+            raise Invalid(msg, d, None, error_dict=error_dict)
+        result = base.Object(
+            (name, value)
+            for name, value in to_set
+            if value is not Missing)
+        return result
+
     def _validate(self, d, allow_extra=False, strip_extra=False):
         from . import base
+        l_Missing = Missing
         result = base.Object()
         if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
-        error_dict = {}
         check_extra = True
         to_set = []
+        errors = []
         for name,field in self.fields.iteritems():
-            if isinstance(name, basestring):
-                try:
-                    value = field.validate(d.get(name, Missing))
-                    to_set.append((name, value))
-                except Invalid, inv:
-                    error_dict[name] = inv
-            else:
-                # Validate all items in d against this field. No
-                #    need in this case to deal with 'extra' keys
-                check_extra = False
-                allow_extra=True
-                name_validator = SchemaItem.make(name)
-                for name, value in d.iteritems():
-                    try:
-                        to_set.append((
-                                name_validator.validate(name),
-                                field.validate(value)))
-                    except Invalid, inv:
-                        error_dict[name] = inv
-        if error_dict:
+            try:
+                value = field.validate(
+                    d.get(name, l_Missing),
+                    allow_extra=allow_extra, strip_extra=strip_extra)
+                to_set.append((name, value))
+            except Invalid, inv:
+                errors.append((name, inv))
+        if errors:
+            error_dict = dict(errors)
             msg = '\n'.join('%s:%s' % t for t in error_dict.iteritems())
             raise Invalid(msg, d, None, error_dict=error_dict)
         for name, value in to_set:
@@ -354,7 +371,8 @@ class Document(Object):
         cls = self.get_polymorphic_cls(d)
         if cls is None or cls == self.managed_class:
             result = cls.__new__(cls)
-            result.update(super(Document, self)._validate(d, allow_extra, strip_extra))
+            result.update(super(Document, self)._validate(
+                    d, allow_extra=allow_extra, strip_extra=strip_extra))
             return result
         return cls.m.make(
             d, allow_extra=allow_extra, strip_extra=strip_extra)
@@ -385,7 +403,7 @@ class Array(FancySchemaItem):
     def field_type(self):
         return SchemaItem.make(self._field_type)
 
-    def _validate(self, d):
+    def _validate(self, d, **kw):
         result = []
         error_list = []
         has_errors = False
@@ -396,7 +414,7 @@ class Array(FancySchemaItem):
                 raise Invalid('Not a list or tuple', d, None)
             for value in d:
                 try:
-                    value = self.field_type.validate(value)
+                    value = self.field_type.validate(value, **kw)
                     result.append(value)
                     error_list.append(None)
                 except Invalid, inv:
@@ -417,7 +435,7 @@ class Array(FancySchemaItem):
 class Scalar(FancySchemaItem):
     '''Validate that a value is NOT an array or dict'''
     if_missing=None
-    def _validate(self, value):
+    def _validate(self, value, **kw):
         if isinstance(value, (tuple, list, dict)):
             raise Invalid('%r is not a scalar' % value, value, None)
         return value
@@ -426,8 +444,8 @@ class ParticularScalar(Scalar):
     '''Validate that a value is NOT an array or dict and is a particular type
     '''
     type=()
-    def _validate(self, value):
-        value = Scalar._validate(self, value)
+    def _validate(self, value, **kw):
+        value = Scalar._validate(self, value, **kw)
         if value is None: return value
         if not isinstance(value, self.type):
             raise Invalid('%s is not a %r' % (value, self.type),
@@ -439,7 +457,7 @@ class OneOf(ParticularScalar):
         self.options = options
         ParticularScalar.__init__(self, **kwargs)
 
-    def _validate(self, value):
+    def _validate(self, value, **kw):
         if value not in self.options:
             raise Invalid('%s is not in %r' % (value, self.options),
                           value, None)
@@ -452,7 +470,7 @@ class Value(FancySchemaItem):
         self.value = value
         FancySchemaItem.__init__(self, **kw)
         
-    def _validate(self, value):
+    def _validate(self, value, **kw):
         if value != self.value:
             raise Invalid('%r != %r' % (value, self.value),
                           value, None)
@@ -462,17 +480,17 @@ class String(ParticularScalar):
     type=basestring
 class Int(ParticularScalar):
     type=(int,long)
-    def _validate(self, value):
+    def _validate(self, value, **kw):
         if isinstance(value, float) and round(value) == value:
             value = int(value)
-        return super(Int, self)._validate(value)
+        return super(Int, self)._validate(value, **kw)
 class Float(ParticularScalar):
     type=(float,int,long)
 class DateTimeTZ(ParticularScalar):
     type=datetime
 class DateTime(DateTimeTZ):
-    def _validate(self, value):
-        value = DateTimeTZ._validate(self, value)
+    def _validate(self, value, **kw):
+        value = DateTimeTZ._validate(self, value, **kw)
         if value is None: return value
         if not isinstance(value, self.type):
             raise Invalid('%s is not a %r' % (value, self.type),
@@ -489,9 +507,9 @@ class ObjectId(Scalar):
     def if_missing(self):
         '''Provides a pymongo.bson.ObjectId as default'''
         return bson.ObjectId()
-    def _validate(self, value):
+    def _validate(self, value, **kw):
         try:
-            value = Scalar._validate(self, value)
+            value = Scalar._validate(self, value, **kw)
             if value is None: return value
             if isinstance(value, bson.ObjectId):
                 return value
