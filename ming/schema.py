@@ -8,6 +8,7 @@ import bson
 import pymongo
 
 from .utils import LazyProperty
+from .base import Object as BaseObject
 
 log = logging.getLogger(__name__)
 
@@ -153,14 +154,13 @@ class Migrate(SchemaItem):
         then value must be an object and the result will be a list
         ``[ { key_name: key, **value } ]``.
         '''
-        from . import base
         def migrate_scalars(value):
             return [
-                base.Object({ key_name: k, value_name: v})
+                BaseObject({ key_name: k, value_name: v})
                 for k,v in value.iteritems() ]
         def migrate_objects(value):
             return [
-                base.Object(dict(v, **{key_name:k}))
+                BaseObject(dict(v, **{key_name:k}))
                 for k,v in value.iteritems() ]
         if value_name is None:
             return migrate_objects
@@ -234,9 +234,8 @@ class Anything(FancySchemaItem):
     'Anything goes - always passes validation unchanged except dict=>Object'
 
     def validate(self, value, **kw):
-        from . import base
-        if isinstance(value, dict) and not isinstance(value, base.Object):
-            return base.Object(value)
+        if isinstance(value, dict) and not isinstance(value, BaseObject):
+            return BaseObject(value)
         return value
 
 class Object(FancySchemaItem):
@@ -264,14 +263,14 @@ class Object(FancySchemaItem):
 
     @LazyProperty
     def if_missing(self):
-        from . import base
-        return base.Object(
+        return BaseObject(
             (k, v.validate(Missing))
             for k,v in self.fields.iteritems()
             if isinstance(k, basestring))
 
     def _validate_homogenous(self, name, field, d, **kw):
-        from . import base
+        if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
+        l_Missing = Missing
         name_validator = SchemaItem.make(name)
         to_set = []
         errors = []
@@ -279,24 +278,19 @@ class Object(FancySchemaItem):
             try:
                 k = name_validator.validate(k, **kw)
                 v = field.validate(v, **kw)
-                to_set.append((k,v))
+                if v is not l_Missing:
+                    to_set.append((k,v))
             except Invalid, inv:
                 errors.append((name, inv))
         if errors:
             error_dict = dict(errors)
             msg = '\n'.join('%s:%s' % t for t in error_dict.iteritems())
             raise Invalid(msg, d, None, error_dict=error_dict)
-        result = base.Object(
-            (name, value)
-            for name, value in to_set
-            if value is not Missing)
-        return result
+        return BaseObject(to_set)
 
     def _validate(self, d, allow_extra=False, strip_extra=False):
-        from . import base
-        l_Missing = Missing
-        result = base.Object()
         if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
+        l_Missing = Missing
         check_extra = True
         to_set = []
         errors = []
@@ -305,16 +299,15 @@ class Object(FancySchemaItem):
                 value = field.validate(
                     d.get(name, l_Missing),
                     allow_extra=allow_extra, strip_extra=strip_extra)
-                to_set.append((name, value))
+                if value is not l_Missing:
+                    to_set.append((name, value))
             except Invalid, inv:
                 errors.append((name, inv))
         if errors:
             error_dict = dict(errors)
             msg = '\n'.join('%s:%s' % t for t in error_dict.iteritems())
             raise Invalid(msg, d, None, error_dict=error_dict)
-        for name, value in to_set:
-            if value is Missing: continue
-            result[name] = value
+        result = BaseObject(to_set)
         if check_extra:
             try:
                 extra_keys = set(d.iterkeys()) - set(self.fields.iterkeys())
@@ -344,12 +337,13 @@ class Document(Object):
         self.managed_class=None
 
     def get_polymorphic_cls(self, data):
+        l_Missing = Missing
         if self.polymorphic_registry:
             disc = data.get(self.polymorphic_on, Missing)
             if disc is Missing:
                 mm = self.managed_class.m
                 disc = getattr(mm, 'polymorphic_identity', Missing)
-            if disc is not Missing:
+            if disc is not l_Missing:
                 cls = self.polymorphic_registry[disc]
             return cls
         return self.managed_class
