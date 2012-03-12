@@ -319,8 +319,10 @@ class Document(Object):
     ParentClass._validate(...) sometimes will return an instance of ChildClass).
     '''
 
-    def __init__(self, fields=None, required=False, if_missing=NoDefault):
+    def __init__(self, fields=None,
+                 required=False, lazy=False, if_missing=NoDefault):
         super(Document, self).__init__(fields, required, if_missing)
+        self.lazy = lazy
         self.polymorphic_on = self.polymorphic_registry = None
         self.managed_class=None
 
@@ -336,6 +338,9 @@ class Document(Object):
         return self.managed_class
 
     def validate(self, value, **kw):
+        if self.lazy:
+            cls = self.get_polymorphic_cls(value)
+            return lazy_document(cls, cls.m.schema)
         try:
             return super(Document, self).validate(value, **kw)
         except Invalid, inv:
