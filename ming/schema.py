@@ -291,8 +291,10 @@ class Object(FancySchemaItem):
     def _validate(self, d, allow_extra=False, strip_extra=False):
         if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
         l_Missing = Missing
-        check_extra = True
-        to_set = []
+        if allow_extra and not strip_extra:
+            to_set = d.items()
+        else:
+            to_set = []
         errors = []
         for name,field in self.fields.iteritems():
             try:
@@ -305,19 +307,16 @@ class Object(FancySchemaItem):
                 errors.append((name, inv))
         if errors:
             error_dict = dict(errors)
-            msg = '\n'.join('%s:%s' % t for t in error_dict.iteritems())
+            msg = '\n'.join('%s:%s' % t for t in errors)
             raise Invalid(msg, d, None, error_dict=error_dict)
         result = BaseObject(to_set)
-        if check_extra:
+        if not allow_extra:
             try:
                 extra_keys = set(d.iterkeys()) - set(self.fields.iterkeys())
             except AttributeError, ae:
                 raise Invalid(str(ae), d, None)
-            if extra_keys and not allow_extra:
+            if extra_keys:
                 raise Invalid('Extra keys: %r' % extra_keys, d, None)
-            if extra_keys and not strip_extra:
-                for ek in extra_keys:
-                    result[ek] = d[ek]
         return result
 
     def extend(self, other):

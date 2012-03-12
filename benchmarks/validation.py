@@ -175,6 +175,8 @@ sys.stdout.flush()
 begin = time.time()
 for x in xrange(NUM_ITER):
     Project.m.find(validate=True).next()
+    print '.',
+    sys.stdout.flush()
 elapsed = time.time() - begin
 docs_per_s = float(NUM_ITER) / elapsed
 ms_per_doc = 1000 / docs_per_s
