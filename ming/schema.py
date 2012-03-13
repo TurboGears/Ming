@@ -255,6 +255,10 @@ class Object(FancySchemaItem):
                 self._validate = lambda d, **kw: (
                     self._validate_homogenous(name, field, d, **kw))
 
+    @LazyProperty
+    def field_items(self):
+        return sorted(self.fields.items())
+
     def __repr__(self):
         l = [ super(Object, self).__repr__() ]
         for k,f in self.fields.iteritems():
@@ -290,14 +294,13 @@ class Object(FancySchemaItem):
 
     def _validate_core(self, d, to_set, errors, **kw):
         l_Missing = Missing
-        for name,field in self.fields.iteritems():
+        for name,field in self.field_items:
             try:
                 value = field.validate(d.get(name, l_Missing), **kw)
                 if value is not l_Missing:
                     to_set.append((name, value))
             except Invalid, inv:
                 errors.append((name, inv))
-        
 
     def _validate(self, d, allow_extra=False, strip_extra=False):
         if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
