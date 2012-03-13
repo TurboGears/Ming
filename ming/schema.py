@@ -218,7 +218,7 @@ class FancySchemaItem(SchemaItem):
     def _validate_required(self, value, **kw):
         if value is None or value is Missing:
             raise Invalid('Missing field', value, None)
-        return self._validate_optional(value, **kw)
+        return self._validate(value, **kw)
 
     def _validate_fast_missing(self, value, **kw):
         if (value is Missing
@@ -228,12 +228,9 @@ class FancySchemaItem(SchemaItem):
         return self._validate(value, **kw)
 
     def _validate_optional(self, value, **kw):
-        if value is None:
-            value = Missing
+        if value is None: value = Missing
         if value is Missing:
-            if isinstance(self.if_missing, (NoneType, basestring, int, float, long)):
-                return self._validate_fast_missing(value, **kw)
-            elif self.if_missing == []:
+            if self.if_missing == []:
                 return []
             elif self._callable_if_missing:
                 return self.if_missing()
@@ -460,7 +457,6 @@ class ParticularScalar(Scalar):
     '''
     type=()
     def _validate(self, value, **kw):
-        value = Scalar._validate(self, value, **kw)
         if value is None: return value
         if not isinstance(value, self.type):
             raise Invalid('%s is not a %r' % (value, self.type),
