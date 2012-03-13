@@ -307,6 +307,16 @@ class Object(FancySchemaItem):
 
     def _validate_core(self, d, to_set, errors, **kw):
         l_Missing = Missing
+        # try common case (no Invalid)
+        try:
+            for name,field in self.field_items:
+                value = field.validate(d.get(name, l_Missing), **kw)
+                if value is not l_Missing:
+                    to_set.append((name, value))
+            return
+        except Invalid:
+            pass
+        # Go back and re-scan for the invalid items
         for name,field in self.field_items:
             try:
                 value = field.validate(d.get(name, l_Missing), **kw)
@@ -317,7 +327,6 @@ class Object(FancySchemaItem):
 
     def _validate(self, d, allow_extra=False, strip_extra=False):
         if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
-        l_Missing = Missing
         if allow_extra and not strip_extra:
             to_set = d.items()
         else:
