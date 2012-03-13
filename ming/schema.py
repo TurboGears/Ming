@@ -271,7 +271,6 @@ class Object(FancySchemaItem):
             l.append('  %s: %s' % (k, repr(f).replace('\n', '\n    ')))
         return '\n'.join(l) 
 
-    @LazyProperty
     def if_missing(self):
         return BaseObject(
             (k, v.validate(Missing))
