@@ -12,6 +12,8 @@ from .base import Object as BaseObject
 
 log = logging.getLogger(__name__)
 
+NoneType = type(None)
+
 
 # lifted from formencode.validators
 # but separate, so TurboGears special handling of formencode.validators.Invalid won't kick in incorrectly
@@ -217,6 +219,10 @@ class FancySchemaItem(SchemaItem):
                 return self.if_missing
             elif self._callable_if_missing:
                 return self.if_missing()
+            elif isinstance(self.if_missing, (NoneType, basestring, int, float, long)):
+                return self.if_missing
+            elif self.if_missing == []:
+                return []
             else:
                 return deepcopy(self.if_missing) # handle mutable defaults
         try:
@@ -311,15 +317,6 @@ class Object(FancySchemaItem):
             to_set = []
         errors = []
         self._validate_core(d, to_set, errors, allow_extra=allow_extra, strip_extra=strip_extra)
-        # for name,field in self.fields.iteritems():
-        #     try:
-        #         value = field.validate(
-        #             d.get(name, l_Missing),
-        #             allow_extra=allow_extra, strip_extra=strip_extra)
-        #         if value is not l_Missing:
-        #             to_set.append((name, value))
-        #     except Invalid, inv:
-        #         errors.append((name, inv))
         if errors:
             error_dict = dict(errors)
             msg = '\n'.join('%s:%s' % t for t in errors)
