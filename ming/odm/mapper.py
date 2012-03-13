@@ -199,31 +199,31 @@ class MapperExtension(object):
     """Base implementation for customizing Mapper behavior."""
     def __init__(self, mapper):
         self.mapper = mapper
-    def before_insert(mapper, instance, state):
+    def before_insert(self, instance, state, sess):
         """Receive an object instance and its current state before that
         instance is inserted into its collection."""
         pass
-    def after_insert(mapper, instance, state):
+    def after_insert(self, instance, state, sess):
         """Receive an object instance and its current state after that
         instance is inserted into its collection."""
         pass
-    def before_update(mapper, instance, state):
+    def before_update(self, instance, state, sess):
         """Receive an object instance and its current state before that
         instance is updated."""
         pass
-    def after_update(mapper, instance, state):
+    def after_update(self, instance, state, sess):
         """Receive an object instance and its current state after that
         instance is updated."""
         pass
-    def before_delete(mapper, instance, state):
+    def before_delete(self, instance, state, sess):
         """Receive an object instance and its current state before that
         instance is deleted."""
         pass
-    def after_delete(mapper, instance, state):
+    def after_delete(self, instance, state, sess):
         """Receive an object instance and its current state after that
         instance is deleted."""
-    def before_remove(self, *args, **kwargs): pass
-    def after_remove(self, *args, **kwargs): pass
+    def before_remove(self, sess): pass
+    def after_remove(self, sess): pass
 
 class _ORMDecoration(object):
 

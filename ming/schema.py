@@ -527,8 +527,8 @@ class ObjectId(Scalar):
         return bson.ObjectId()
     def _validate(self, value, **kw):
         try:
-            value = Scalar._validate(self, value, **kw)
             if value is None: return value
+            value = Scalar._validate(self, value, **kw)
             if isinstance(value, bson.ObjectId):
                 return value
             elif isinstance(value, basestring):
