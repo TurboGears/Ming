@@ -402,8 +402,14 @@ class Array(FancySchemaItem):
     def __init__(self, field_type, **kw):
         required = kw.pop('required', False)
         if_missing = kw.pop('if_missing', [])
+        validate_ranges = kw.pop('validate_ranges', None)
         FancySchemaItem.__init__(self, required, if_missing)
         self._field_type = field_type
+        if validate_ranges:
+            self._validate = lambda d, **kw: (
+                self._range_validate(validate_ranges, d, **kw))
+        else:
+            self._validate = self._full_validate
 
     def __repr__(self):
         l = [ super(Array, self).__repr__() ]
@@ -414,33 +420,35 @@ class Array(FancySchemaItem):
     def field_type(self):
         return SchemaItem.make(self._field_type)
 
-    def _validate(self, d, **kw):
-        result = []
-        error_list = []
-        has_errors = False
-        if d is None:
-            d = []
+    def _range_validate(self, ranges, d, **kw):
+        result = d[:]
+        for range in ranges:
+            result[range] = self._full_validate(d[range], **kw)
+        return result
+
+    def _full_validate(self, d, **kw):
+        if not isinstance(d, (list, tuple)):
+            raise Invalid('Not a list or tuple', d, None)
+        if d is None: d = []
+        # try common case (no Invalid)
+        validate = self.field_type.validate
         try:
-            if not isinstance(d, (list, tuple)):
-                raise Invalid('Not a list or tuple', d, None)
-            for value in d:
-                try:
-                    value = self.field_type.validate(value, **kw)
-                    result.append(value)
-                    error_list.append(None)
-                except Invalid, inv:
-                    error_list.append(inv)
-                    has_errors = True
-            if has_errors:
-                msg = '\n'.join(('[%s]:%s' % (i,v))
-                                for i,v in enumerate(error_list)
-                                if v)
-                raise Invalid(msg, d, None, error_list=error_list)
-            return result
+            return [
+                validate(value, **kw)
+                for value in d ]
         except Invalid:
-            raise
-        except TypeError, ex:
-            raise Invalid(str(ex), d, None)
+            pass
+        # Find the invalid values
+        error_list = [ None ] * len(d)
+        for i, value in enumerate(d):
+            try:
+                validate(value, **kw)
+            except Invalid, inv:
+                error_list[i] = inv
+        msg = '\n'.join(('[%s]:%s' % (i,v))
+                        for i,v in enumerate(error_list)
+                        if v is not None)
+        raise Invalid(msg, d, None, error_list=error_list)
         
 
 class Scalar(FancySchemaItem):
