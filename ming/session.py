@@ -4,7 +4,6 @@ from functools import update_wrapper
 
 import pymongo
 import pymongo.errors
-from pymongo.son import SON
 
 from .base import Cursor, Object
 from .utils import fixup_index

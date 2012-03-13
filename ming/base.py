@@ -1,9 +1,24 @@
 """Ming Base module.  Good stuff here.
 """
 import decimal
+from collections import defaultdict
 from datetime import datetime
 
 import bson
+
+class Missing(tuple):
+    '''Missing is a sentinel used to indicate a missing key or missing keyword
+    argument (used since None sometimes has meaning)'''
+    def __repr__(self):
+        return '<Missing>'
+class NoDefault(tuple):
+    '''NoDefault is a sentinel used to indicate a keyword argument was not
+    specified.  Used since None and Missing mean something else
+    '''
+    def __repr__(self):
+        return '<NoDefault>'
+Missing = Missing()
+NoDefault = NoDefault()
 
 class Object(dict):
     'Dict providing object-like attr access'

@@ -8,7 +8,7 @@ import bson
 import pymongo
 
 from .utils import LazyProperty
-from .base import Object as BaseObject
+from .base import Object as BaseObject, Missing, NoDefault
 
 log = logging.getLogger(__name__)
 
@@ -71,19 +71,6 @@ class Invalid(Exception):
         else:
             return unicode(self.msg)
 
-class Missing(tuple):
-    '''Missing is a sentinel used to indicate a missing key or missing keyword
-    argument (used since None sometimes has meaning)'''
-    def __repr__(self):
-        return '<Missing>'
-class NoDefault(tuple):
-    '''NoDefault is a sentinel used to indicate a keyword argument was not
-    specified.  Used since None and Missing mean something else
-    '''
-    def __repr__(self):
-        return '<NoDefault>'
-Missing = Missing()
-NoDefault = NoDefault()
 
 class SchemaItem(object):
     '''Part of a MongoDB schema.  The validate() method is called when a record
@@ -309,10 +296,13 @@ class Object(FancySchemaItem):
         l_Missing = Missing
         # try common case (no Invalid)
         try:
-            for name,field in self.field_items:
-                value = field.validate(d.get(name, l_Missing), **kw)
-                if value is not l_Missing:
-                    to_set.append((name, value))
+            validated = [
+                (name, field.validate(d.get(name, l_Missing)))
+                for name, field in self.field_items ]
+            to_set.extend([
+                (name, value)
+                for name, value in validated
+                if value is not l_Missing])
             return
         except Invalid:
             pass
