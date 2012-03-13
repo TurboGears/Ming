@@ -295,7 +295,7 @@ class Object(FancySchemaItem):
         # try common case (no Invalid)
         try:
             validated = [
-                (name, field.validate(d.get(name, l_Missing)))
+                (name, field.validate(d.get(name, l_Missing), **kw))
                 for name, field in self.field_items ]
             to_set.extend([
                 (name, value)
