@@ -5,7 +5,7 @@ from ming import Document, Field, Session
 from ming import schema as S
 from ming.datastore import DataStore
 
-NUM_ITER = 10
+NUM_ITER = 100
 
 doc_session = Session.by_name('benchmark')
 
@@ -130,12 +130,13 @@ class Project(Document):
                 read_operations=int,
                 location=str,
                 type=str) ])
-    releases=Field([dict(
+    releases=Field(
+        S.Array(
+            dict(
                 filename=str,
                 url=str,
                 date=datetime,
                 bytes=float,
-                download_count=S.Deprecated,
                 file_type=S.String(if_missing=''),
                 mime_type=str,
                 md5sum=str,
@@ -145,11 +146,15 @@ class Project(Document):
                 sf_release_id=int, sf_package_id=int, sf_type=str, sf_platform=[str],
                 release_notes_url=str,
                 # old FRS data (shouldn't exist any more)
-                group=S.Deprecated, #str,
-                version=S.Deprecated, #str,
-                changelog=S.Deprecated, #str,
-                release_notes=S.Deprecated, #str,
-            )])
+                # download_count=S.Deprecated,
+                # group=S.Deprecated, #str,
+                # version=S.Deprecated, #str,
+                # changelog=S.Deprecated, #str,
+                # release_notes=S.Deprecated, #str,
+            ),
+            validate_ranges=(
+                slice(0, 5), slice(-5, -1))
+            ))
     download_page=Field(str)
     screenshot_page=Field(str)
     maintainers=Field([_person])

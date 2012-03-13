@@ -46,6 +46,13 @@ class TestSchemaItem(TestCase):
         self.assertEqual(S.Int, si_int.field_type.__class__)
         self.assertRaises(ValueError, S.SchemaItem.make, [int, str])
 
+    def test_validate_limited_range(self):
+        si = S.Array(
+            int,
+            validate_ranges=[slice(0, 2) ])
+        si.validate([1,2,'foo', 'bar'])
+        self.assertRaises(S.Invalid, si.validate, [1,'foo', 'bar'])
+    
     def test_dict_is_not_array(self):
         si = S.SchemaItem.make([])
         self.assertRaises(S.Invalid, si.validate, {})
