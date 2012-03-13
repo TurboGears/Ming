@@ -203,19 +203,17 @@ class FancySchemaItem(SchemaItem):
                 types.BuiltinFunctionType))
 
     def _validate_required(self, value, **kw):
-        if value is None or value is Missing:
+        if value is Missing:
             raise Invalid('Missing field', value, None)
         return self._validate(value, **kw)
 
     def _validate_fast_missing(self, value, **kw):
         if (value is Missing
-            or value is None
             or value == self.if_missing):
             return self.if_missing
         return self._validate(value, **kw)
 
     def _validate_optional(self, value, **kw):
-        if value is None: value = Missing
         if value is Missing:
             if self.if_missing == []:
                 return []
