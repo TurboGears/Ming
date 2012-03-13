@@ -196,6 +196,12 @@ class FancySchemaItem(SchemaItem):
             self.required = required
         if if_missing is not NoDefault:
             self.if_missing = if_missing
+        if self.required:
+            self.validate = self._validate_required
+        elif isinstance(self.if_missing, (NoneType, basestring, int, float, long)):
+            self.validate = self._validate_fast_missing
+        else:
+            self.validate = self._validate_optional
 
     def __repr__(self):
         return '<%s required=%s if_missing=...>' % (
@@ -208,30 +214,35 @@ class FancySchemaItem(SchemaItem):
                 types.FunctionType,
                 types.MethodType,
                 types.BuiltinFunctionType))
-    
-    def validate(self, value, **kw):
-        if value is None and self.required:
+
+    def _validate_required(self, value, **kw):
+        if value is None or value is Missing:
+            raise Invalid('Missing field', value, None)
+        return self._validate_optional(value, **kw)
+
+    def _validate_fast_missing(self, value, **kw):
+        if (value is Missing
+            or value is None
+            or value == self.if_missing):
+            return self.if_missing
+        return self._validate(value, **kw)
+
+    def _validate_optional(self, value, **kw):
+        if value is None:
             value = Missing
         if value is Missing:
-            if self.required:
-                raise Invalid('Missing field', value, None)
-            elif self.if_missing is Missing:
-                return self.if_missing
-            elif self._callable_if_missing:
-                return self.if_missing()
-            elif isinstance(self.if_missing, (NoneType, basestring, int, float, long)):
-                return self.if_missing
+            if isinstance(self.if_missing, (NoneType, basestring, int, float, long)):
+                return self._validate_fast_missing(value, **kw)
             elif self.if_missing == []:
                 return []
+            elif self._callable_if_missing:
+                return self.if_missing()
+            elif self.if_missing is Missing:
+                return self.if_missing
             else:
                 return deepcopy(self.if_missing) # handle mutable defaults
-        try:
-            if value == self.if_missing:
-                return value
-        except Invalid:
-            pass
-        except:
-            pass
+        if value == self.if_missing:
+            return value
         return self._validate(value, **kw)
 
     def _validate(self, value, **kw): return value
