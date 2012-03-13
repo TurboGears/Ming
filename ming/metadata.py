@@ -348,7 +348,6 @@ class _FieldDescriptor(object):
         del inst[self.name]
         
 class _Document(Object):
-    _lazy_options = None
 
     def __init__(self, data=None, skip_from_bson=False):
         if data is None:
