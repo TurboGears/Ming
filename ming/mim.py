@@ -5,6 +5,7 @@ import sys
 import itertools
 import collections
 from datetime import datetime
+from hashlib import md5
 
 try:
     from spidermonkey import Runtime
@@ -93,7 +94,10 @@ class Database(database.Database):
             command = {command:value}
             command.update(**kwargs)
         if 'filemd5' in command:
-            return dict(md5='42') # completely bogus value; will it work?
+            checksum = md5()
+            for chunk in self.chef.file.chunks.find().sort('n'):
+                checksum.update(chunk['data'])
+            return dict(md5=checksum.hexdigest())
         elif 'findandmodify' in command:
             coll = self._collections[command['findandmodify']]
             before = coll.find_one(command['query'], sort=command.get('sort'))

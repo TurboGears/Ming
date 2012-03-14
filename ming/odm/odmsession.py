@@ -87,22 +87,24 @@ class ODMSession(object):
 
     def find(self, cls, *args, **kwargs):
         refresh = kwargs.pop('refresh', False)
+        decorate = kwargs.pop('decorate', None)
         if self.autoflush:
             self.flush()
         m = mapper(cls)
         # args = map(deinstrument, args)
         ming_cursor = self.impl.find(m.collection, *args, **kwargs)
-        odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh)
+        odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh, decorate=decorate)
         call_hook(self, 'cursor_created', odm_cursor, 'find', cls, *args, **kwargs)
         return odm_cursor
 
     def find_and_modify(self, cls, *args, **kwargs):
+        decorate = kwargs.pop('decorate', None)
         if self.autoflush:
             self.flush()
         m = mapper(cls)
         obj = self.impl.find_and_modify(m.collection, *args, **kwargs)
         if obj is None: return None
-        cursor = ODMCursor(self, cls, iter([ obj ]), refresh=True)
+        cursor = ODMCursor(self, cls, iter([ obj ]), refresh=True, decorate=decorate)
         result = cursor.first()
         state(result).status = ObjectState.clean
         return result
@@ -227,13 +229,14 @@ class ContextualODMSession(ContextualProxy):
 
 class ODMCursor(object):
 
-    def __init__(self, session, cls, ming_cursor, refresh=False):
+    def __init__(self, session, cls, ming_cursor, refresh=False, decorate=None):
         self.session = session
         self.cls = cls
         self.mapper = mapper(cls)
         self.ming_cursor = ming_cursor
         self._options = Object(
             refresh=refresh,
+            decorate=decorate,
             instrument=True)
 
     def __iter__(self):
@@ -267,7 +270,10 @@ class ODMCursor(object):
         if other_session is not None and other_session != self:
             other_session.expunge(obj)
             self.session.save(obj)
-        return obj
+        if self._options.decorate is not None:
+            return self._options.decorate(obj)
+        else:
+            return obj
 
     def next(self):
         call_hook(self, 'before_cursor_next', self)
