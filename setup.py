@@ -33,7 +33,7 @@ setup(name='Ming',
         "WebOb",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
         # tests:
-        "mock >=0.6.0",
+        "mock >=0.8.0",
         "nose",
         "webtest",
       ],
