@@ -45,7 +45,7 @@ class TestCommands(TestCase):
 
     def test_filemd5(self):
         self.assertEqual(
-            dict(md5='42'),
+            dict(md5='d41d8cd98f00b204e9800998ecf8427e'),
             self.bind.db.command('filemd5'))
 
     def test_findandmodify_old(self):
