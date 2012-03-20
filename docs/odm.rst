@@ -186,7 +186,7 @@ To use MapperExtension, make your own subclass of it and just send it off to a m
 
     from ming.odm.mapper import MapperExtension
     class MyExtension(MapperExtension):
-        def after_insert(self, obj, st):
+        def after_insert(self, obj, st, sess):
             print "instance %s after insert !" % obj
 
     class MyMappedClass(MappedClass):
