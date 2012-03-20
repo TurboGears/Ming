@@ -88,7 +88,7 @@ class TestBasicMapperExtension(TestCase):
             class __mongometa__:
                 name='basic'
                 session = self.session
-                extensions = [BasicMapperExtension]
+                extensions = [BasicMapperExtension, MapperExtension]
             _id = FieldProperty(S.ObjectId)
             a = FieldProperty(int)
             b = FieldProperty([int])
