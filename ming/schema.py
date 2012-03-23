@@ -457,8 +457,14 @@ class ParticularScalar(Scalar):
     '''Validate that a value is NOT an array or dict and is a particular type
     '''
     type=()
+    def __init__(self, **kw):
+        self._allow_none = kw.pop('allow_none', True)
+        if not self._allow_none:
+            kw.setdefault('if_missing', Missing)
+        super(ParticularScalar, self).__init__(**kw)
+
     def _validate(self, value, **kw):
-        if value is None: return value
+        if self._allow_none and value is None: return value
         if not isinstance(value, self.type):
             raise Invalid('%s is not a %r' % (value, self.type),
                           value, None)

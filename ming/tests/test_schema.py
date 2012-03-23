@@ -45,6 +45,10 @@ class TestSchemaItem(TestCase):
         self.assertEqual(S.Anything, si_any.field_type.__class__)
         self.assertEqual(S.Int, si_int.field_type.__class__)
         self.assertRaises(ValueError, S.SchemaItem.make, [int, str])
+        
+    def test_dont_allow_none(self):
+        si = S.Int(allow_none=False)
+        self.assertRaises(S.Invalid, si.validate, None)
 
     def test_validate_limited_range(self):
         si = S.Array(
