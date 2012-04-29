@@ -467,15 +467,18 @@ def cursor_comparator(keys):
         for k,d in keys:
             x = _lookup(a, k, None)
             y = _lookup(b, k, None)
-            tx = _bson_type_index[type(x)]
-            ty = _bson_type_index[type(y)]
-            if tx == ty:
-                part = cmp(_lookup(a, k, None), _lookup(b, k, None))
-            else:
-                part = cmp(tx, ty)
+            part = bson_compare(x, y)
             if part: return part * d
         return 0
     return comparator
+
+def bson_compare(x, y):
+    tx = _bson_type_index[type(x)]
+    ty = _bson_type_index[type(y)]
+    if tx == ty:
+        return cmp(x, y)
+    else:
+        return cmp(tx, ty)
 
 def match(spec, doc):
     '''TODO:
@@ -527,10 +530,10 @@ def _lookup(doc, k, default=()):
     return doc
 
 def compare(op, a, b):
-    if op == '$gt': return a > b
-    if op == '$gte': return a >= b
-    if op == '$lt': return a < b
-    if op == '$lte': return a <= b
+    if op == '$gt': return bson_compare(a, b) > 0
+    if op == '$gte': return bson_compare(a, b) >= 0
+    if op == '$lt': return bson_compare(a, b) < 0
+    if op == '$lte': return bson_compare(a, b) <= 0
     if op == '$eq':
         if hasattr(b, 'match'):
             return b.match(a)
