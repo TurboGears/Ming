@@ -110,3 +110,38 @@ class TestCommands(TestCase):
         self.assertEqual(
             list(self.bind.db.reduce.find()),
             [ dict(_id=1, value=45) ])
+
+class TestCollection(TestCase):
+    
+    def setUp(self):
+        self.bind = DS.DataStore(master='mim:///', database='testdb')
+        self.bind.conn.drop_all()
+
+    def test_upsert_simple(self):
+        test = self.bind.db.test
+        test.update(
+            dict(_id=0, a=5),
+            {'$set': dict(b=6) },
+            upsert=True)
+        doc = test.find_one()
+        self.assertEqual(doc, dict(_id=0, a=5, b=6))
+        
+    def test_upsert_inc(self):
+        test = self.bind.db.test
+        test.update(
+            dict(_id=0, a=5),
+            {'$inc': dict(a=2, b=3) },
+            upsert=True)
+        doc = test.find_one()
+        self.assertEqual(doc, dict(_id=0, a=7, b=3))
+        
+    def test_upsert_push(self):
+        test = self.bind.db.test
+        test.update(
+            dict(_id=0, a=5),
+            {'$push': dict(c=1) },
+            upsert=True)
+        doc = test.find_one()
+        self.assertEqual(doc, dict(_id=0, a=5, c=[1]))
+        
+

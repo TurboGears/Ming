@@ -319,7 +319,7 @@ class Collection(collection.Collection):
         if updated: return
         if upsert:
             doc = dict(spec)
-            doc.update(document)
+            update(doc, document)
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
@@ -546,11 +546,13 @@ def update(doc, updates):
                 doc[kk] = doc.get(kk, 0) + vv
         elif k == '$push':
             for kk, vv in v.iteritems():
-                doc[kk].append(vv)
+                l = doc.setdefault(kk, [])
+                l.append(vv)
         elif k == '$addToSet':
             for kk, vv in v.iteritems():
-                if vv not in doc[kk]:
-                    doc[kk].append(vv)
+                l = doc.setdefault(kk, [])
+                if vv not in l:
+                    l.append(vv)
         elif k == '$pull':
             for kk, vv in v.iteritems():
                 doc[kk] = [
