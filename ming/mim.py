@@ -1,6 +1,7 @@
 '''mim.py - Mongo In Memory - stripped-down version of mongo that is
 non-persistent and hopefully much, much faster
 '''
+import re
 import sys
 import itertools
 import collections
@@ -17,6 +18,21 @@ from ming.utils import LazyProperty
 import bson
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo import database, collection, ASCENDING
+
+_bson_types = [
+    [ type(None) ],
+    [ int, long, float ],
+    [ dict ],
+    [ list ],
+    [ bson.Binary ],
+    [ bson.ObjectId ],
+    [ datetime ],
+    [ type(re.compile('foo')) ]
+    ]
+_bson_type_index = {}
+for i, types in enumerate(_bson_types):
+    for t in types:
+        _bson_type_index[t] = i
 
 class Connection(object):
     _singleton = None
@@ -449,7 +465,14 @@ class Cursor(object):
 def cursor_comparator(keys):
     def comparator(a, b):
         for k,d in keys:
-            part = cmp(_lookup(a, k, None), _lookup(b, k, None))
+            x = _lookup(a, k, None)
+            y = _lookup(b, k, None)
+            tx = _bson_type_index[type(x)]
+            ty = _bson_type_index[type(y)]
+            if tx == ty:
+                part = cmp(_lookup(a, k, None), _lookup(b, k, None))
+            else:
+                part = cmp(tx, ty)
             if part: return part * d
         return 0
     return comparator
