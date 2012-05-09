@@ -22,6 +22,7 @@ from pymongo import database, collection, ASCENDING
 _bson_types = [
     [ type(None) ],
     [ int, long, float ],
+    [ str, unicode ],
     [ dict ],
     [ list ],
     [ bson.Binary ],
