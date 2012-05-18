@@ -50,7 +50,7 @@ class Index(object):
         self.unique = kwargs.pop('unique', False)
         self.sparse = kwargs.pop('sparse', False)
         self.index_spec = fixup_index(fields, self.direction)
-        self.name = 'idx_' + '_'.join('%s_%d' % t for t in self.index_spec)
+        self.name = 'idx_' + '_'.join('%s_%s' % t for t in self.index_spec)
         if kwargs: raise TypeError, 'unknown kwargs: %r' % kwargs
 
     def __repr__(self):

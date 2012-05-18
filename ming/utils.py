@@ -125,6 +125,10 @@ def fixup_index(index, direction=pymongo.ASCENDING):
               and len(i) == 2
               and i[1] in (pymongo.ASCENDING, pymongo.DESCENDING)):
             yield i
+        elif (isinstance(i, tuple)
+             and len(i) == 2
+             and i[1] == pymongo.GEO2D):
+            yield i
         else:
             for key in i:
                 for x in _fixup(key): yield x
