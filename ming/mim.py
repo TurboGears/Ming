@@ -261,7 +261,7 @@ class Collection(collection.Collection):
     def __getattr__(self, name):
         return self._database['%s.%s' % (self.name, name)]
 
-    def _find(self, spec, sort=None):
+    def _find(self, spec, sort=None, **kwargs):
         bson_safe(spec)
         def _gen():
             for doc in self._data.itervalues():
@@ -423,6 +423,9 @@ class Cursor(object):
 
     def count(self):
         return sum(1 for x in self._iterator_gen())
+
+    def __getitem__(self, key):
+        return self.skip(key).next()
 
     def __iter__(self):
         return self
