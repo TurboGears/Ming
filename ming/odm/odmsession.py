@@ -186,12 +186,12 @@ class ThreadLocalODMSession(ThreadLocalProxy):
     
     @classmethod
     def flush_all(cls):
-        for sess in cls._session_registry.itervalues():
+        for sess in cls._session_registry.values():
             sess.flush()
 
     @classmethod
     def close_all(cls):
-        for sess in cls._session_registry.itervalues():
+        for sess in cls._session_registry.values():
             sess.close()
 
 class ContextualODMSession(ContextualProxy):
