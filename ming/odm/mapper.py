@@ -1,4 +1,6 @@
+import warnings
 from copy import copy
+
 from ming.base import Object
 from ming.utils import wordwrap
 
@@ -136,7 +138,16 @@ class Mapper(object):
         obj.__ming__ = _ORMDecoration(self, obj, options)
         st = state(obj)
         st.original_document = doc
-        st.document = self.collection.m.schema.validate(doc)
+        if self.collection.m.schema:
+            st.document = self.collection.m.schema.validate(doc)
+        else:
+            warnings.warn(
+                "You're trying to build an ODM object from a collection with "
+                "no schema. While this will work, please note that it's not "
+                "too useful, since no schema means that there are no fields "
+                "mapped from the database document onto the object.",
+                UserWarning)
+            st.document = doc
         st.status = st.new
         # self.session.save(obj)
         return obj

@@ -10,6 +10,28 @@ from ming.odm import ODMSession, mapper, state, Mapper
 from ming.odm import ForeignIdProperty, RelationProperty
 from ming.odm.icollection import InstrumentedList, InstrumentedObj
 
+class TestWithNoFields(TestCase):
+
+    def setUp(self):
+        self.datastore = DS.DataStore(
+            'mim:///', database='test_db')
+        session = Session(bind=self.datastore)
+        self.session = ODMSession(session)
+        basic = collection('basic', session)
+        class Basic(object):
+            pass                    
+        self.session.mapper(Basic, basic)
+        self.basic = basic
+        self.Basic = Basic
+
+    def tearDown(self):
+        self.session.clear()
+        self.datastore.conn.drop_all()
+
+    def test_query(self):
+        self.basic(dict(a=1)).m.insert()
+        doc = self.Basic.query.get(a=1)
+
 class TestBasicMapping(TestCase):
     
     def setUp(self):
