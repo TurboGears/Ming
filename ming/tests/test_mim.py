@@ -76,9 +76,26 @@ class TestCommands(TestCase):
             out=dict(inline=1))
         self.assertEqual(result['results'], [ dict(_id=1, value=2) ])
 
+    def test_mr_inline_collection(self):
+        result = self.bind.db.coll.map_reduce(
+            map='function(){ emit(1, this.a); }',
+            reduce=self.sum_js,
+            out=dict(inline=1))
+        self.assertEqual(result['results'], [ dict(_id=1, value=2) ])
+
     def test_mr_merge(self):
         result = self.bind.db.command(
             'mapreduce', 'coll',
+            map='function(){ emit(1, this.a+1); }',
+            reduce=self.sum_js,
+            out=dict(merge='coll'))
+        self.assertEqual(result['result'], 'coll')
+        self.assertEqual(
+            sorted(list(self.bind.db.coll.find())),
+            sorted([ self.doc, dict(_id=1, value=3) ]))
+
+    def test_mr_merge_collection(self):
+        result = self.bind.db.coll.map_reduce(
             map='function(){ emit(1, this.a+1); }',
             reduce=self.sum_js,
             out=dict(merge='coll'))
@@ -98,11 +115,33 @@ class TestCommands(TestCase):
             list(self.bind.db.coll.find()),
             [ dict(_id=1, value=3) ])
 
+    def test_mr_replace_collection(self):
+        result = self.bind.db.coll.map_reduce(
+            map='function(){ emit(1, this.a+1); }',
+            reduce=self.sum_js,
+            out=dict(replace='coll'))
+        self.assertEqual(result['result'], 'coll')
+        self.assertEqual(
+            list(self.bind.db.coll.find()),
+            [ dict(_id=1, value=3) ])
+
     def test_mr_reduce(self):
         self.bind.db.reduce.insert(dict(
                 _id=1, value=42))
         result = self.bind.db.command(
             'mapreduce', 'coll',
+            map='function(){ emit(1, this.a+1); }',
+            reduce=self.sum_js,
+            out=dict(reduce='reduce'))
+        self.assertEqual(result['result'], 'reduce')
+        self.assertEqual(
+            list(self.bind.db.reduce.find()),
+            [ dict(_id=1, value=45) ])
+
+    def test_mr_reduce_collection(self):
+        self.bind.db.reduce.insert(dict(
+                _id=1, value=42))
+        result = self.bind.db.coll.map_reduce(
             map='function(){ emit(1, this.a+1); }',
             reduce=self.sum_js,
             out=dict(reduce='reduce'))

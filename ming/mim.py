@@ -398,6 +398,18 @@ class Collection(collection.Collection):
             key_values = tuple(doc.get(key, None) for key in keys)
             index.pop(key_values, None)
 
+    def map_reduce(self, map, reduce, out, full_response=False, **kwargs):
+        if isinstance(out, basestring):
+            out = { 'replace':out }
+        cmd_args = {'mapreduce': self.name,
+                    'map': map,
+                    'reduce': reduce,
+                    'out': out,
+                    }
+        cmd_args.update(kwargs)
+        return self.database.command(cmd_args)
+
+
 class Cursor(object):
 
     def __init__(self, iterator_gen, sort=None, skip=None, limit=None, fields=None, as_class=dict):
