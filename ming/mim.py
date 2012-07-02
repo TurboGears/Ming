@@ -133,6 +133,10 @@ class Database(database.Database):
         elif 'mapreduce' in command:
             collection = command.pop('mapreduce')
             return self._handle_mapreduce(collection, **command)
+        elif 'distinct' in command:
+            collection = self._collections[command['distinct']]
+            key = command['key']
+            return list(set(d[key] for d in collection.find()))
         else:
             raise NotImplementedError, repr(command)
 
@@ -408,6 +412,11 @@ class Collection(collection.Collection):
                     }
         cmd_args.update(kwargs)
         return self.database.command(cmd_args)
+
+    def distinct(self, key):
+        return self.database.command({'distinct': self.name,
+                                      'key': key,
+                                      })
 
 
 class Cursor(object):

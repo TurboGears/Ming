@@ -182,5 +182,9 @@ class TestCollection(TestCase):
             upsert=True)
         doc = test.find_one()
         self.assertEqual(doc, dict(_id=0, a=5, c=[1]))
-        
 
+    def test_distinct(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':'A'})
+        result = self.bind.db.coll.distinct('a')
+        self.assertEqual(result, ['A'])
