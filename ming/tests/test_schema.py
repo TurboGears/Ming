@@ -8,7 +8,7 @@ from ming import schema as S
 class TestQuerySafety(TestCase):
 
     def setUp(self):
-        self.bind = ming.datastore.DataStore(master='mim:///', database='testdb')
+        self.bind = ming.create_datastore('mim:///datastore')
         self.bind.conn.drop_all()
         self.bind.db.coll.insert({'_id':'foo', 'a':2, 'b':3})
         self.session = ming.Session(self.bind)

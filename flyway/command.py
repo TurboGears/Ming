@@ -3,7 +3,7 @@ import logging
 import pkg_resources
 from paste.script import command
 
-from ming.datastore import Engine, DataStore
+from ming import create_engine, create_datastore
 
 class MigrateCommand(command.Command):
     min_args = 0
@@ -30,14 +30,14 @@ class MigrateCommand(command.Command):
         self._setup_logging()
         self._load_migrations()
         from .runner import run_migration, reset_migration, show_status, set_status
-        bind = Engine(self.options.connection_url)
+        bind = create_engine(self.options.connection_url)
         if self.options.database is None:
             datastores = [
-                DataStore(bind=bind, database=db)
+                create_datastore(bind=bind, database=db)
                 for db in bind.conn.database_names()
                 if db not in ('admin', 'local') ]
         else:
-            datastores = [ DataStore(bind=bind, database=self.options.database) ]
+            datastores = [ create_datastore(bind=bind, database=self.options.database) ]
         for ds in datastores:
             self.log.info('Migrate DB: %s', ds.database)
             if self.options.status_only:

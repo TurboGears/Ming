@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from mock import Mock
 
-from ming import datastore as DS
+from ming import create_datastore
 from ming import schema as S
 from ming import collection, Field, Session
 from ming.base import Object
@@ -13,8 +13,7 @@ from ming.odm.icollection import InstrumentedList, InstrumentedObj
 class TestWithNoFields(TestCase):
 
     def setUp(self):
-        self.datastore = DS.DataStore(
-            'mim:///', database='test_db')
+        self.datastore = create_datastore('mim:///test_db')
         session = Session(bind=self.datastore)
         self.session = ODMSession(session)
         basic = collection('basic', session)
@@ -35,8 +34,7 @@ class TestWithNoFields(TestCase):
 class TestBasicMapping(TestCase):
     
     def setUp(self):
-        self.datastore = DS.DataStore(
-            'mim:///', database='test_db')
+        self.datastore = create_datastore('mim:///test_db')
         session = Session(bind=self.datastore)
         self.session = ODMSession(session)
         basic = collection(
@@ -190,8 +188,7 @@ class TestBasicMapping(TestCase):
         
 class TestRelation(TestCase):
     def setUp(self):
-        self.datastore = DS.DataStore(
-            'mim:///', database='test_db')
+        self.datastore = create_datastore('mim:///test_db')
         session = Session(bind=self.datastore)
         self.session = ODMSession(session)
         class Parent(object): pass
@@ -240,8 +237,7 @@ class TestRelation(TestCase):
 class TestPolymorphic(TestCase):
 
     def setUp(self):
-        self.datastore = DS.DataStore(
-            'mim:///', database='test_db')
+        self.datastore = create_datastore('mim:///test_db')
         session = Session(bind=self.datastore)
         self.session = ODMSession(session)
         base = collection(

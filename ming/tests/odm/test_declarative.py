@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from ming import schema as S
-from ming import datastore as DS
+from ming import create_datastore
 from ming import Session
 from ming.odm import ODMSession, Mapper
 from ming.odm import FieldProperty, RelationProperty, ForeignIdProperty
@@ -24,8 +24,7 @@ class TestIndex(TestCase):
 class TestRelation(TestCase):
 
     def setUp(self):
-        self.datastore = DS.DataStore(
-            'mim:///', database='test_db')
+        self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
             class __mongometa__:
@@ -72,8 +71,7 @@ class TestRelation(TestCase):
 
 class TestBasicMapperExtension(TestCase):
     def setUp(self):
-        self.datastore = DS.DataStore(
-            'mim:///', database='test_db')
+        self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class BasicMapperExtension(MapperExtension):
             def after_insert(self, instance, state, session):
@@ -112,8 +110,7 @@ class TestBasicMapperExtension(TestCase):
 class TestBasicMapping(TestCase):
     
     def setUp(self):
-        self.datastore = DS.DataStore(
-            'mim:///', database='test_db')
+        self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Basic(MappedClass):
             class __mongometa__:
@@ -233,8 +230,8 @@ class TestBasicMapping(TestCase):
 class TestPolymorphic(TestCase):
 
     def setUp(self):
-        self.bind = DS.DataStore(master='mim:///', database='test_db')
-        self.doc_session = Session(self.bind)
+        self.datastore = create_datastore('mim:///test_db')
+        self.doc_session = Session(self.datastore)
         self.odm_session = ODMSession(self.doc_session)
         class Base(MappedClass):
             class __mongometa__:
