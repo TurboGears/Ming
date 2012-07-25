@@ -34,7 +34,11 @@ def configure_from_nested_dict(config):
     datastores = {}
     for name, datastore in config.iteritems():
         args = DatastoreSchema.to_python(datastore, None)
-        datastores[name] = create_datastore(**args)
+        database = args.pop('database', None)
+        if database is None:
+            datastores[name] = create_datastore(**args)
+        else:
+            datastores[name] = create_datastore(database, **args)
     Session._datastores = datastores
     # bind any existing sessions
     for name, session in Session._registry.iteritems():

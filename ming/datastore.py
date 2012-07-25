@@ -31,7 +31,7 @@ def create_engine(*args, **kwargs):
     sleep = kwargs.pop('sleep', None)
     if use_class is None:
         if args and args[0].startswith('mim:'):
-            use_class = mim.Connection
+            use_class = lambda *a, **kw: mim.Connection.get()
             args = args[1:]
         elif 'replicaSet' in kwargs:
             use_class = ReplicaSetConnection

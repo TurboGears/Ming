@@ -51,11 +51,10 @@ class TestConnectionFailure(TestCase):
 class TestEngineMim(TestCase):
     
     def test_mim(self):
-        from ming.mim import Connection
-        with patch('ming.datastore.mim.Connection', spec=True):
+        with patch('ming.datastore.mim.Connection', spec=True) as Connection:
             result = create_engine('mim:///')
             conn = result.connect()
-            assert isinstance(conn, Connection)
+            assert conn is Connection.get()
 
 class TestMasterSlave(TestCase):
     
@@ -128,7 +127,8 @@ class TestDatastore(TestCase):
             ds._authenticate,
             dict(name='user', password='pass'))
 
-    def test_configure(self):
+    @patch('ming.datastore.Connection', spec=True)
+    def test_configure(self, Connection):
         ming.configure(**{
                 'ming.main.uri':'mongodb://localhost:27017/test_db',
                 'ming.main.network_timeout':'0.1',
@@ -138,6 +138,8 @@ class TestDatastore(TestCase):
         session = Session.by_name('main')
         assert session.bind.conn is not None
         assert session.bind.db is not None
+        args, kwargs = Connection.call_args
+        assert 'database' not in kwargs
 
     def test_no_kwargs_with_bind(self):
         self.assertRaises(
@@ -154,7 +156,8 @@ class TestDatastore(TestCase):
 
     def test_mim_ds(self):
         ds = create_datastore('mim:///test_db')
-        assert isinstance(ds.bind.connect(), mim.Connection)
+        conn = ds.bind.connect()
+        assert conn is mim.Connection.get()
 
     def _check_datastore(self, ds, db_name):
         assert ds.db is self.MockConn()[db_name]
