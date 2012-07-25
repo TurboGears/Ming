@@ -1,11 +1,11 @@
 from unittest import TestCase
 
-from ming import datastore as DS
+from ming import create_datastore
 
 class TestDatastore(TestCase):
 
     def setUp(self):
-        self.bind = DS.DataStore(master='mim:///', database='testdb')
+        self.bind = create_datastore('mim:///testdb')
         self.bind.conn.drop_all()
         self.bind.db.coll.insert({'_id':'foo', 'a':2, 'c':[1,2,3]})
 
@@ -38,7 +38,7 @@ class TestCommands(TestCase):
         return total; }'''
 
     def setUp(self):
-        self.bind = DS.DataStore(master='mim:///', database='testdb')
+        self.bind = create_datastore('mim:///testdb')
         self.bind.conn.drop_all()
         self.doc = {'_id':'foo', 'a':2, 'c':[1,2,3]}
         self.bind.db.coll.insert(self.doc)
@@ -114,7 +114,7 @@ class TestCommands(TestCase):
 class TestCollection(TestCase):
     
     def setUp(self):
-        self.bind = DS.DataStore(master='mim:///', database='testdb')
+        self.bind = create_datastore('mim:///testdb')
         self.bind.conn.drop_all()
 
     def test_upsert_simple(self):

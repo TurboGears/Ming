@@ -33,11 +33,11 @@ class MigrateCommand(command.Command):
         bind = create_engine(self.options.connection_url)
         if self.options.database is None:
             datastores = [
-                create_datastore(bind=bind, database=db)
+                create_datastore(db, bind=bind)
                 for db in bind.conn.database_names()
                 if db not in ('admin', 'local') ]
         else:
-            datastores = [ create_datastore(bind=bind, database=self.options.database) ]
+            datastores = [ create_datastore(self.options.database, bind=bind) ]
         for ds in datastores:
             self.log.info('Migrate DB: %s', ds.database)
             if self.options.status_only:

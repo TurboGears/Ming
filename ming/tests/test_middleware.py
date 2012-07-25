@@ -4,7 +4,7 @@ from webtest import TestApp
 from webob import exc
 
 from ming import schema as S
-from ming import datastore as DS
+from ming import create_datastore
 from ming import Session
 from ming.odm import ThreadLocalODMSession
 from ming.odm import FieldProperty, Mapper
@@ -14,8 +14,7 @@ from ming.odm.middleware import MingMiddleware
 class TestRelation(TestCase):
 
     def setUp(self):
-        self.datastore = DS.DataStore(
-            'mim:///', database='test_db')
+        self.datastore = create_datastore('mim:///test_db')
         self.session = ThreadLocalODMSession(Session(bind=self.datastore))
         class Parent(MappedClass):
             class __mongometa__:

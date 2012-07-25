@@ -4,10 +4,10 @@ from mock import patch, Mock
 from pymongo.errors import ConnectionFailure
 
 import ming
-from ming import Session, Field, Document
+from ming import Session
+from ming import mim
 from ming import create_datastore, create_engine
 from ming.datastore import Engine
-from ming import schema as S
 
 class DummyConnection(object):
     def __init__(*args, **kwargs): pass
@@ -151,6 +151,10 @@ class TestDatastore(TestCase):
             create_datastore,
             'mongodb://user:pass@server/test_db',
             authenticate=dict(name='user', password='pass'))
+
+    def test_mim_ds(self):
+        ds = create_datastore('mim:///test_db')
+        assert isinstance(ds.bind.connect(), mim.Connection)
 
     def _check_datastore(self, ds, db_name):
         assert ds.db is self.MockConn()[db_name]

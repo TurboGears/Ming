@@ -30,7 +30,7 @@ def create_engine(*args, **kwargs):
     connect_retry = kwargs.pop('connect_retry', 3)
     sleep = kwargs.pop('sleep', None)
     if use_class is None:
-        if args and args[0].startswith('mim://'):
+        if args and args[0].startswith('mim:'):
             use_class = mim.Connection
             args = args[1:]
         elif 'replicaSet' in kwargs:
@@ -134,12 +134,16 @@ class Engine(object):
         return '<Engine %r>' % self._conn
 
     def __getattr__(self, name):
-        if self._conn is None: self.connect()
-        return getattr(self._conn, name)
+        if name == 'conn': raise AttributeError, name
+        return getattr(self.conn, name)
 
     def __getitem__(self, name):
+        return self.conn[name]
+
+    @property
+    def conn(self):
         if self._conn is None: self.connect()
-        return self._conn[name]
+        return self._conn
 
     def connect(self):
         for x in xrange(self._connect_retry):
@@ -160,7 +164,7 @@ class Engine(object):
 class DataStore(object):
 
     def __init__(self, bind, name, authenticate=None):
-        self._bind = bind
+        self.bind = bind
         self.name = name
         self._authenticate = authenticate
         self._db = None
@@ -180,8 +184,8 @@ class DataStore(object):
     @property
     def db(self):
         if self._db is None:
-            if self._bind is None: raise AttributeError
-            self._db = self._bind[self.name]
+            if self.bind is None: raise AttributeError
+            self._db = self.bind[self.name]
             if self._authenticate:
                 self._db.authenticate(**self._authenticate)
         return self._db

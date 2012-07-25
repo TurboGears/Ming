@@ -8,7 +8,7 @@ from collections import defaultdict
 
 import mock
 
-from ming import datastore
+from ming import create_datastore
 from ming import fs, Session
 
 def mock_datastore():
@@ -24,13 +24,13 @@ def mock_collection():
 class TestFS(TestCase):
 
     def setUp(self):
-        self.ds = datastore.DataStore('mim:///', database='test')
+        self.ds = create_datastore('mim:///test')
         self.Session = Session(bind=self.ds)
         self.TestFS = fs.filesystem(
             'test_fs', self.Session)
 
     def tearDown(self):
-        self.ds.bind.conn.drop_all()
+        self.ds.bind.drop_all()
 
     def test_simple(self):
         with self.TestFS.m.new_file('test.txt') as fp:
