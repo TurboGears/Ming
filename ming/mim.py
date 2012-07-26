@@ -487,6 +487,9 @@ class Cursor(object):
         self._limit = limit
         return self
 
+    def distinct(self, key):
+        return list(set(d[key] for d in self.all()))
+
 def cursor_comparator(keys):
     def comparator(a, b):
         for k,d in keys:
