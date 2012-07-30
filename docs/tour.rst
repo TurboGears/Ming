@@ -57,9 +57,12 @@ Database object.  (The actual Database object can always be accessed via the `db
 property of the DataStore instance.  For this tutorial, we will be using a
 single, global DataStore::
 
-    from ming.datastore import DataStore
-    bind = DataStore('mongodb://localhost:27017/', database='tutorial')
+    from ming import create_datastore
+    bind = create_datastore('mongodb://localhost:27017/tutorial')
 
+Note that if you're connecting to MongoDB on the default host (localhost) and port (27017), you can just provide the database name here::
+
+    bind = create_datastore('tutorial')
 
 Ming, like many object-relational mappers (ORMs), revolves around the idea of
 model classes.  In order to create these classes, we need a way of connecting
@@ -166,11 +169,10 @@ Now that we've defined a basic schema, let's start playing around with Ming in
 the interactive interpreter.  First, make sure you've saved the code below in a
 module "tutorial.py"::
 
-    from ming.datastore import DataStore
-    from ming import Session
+    from ming import Session, create_datastore
     from ming import Document, Field, schema
 
-    bind = DataStore('mongodb://localhost:27017/', database='tutorial')
+    bind = create_datastore('tutorial')
     session = Session(bind)
 
     class WikiPage(Document):

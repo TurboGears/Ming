@@ -1,6 +1,18 @@
 Ming News / Release Notes
 =====================================
 
+0.3.2 (July 26, 2012)
+------------------------------------------------
+
+Whoops, skipped a version there. Anyway, the bigger changes:
+
+* Speed improvements in validation, particularly `validate_ranges` which allows
+  selective validation of arrays 
+* Allow requiring scalar values to be non-None
+* Add support for geospatial indexing
+* Updates to engine/datastore creation syntax (use the new `create_engine` or
+  `create_datastore`, which are significantly simplified and improved).
+
 0.3 (March 6, 2012)
 ------------------------------------------------
 
