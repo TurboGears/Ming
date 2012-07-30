@@ -136,7 +136,7 @@ class Database(database.Database):
         elif 'distinct' in command:
             collection = self._collections[command['distinct']]
             key = command['key']
-            return list(set(d[key] for d in collection.find()))
+            return list(set(_lookup(d, key) for d in collection.find()))
         else:
             raise NotImplementedError, repr(command)
 
@@ -488,7 +488,7 @@ class Cursor(object):
         return self
 
     def distinct(self, key):
-        return list(set(d[key] for d in self.all()))
+        return list(set(_lookup(d, key) for d in self.all()))
 
 def cursor_comparator(keys):
     def comparator(a, b):
