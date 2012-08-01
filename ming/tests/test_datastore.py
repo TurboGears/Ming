@@ -46,7 +46,7 @@ class TestConnectionFailure(TestCase):
             raise ConnectionFailure()
         engine = Engine(Connection, (), {}, 17, lambda x:None)
         self.assertRaises(ConnectionFailure, engine.connect)
-        self.assertEqual(failures[0], 17)
+        self.assertEqual(failures[0], 18)
 
 class TestEngineMim(TestCase):
     

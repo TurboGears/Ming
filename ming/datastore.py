@@ -146,7 +146,7 @@ class Engine(object):
         return self._conn
 
     def connect(self):
-        for x in xrange(self._connect_retry):
+        for x in xrange(self._connect_retry+1):
             try:
                 with self._lock:
                     if self._conn is None:
@@ -155,7 +155,7 @@ class Engine(object):
                     else:
                         return self._conn
             except ConnectionFailure:
-                if x < self._connect_retry - 1:
+                if x < self._connect_retry:
                     self._log.exception('Error connecting (#%d)', x)
                     self._sleep(1)
                 else:
