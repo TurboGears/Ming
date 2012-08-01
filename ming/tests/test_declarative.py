@@ -179,10 +179,19 @@ class TestIndexes(TestCase):
 
     def test_ensure_indexes_slave(self):
         # on a slave, an error will be thrown, but it should be swallowed
-        collection = self.MockSession.db[self.MyDoc.m.collection_name]
+        collection = self.MockSession.db[self.MyDoc.__mongometa__.name]
         ensure_index = collection.ensure_index
         ensure_index.side_effect = AutoReconnect('not master')
         self.MyDoc.m
+        assert ensure_index.called
+
+    def test_ensure_indexes_other_error(self):
+        # same as above, but no swallowing
+        collection = self.MockSession.db[self.MyDoc.__mongometa__.name]
+        ensure_index = collection.ensure_index
+        ensure_index.side_effect = AutoReconnect('blah blah')
+        with self.assertRaises(AutoReconnect):
+            self.MyDoc.m
         assert ensure_index.called
 
     def test_index_inheritance_child_none(self):
