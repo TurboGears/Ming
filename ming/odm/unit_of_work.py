@@ -7,6 +7,9 @@ class UnitOfWork(object):
         self.session = session
         self._objects = {}
 
+    def __iter__(self):
+        return self._objects.itervalues()
+
     def save(self, obj):
         self._objects[id(obj)] = obj
 

@@ -6,9 +6,33 @@ from ming import create_datastore
 from ming import schema as S
 from ming import collection, Field, Session
 from ming.base import Object
-from ming.odm import ODMSession, mapper, state, Mapper
+from ming.odm import ODMSession, mapper, state, Mapper, session
 from ming.odm import ForeignIdProperty, RelationProperty
 from ming.odm.icollection import InstrumentedList, InstrumentedObj
+
+class TestOrphanObjects(TestCase):
+
+    def setUp(self):
+        self.datastore = create_datastore('mim:///test_db')
+        session = Session(bind=self.datastore)
+        self.session = ODMSession(session)
+        basic = collection('basic', session)
+        class Basic(object):
+            pass                    
+        self.session.mapper(Basic, basic)
+        self.basic = basic
+        self.Basic = Basic
+
+    def tearDown(self):
+        self.session.clear()
+        self.datastore.conn.drop_all()
+
+    def test_orphan_object(self):
+        obj = self.Basic()
+        assert session(obj) is self.session
+        self.session.clear()
+        assert session(obj) is None
+        
 
 class TestWithNoFields(TestCase):
 

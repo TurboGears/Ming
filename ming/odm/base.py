@@ -9,7 +9,7 @@ def session(v):
     if isinstance(v, type):
         return v.query.mapper.session
     else:
-        return session(type(v))
+        return state(v).session
 
 def call_hook(obj, hook_name, *args, **kw):
     for e in obj.extensions:
@@ -36,14 +36,15 @@ class with_hooks(object):
 class ObjectState(object):
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 
-    def __init__(self, options):
+    def __init__(self, options, session):
+        self.options = options
+        self.session = session
         self.status = self.new
         self.original_document = None # unvalidated, as loaded from mongodb
         self.document = None
         self.i_document = {}
         self.extra_state = {}
         self.tracker = _DocumentTracker(self)
-        self.options = options
 
     def soil(self):
         if self.status == self.clean:

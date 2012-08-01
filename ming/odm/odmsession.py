@@ -40,10 +40,12 @@ class ODMSession(object):
     def save(self, obj):
         self.uow.save(obj)
         self.imap.save(obj)
+        state(obj).session = self
 
     def expunge(self, obj):
         self.uow.expunge(obj)
         self.imap.expunge(obj)
+        state(obj).session = None
 
     @with_hooks('flush')
     def flush(self, obj=None):
@@ -72,6 +74,9 @@ class ODMSession(object):
         mapper(obj).delete(obj, st, self, **kwargs)
         
     def clear(self):
+        # Orphan all objects
+        for obj in self.uow:
+            state(obj).session = None
         self.uow.clear()
         self.imap.clear()
 

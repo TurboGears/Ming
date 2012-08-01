@@ -24,6 +24,10 @@ class IdentityMap(object):
         except KeyError:
             pass
 
+    def __iter__(self):
+        for (cls,vid), value in self._objects.iteritems():
+            yield cls, vid, value
+
     def __repr__(self):
         l = [ '<imap (%d)>' % len(self._objects) ]
         for k,v in sorted(self._objects.iteritems()):

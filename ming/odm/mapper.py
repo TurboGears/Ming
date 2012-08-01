@@ -241,7 +241,7 @@ class _ORMDecoration(object):
     def __init__(self, mapper, instance, options):
         self.mapper = mapper
         self.instance = instance
-        self.state = ObjectState(options)
+        self.state = ObjectState(options, None)
         self.state.document = Object()
         self.state.original_document = Object()
 
