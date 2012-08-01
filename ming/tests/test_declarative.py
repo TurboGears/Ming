@@ -185,6 +185,10 @@ class TestIndexes(TestCase):
         self.MyDoc.m
         assert ensure_index.called
 
+        # don't keep trying after it failed once
+        self.MyDoc.m
+        assert ensure_index.call_count == 1, ensure_index.call_args_list
+
     def test_ensure_indexes_other_error(self):
         # same as above, but no swallowing
         collection = self.MockSession.db[self.MyDoc.__mongometa__.name]

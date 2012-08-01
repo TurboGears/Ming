@@ -298,7 +298,7 @@ class _ManagerDescriptor(object):
 
     def __init__(self, manager):
         self.manager = manager
-        self.initialized = False
+        self.indexes_ensured = False
 
     def _ensure_indexes(self):
         session = self.manager.session
@@ -310,19 +310,18 @@ class _ManagerDescriptor(object):
                 idx.index_spec,
                 unique=idx.unique,
                 sparse=idx.sparse)
-        self.initialized = True
 
     def __get__(self, inst, cls=None):
-        if not self.initialized:
+        if not self.indexes_ensured:
             try:
                 self._ensure_indexes()
             except (MongoGone, ConnectionFailure) as e:
                 if e.args[0] == 'not master':
-                    # okay for slaves to not ensure indexes
-                    pass
+                    log.info('Could not run ensure_indexes because the connection is not to a master.  This is expected when connecting to a slave')
                 else:
                     # raise all other connection issues
                     raise
+        self.indexes_ensured = True
         if inst is None:
             return self.manager
         else:
