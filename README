@@ -1,3 +1,4 @@
 # Release/build process
 
+pip install paramiko
 python setup.py sdist git_tag sf_upload -u /sf_username/ register
