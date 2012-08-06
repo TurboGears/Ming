@@ -421,9 +421,9 @@ class Array(FancySchemaItem):
         return result
 
     def _full_validate(self, d, **kw):
+        if d is None: d = []
         if not isinstance(d, (list, tuple)):
             raise Invalid('Not a list or tuple', d, None)
-        if d is None: d = []
         # try common case (no Invalid)
         validate = self.field_type.validate
         try:
