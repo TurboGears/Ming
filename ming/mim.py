@@ -523,18 +523,18 @@ def match(spec, doc):
                 else:
                     return False
             else:
-                op, value = _parse_query(v)
-                if not _part_match(op, value, k.split('.'), doc):
-                    return False
+                for op, value in _parse_query(v):
+                    if not _part_match(op, value, k.split('.'), doc):
+                        return False
     except (AttributeError, KeyError), ex:
         return False
     return True
 
 def _parse_query(v):
-    if isinstance(v, dict) and len(v) == 1 and v.keys()[0].startswith('$'):
-        return v.keys()[0], v.values()[0]
+    if isinstance(v, dict) and all(k.startswith('$') for k in v.keys()):
+        return v.items()
     else:
-        return '$eq', v
+        return [('$eq', v)]
 
 def _part_match(op, value, key_parts, doc, allow_list_compare=True):
     if not key_parts:

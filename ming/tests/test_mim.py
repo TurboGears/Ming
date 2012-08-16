@@ -8,6 +8,44 @@ class TestDatastore(TestCase):
         self.bind = create_datastore('mim:///testdb')
         self.bind.conn.drop_all()
         self.bind.db.coll.insert({'_id':'foo', 'a':2, 'c':[1,2,3]})
+        for r in range(4):
+            self.bind.db.rcoll.insert({'_id':'r%s' % r, 'd':r})
+
+    def test_gt(self):
+        f = self.bind.db.rcoll.find
+        assert 1 == f(dict(d={'$gt': 2})).count()
+        assert 0 == f(dict(d={'$gt': 3})).count()
+
+    def test_gte(self):
+        f = self.bind.db.rcoll.find
+        assert 2 == f(dict(d={'$gte': 2})).count()
+        assert 1 == f(dict(d={'$gte': 3})).count()
+
+    def test_lt(self):
+        f = self.bind.db.rcoll.find
+        assert 0 == f(dict(d={'$lt': 0})).count()
+        assert 1 == f(dict(d={'$lt': 1})).count()
+        assert 2 == f(dict(d={'$lt': 2})).count()
+
+    def test_lte(self):
+        f = self.bind.db.rcoll.find
+        assert 1 == f(dict(d={'$lte': 0})).count()
+        assert 2 == f(dict(d={'$lte': 1})).count()
+        assert 3 == f(dict(d={'$lte': 2})).count()
+
+    def test_range_equal(self):
+        f = self.bind.db.rcoll.find
+        assert 1 == f(dict(d={'$gte': 2, '$lte': 2})).count()
+        assert 2 == f(dict(d={'$gte': 1, '$lte': 2})).count()
+        assert 0 == f(dict(d={'$gte': 4, '$lte': -1})).count()
+
+    def test_range_inequal(self):
+        f = self.bind.db.rcoll.find
+        assert 0 == f(dict(d={'$gt': 2, '$lt': 2})).count()
+        assert 1 == f(dict(d={'$gt': 2, '$lt': 4})).count()
+        assert 0 == f(dict(d={'$gt': 1, '$lt': 2})).count()
+        assert 1 == f(dict(d={'$gt': 1, '$lt': 3})).count()
+        assert 0 == f(dict(d={'$gt': 4, '$lt': -1})).count()
 
     def test_exists(self):
         f = self.bind.db.coll.find
