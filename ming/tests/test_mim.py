@@ -226,3 +226,6 @@ class TestCollection(TestCase):
             self.bind.db.coll.insert({'_id':str(i), 'a':'A'})
         result = self.bind.db.coll.distinct('a')
         self.assertEqual(result, ['A'])
+
+    def test_find_and_modify_returns_none_on_no_entries(self):
+        self.assertEqual(None, self.bind.db.foo.find_and_modify({'i': 1}, {'$set': {'i': 2}}))
