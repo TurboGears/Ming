@@ -3,6 +3,7 @@ non-persistent and hopefully much, much faster
 '''
 import re
 import sys
+import time
 import itertools
 import collections
 from datetime import datetime
@@ -178,7 +179,9 @@ class Database(database.Database):
             if isinstance(obj, basestring):
                 return obj
             elif isinstance(obj, datetime):
-                return j.execute('new Date("%s")' % obj.ctime())
+                ts = 1000. * time.mktime(obj.timetuple())
+                ts += (obj.microsecond / 1000.)
+                return j.execute('new Date(%f)' % (ts))
             elif isinstance(obj, collections.Mapping):
                 return dict((k,tojs(v)) for k,v in obj.iteritems())
             elif isinstance(obj, collections.Sequence):

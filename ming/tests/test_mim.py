@@ -118,13 +118,15 @@ class TestCommands(TestCase):
         self.assertEqual(result['results'], [ dict(_id=1, value=2) ])
 
     def test_mr_inline_date_key(self):
+        dt = datetime.utcnow()
+        dt = dt.replace(microsecond=123000)
+        self.bind.db.date_coll.insert({'a': dt })
         result = self.bind.db.command(
-            'mapreduce', 'coll',
-            map='function(){ emit(new Date(), this.a); }',
-            reduce=self.sum_js,
+            'mapreduce', 'date_coll',
+            map='function(){ emit(1, this.a); }',
+            reduce=self.first_js,
             out=dict(inline=1))
-        self.assertEqual(result['results'][0]['value'], 2)
-        self.assert_(isinstance(result['results'][0]['_id'], datetime))
+        self.assertEqual(result['results'][0]['value'], dt)
 
     def test_mr_inline_date_value(self):
         result = self.bind.db.command(
