@@ -298,7 +298,7 @@ class Collection(collection.Collection):
                 before = dict(query)
                 self.insert(before)
             else:
-                raise OperationFailure, 'No matching object found'
+                return None
         self.update(query, update)
         if kwargs.get('new', False) or upserted:
             return self.find_one(dict(_id=before['_id']))
