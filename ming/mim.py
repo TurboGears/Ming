@@ -9,6 +9,7 @@ from datetime import datetime
 from hashlib import md5
 
 try:
+    import spidermonkey
     from spidermonkey import Runtime
 except ImportError:
     Runtime = None
@@ -145,8 +146,10 @@ class Database(database.Database):
         if self._jsruntime is None:
             raise ImportError, 'Cannot import spidermonkey, required for MIM mapreduce'
         j = self._jsruntime.new_context()
+        tmp_j = self._jsruntime.new_context()
         temp_coll = collections.defaultdict(list)
         def emit(k, v):
+            k = topy(k)
             if isinstance(k, dict):
                 k = bson.BSON.encode(k)
             temp_coll[k].append(v)
@@ -158,6 +161,19 @@ class Database(database.Database):
         j.execute('var reduce=%s;' % reduce)
         if query is None: query = {}
         # Run the map phase
+        def topy(obj):
+            if isinstance(obj, spidermonkey.Object):
+                tmp_j.add_global('x', obj)
+                js_source = tmp_j.execute('x.toSource()')
+                if 'new Date' in js_source:
+                    obj = datetime.fromtimestamp(tmp_j.execute('x.valueOf()')/1000.)
+                else:
+                    assert False, 'Cannot convert %s to Python' % (js_source)
+            elif isinstance(obj, collections.Mapping):
+                return dict((k, topy(v)) for k,v in obj.iteritems())
+            elif isinstance(obj, collections.Sequence):
+                return map(topy, obj)
+            return obj
         def tojs(obj):
             if isinstance(obj, basestring):
                 return obj
@@ -175,9 +191,9 @@ class Database(database.Database):
             obj = tojs(obj)
             j.execute('map').apply(obj)
         # Run the reduce phase
-        reduced = dict(
+        reduced = topy(dict(
             (k, j.execute('reduce')(k, tojs(values)))
-            for k, values in temp_coll.iteritems())
+            for k, values in temp_coll.iteritems()))
         # Handle the output phase
         result = dict()
         assert len(out) == 1

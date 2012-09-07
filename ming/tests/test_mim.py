@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest import TestCase
 
 from ming import create_datastore
@@ -75,6 +76,8 @@ class TestCommands(TestCase):
             total += values[i]; }
         return total; }'''
 
+    first_js = 'function(key,values) { return values[0]; }'
+
     def setUp(self):
         self.bind = create_datastore('mim:///testdb')
         self.bind.conn.drop_all()
@@ -113,6 +116,24 @@ class TestCommands(TestCase):
             reduce=self.sum_js,
             out=dict(inline=1))
         self.assertEqual(result['results'], [ dict(_id=1, value=2) ])
+
+    def test_mr_inline_date_key(self):
+        result = self.bind.db.command(
+            'mapreduce', 'coll',
+            map='function(){ emit(new Date(), this.a); }',
+            reduce=self.sum_js,
+            out=dict(inline=1))
+        self.assertEqual(result['results'][0]['value'], 2)
+        self.assert_(isinstance(result['results'][0]['_id'], datetime))
+
+    def test_mr_inline_date_value(self):
+        result = self.bind.db.command(
+            'mapreduce', 'coll',
+            map='function(){ emit(1, new Date()); }',
+            reduce=self.first_js,
+            out=dict(inline=1))
+        self.assertEqual(result['results'][0]['_id'], 1)
+        self.assert_(isinstance(result['results'][0]['value'], datetime))
 
     def test_mr_inline_collection(self):
         result = self.bind.db.coll.map_reduce(
