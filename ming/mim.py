@@ -332,7 +332,7 @@ class Collection(collection.Collection):
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
             if _id in self._data:
-                if safe: raise OperationFailure('duplicate ID on insert')
+                if safe: raise DuplicateKeyError('duplicate ID on insert')
                 continue
             self._index(doc)
             self._data[_id] = bcopy(doc)
