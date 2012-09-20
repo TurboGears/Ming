@@ -78,6 +78,14 @@ class TestBasicMapping(TestCase):
         self.session.clear()
         self.datastore.conn.drop_all()
 
+    def test_set_to_same(self):
+        obj = self.Basic(a=1)
+        assert state(obj).status == 'new'
+        self.session.flush()
+        assert state(obj).status == 'clean'
+        obj.a = 1
+        assert state(obj).status == 'clean'
+
     def test_disable_instrument(self):
         # Put a doc in the DB
         self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))

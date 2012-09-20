@@ -84,8 +84,9 @@ class FieldProperty(ORMProperty):
         st = state(instance)
         value = deinstrument(value)
         value = self.field.schema.validate(value)
-        st.set(self.name, value)
-        st.soil()
+        if st.document.get(self.name, ()) != value:
+            st.set(self.name, value)
+            st.soil()
 
     def __delete__(self, instance, cls=None):
         st = state(instance)
