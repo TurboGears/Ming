@@ -163,6 +163,8 @@ class Database(database.Database):
         if query is None: query = {}
         # Run the map phase
         def topy(obj):
+            if isinstance(obj, spidermonkey.Array):
+                return [topy(x) for x in obj]
             if isinstance(obj, spidermonkey.Object):
                 tmp_j.add_global('x', obj)
                 js_source = tmp_j.execute('x.toSource()')
@@ -172,8 +174,10 @@ class Database(database.Database):
                     assert False, 'Cannot convert %s to Python' % (js_source)
             elif isinstance(obj, collections.Mapping):
                 return dict((k, topy(v)) for k,v in obj.iteritems())
+            elif isinstance(obj, basestring):
+                return obj
             elif isinstance(obj, collections.Sequence):
-                return map(topy, obj)
+                return [topy(x) for x in obj]
             return obj
         def tojs(obj):
             if isinstance(obj, basestring):
