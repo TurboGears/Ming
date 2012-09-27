@@ -77,6 +77,7 @@ class TestCommands(TestCase):
         return total; }'''
 
     first_js = 'function(key,values) { return values[0]; }'
+    concat_js = 'function(key,vs) { return [].concat.apply([], vs);}'
 
     def setUp(self):
         self.bind = create_datastore('mim:///testdb')
@@ -198,6 +199,19 @@ class TestCommands(TestCase):
         self.assertEqual(
             list(self.bind.db.reduce.find()),
             [ dict(_id=1, value=45) ])
+
+    def test_mr_reduce_list(self):
+        self.bind.db.reduce.insert(dict(
+                _id=1, value=[42]))
+        result = self.bind.db.command(
+            'mapreduce', 'coll',
+            map='function(){ emit(1, [1]); }',
+            reduce=self.concat_js,
+            out=dict(reduce='reduce'))
+        self.assertEqual(result['result'], 'reduce')
+        self.assertEqual(
+            list(self.bind.db.reduce.find()),
+            [ dict(_id=1, value=[1, 42]) ])
 
     def test_mr_reduce_collection(self):
         self.bind.db.reduce.insert(dict(
