@@ -212,7 +212,7 @@ class Database(database.Database):
                 if doc is None:
                     out_coll.insert(dict(_id=k, value=v))
                 else:
-                    doc['value'] = j.execute('reduce')(k, tojs([v, doc['value']]))
+                    doc['value'] = topy(j.execute('reduce')(k, tojs([v, doc['value']])))
                     out_coll.save(doc)
         elif out.keys() == ['merge']:
             result['result'] = out.values()[0]
