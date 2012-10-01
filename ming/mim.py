@@ -299,7 +299,8 @@ class Collection(collection.Collection):
         if spec is None:
             spec = {}
         sort = kwargs.pop('sort', None)
-        cur = Cursor(lambda:self._find(spec, **kwargs), fields=fields, as_class=as_class)
+        cur = Cursor(collection=self, fields=fields, as_class=as_class,
+                     _iterator_gen=lambda: self._find(spec, **kwargs))
         if sort:
             cur = cur.sort(sort)
         return cur
@@ -444,8 +445,9 @@ class Collection(collection.Collection):
 
 class Cursor(object):
 
-    def __init__(self, iterator_gen, sort=None, skip=None, limit=None, fields=None, as_class=dict):
-        self._iterator_gen = iterator_gen
+    def __init__(self, collection, _iterator_gen, sort=None, skip=None, limit=None, fields=None, as_class=dict):
+        self._collection = collection
+        self._iterator_gen = _iterator_gen
         self._sort = sort
         self._skip = skip
         self._limit = limit
@@ -512,6 +514,24 @@ class Cursor(object):
 
     def distinct(self, key):
         return list(set(_lookup(d, key) for d in self.all()))
+
+    def hint(self, index):
+        # checks indexes, but doesn't actually use hinting
+        if type(index) == list:
+            # ignoring direction, since mim's ensure_index doesn't preserve it (set to 0)
+            test_idx = [(i, 0) for i, direction in index if i != '$natural']
+            if test_idx and test_idx not in self._collection._indexes.values():
+                raise OperationFailure('database error: bad hint. Valid values: %s' %
+                        self._collection._indexes.values())
+        elif isinstance(index, basestring):
+            if index not in self._collection._indexes.keys():
+                raise OperationFailure('database error: bad hint. Valid values: %s'
+                        % self._collection._indexes.keys())
+        elif index == None:
+            pass
+        else:
+            raise TypeError('hint index should be string, list of tuples, or None, but was %s' % type(index))
+        return self
 
 def cursor_comparator(keys):
     def comparator(a, b):

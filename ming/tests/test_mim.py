@@ -2,6 +2,7 @@ from datetime import datetime
 from unittest import TestCase
 
 from ming import create_datastore
+from pymongo.errors import OperationFailure
 
 class TestDatastore(TestCase):
 
@@ -266,3 +267,21 @@ class TestCollection(TestCase):
 
     def test_find_and_modify_returns_none_on_no_entries(self):
         self.assertEqual(None, self.bind.db.foo.find_and_modify({'i': 1}, {'$set': {'i': 2}}))
+
+    def test_hint_simple(self):
+        self.bind.db.coll.ensure_index([('myindex', 1)])
+
+        cursor = self.bind.db.coll.find().hint([('$natural', 1)])
+        self.assertEqual(type(cursor), type(self.bind.db.coll.find()))
+        cursor = self.bind.db.coll.find().hint([('myindex', 1)])
+        self.assertEqual(type(cursor), type(self.bind.db.coll.find()))
+        cursor = self.bind.db.coll.find().hint('myindex')
+        self.assertEqual(type(cursor), type(self.bind.db.coll.find()))
+        cursor = self.bind.db.coll.find().hint(None)
+        self.assertEqual(type(cursor), type(self.bind.db.coll.find()))
+    
+    def test_hint_invalid(self):
+        self.assertRaises(OperationFailure, self.bind.db.coll.find().hint, [('foobar', 1)])
+        self.assertRaises(OperationFailure, self.bind.db.coll.find().hint, 'foobar')
+        self.assertRaises(TypeError, self.bind.db.coll.find().hint, 123)
+
