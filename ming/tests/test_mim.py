@@ -3,6 +3,7 @@ from unittest import TestCase
 
 from ming import create_datastore
 from pymongo.errors import OperationFailure
+from nose import SkipTest
 
 class TestDatastore(TestCase):
 
@@ -110,6 +111,14 @@ class TestCommands(TestCase):
         self.assertEqual(result['value']['a'], 3)
         newdoc = self.bind.db.coll.find().next()
         self.assertEqual(newdoc['a'], 3, newdoc)
+
+
+class TestMRCommands(TestCommands):
+
+    def setUp(self):
+        super(TestMRCommands, self).setUp()
+        if not self.bind.db._jsruntime:
+            raise SkipTest
 
     def test_mr_inline(self):
         result = self.bind.db.command(
