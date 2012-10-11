@@ -43,4 +43,5 @@ def configure_from_nested_dict(config):
     # bind any existing sessions
     for name, session in Session._registry.iteritems():
         session.bind = datastores.get(name, None)
+        session._name = name
     

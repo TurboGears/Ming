@@ -28,6 +28,9 @@ class Session(object):
     _datastores = {}
 
     def __init__(self, bind=None):
+        '''
+        bind may be a lazy parameter, established later with ming.configure
+        '''
         self.bind = bind
 
     @classmethod
@@ -46,6 +49,8 @@ class Session(object):
 
     @property
     def db(self):
+        if not self.bind:
+            raise exc.MongoGone('No MongoDB connection for "%s"' % getattr(self, '_name', 'unknown connection'))
         return self.bind.db
 
     def get(self, cls, **kwargs):

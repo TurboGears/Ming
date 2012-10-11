@@ -82,7 +82,8 @@ class ODMSession(object):
 
     def close(self):
         self.clear()
-        self.impl.bind.conn.end_request()
+        if self.impl.bind:
+            self.impl.bind.conn.end_request()
 
     def get(self, cls, idvalue):
         result = self.imap.get(cls, idvalue)
