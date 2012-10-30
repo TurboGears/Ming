@@ -23,17 +23,17 @@ class TestQuerySafety(TestCase):
     def test_extra_fields_stripped(self):
         r = self.Doc.m.find().all()
         assert  r == [ dict(a=2, _id='foo') ], r
-        r = self.Doc.m.find(allow_extra=True).all()
+        r = self.Doc.m.find({}, allow_extra=True).all()
         assert  r == [ dict(a=2, _id='foo') ], r
         r = self.Doc.m.get(_id='foo')
         assert  r == dict(a=2, _id='foo'), r
 
     def test_extra_fields_not_stripped(self):
-        r = self.Doc.m.find(strip_extra=False).all()
+        r = self.Doc.m.find({}, strip_extra=False).all()
         assert r == [ dict(a=2, b=3, _id='foo') ], r
 
     def test_extra_fields_not_allowed(self):
-        q = self.Doc.m.find(allow_extra=False)
+        q = self.Doc.m.find({}, allow_extra=False)
         self.assertRaises(S.Invalid, q.all)
 
 class TestSchemaItem(TestCase):

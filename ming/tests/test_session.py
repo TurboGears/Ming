@@ -141,6 +141,12 @@ class TestSession(TestCase):
 
         self.assertRaises(ValueError, sess.remove, doc, foobar='baz')
 
+    def test_find_kwargs(self):
+        sess = self.session
+        TestDoc = self.TestDoc
+        self.assertRaises(ValueError, sess.find, TestDoc, a=5)
+
+
 class TestThreadLocalSession(TestSession):
 
     def setUp(self):

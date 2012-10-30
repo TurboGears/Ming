@@ -59,6 +59,10 @@ class Session(object):
         return cls.make(bson, allow_extra=True, strip_extra=True)
 
     def find(self, cls, *args, **kwargs):
+        if not args and kwargs:
+            raise ValueError('A query dict is typically the first param to find() but it is not present. '
+                             'Moreover, **kwargs were found.  Kwargs are only used for options and not query criteria. '
+                             'If you really want to search with no criteria and use kwarg options, pass an explicit {} as your criteria dict.')
         allow_extra=kwargs.pop('allow_extra', True)
         strip_extra=kwargs.pop('strip_extra', True)
         validate=kwargs.pop('validate', True)
