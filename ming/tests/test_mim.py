@@ -1,7 +1,9 @@
 from datetime import datetime
 from unittest import TestCase
 
+import bson
 from ming import create_datastore
+from ming.mim import bson_compare
 from pymongo.errors import OperationFailure
 from nose import SkipTest
 
@@ -294,3 +296,12 @@ class TestCollection(TestCase):
         self.assertRaises(OperationFailure, self.bind.db.coll.find().hint, 'foobar')
         self.assertRaises(TypeError, self.bind.db.coll.find().hint, 123)
 
+class TestBsonCompare(TestCase):
+
+    def test_boolean_bson_type(self):
+        assert bson_compare(True, True) == 0
+        assert bson_compare(True, False) == 1
+        assert bson_compare(False, True) == -1
+        assert bson_compare(False, False) == 0
+        assert bson_compare(False, bson.ObjectId()) == 1
+        assert bson_compare(True, datetime.fromordinal(1)) == -1

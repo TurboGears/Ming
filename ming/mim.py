@@ -29,6 +29,7 @@ _bson_types = [
     [ list ],
     [ bson.Binary ],
     [ bson.ObjectId ],
+    [ bool ],
     [ datetime ],
     [ type(re.compile('foo')) ]
     ]
