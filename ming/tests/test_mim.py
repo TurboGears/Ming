@@ -72,6 +72,12 @@ class TestDatastore(TestCase):
         assert 0 == f(dict({'$or': [{'c':{'$all':[4,2,3]}}]})).count()
         assert 1 == f(dict({'$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count()
 
+    def test_find_with_fields(self):
+        o = self.bind.db.coll.find_one({'a':2}, fields=['a'])
+        assert o['a'] == 2
+        assert o['_id'] == 'foo'
+        assert 'c' not in o
+
 class TestCommands(TestCase):
         
     sum_js = '''function(key,values) {

@@ -447,6 +447,11 @@ class Collection(collection.Collection):
 class Cursor(object):
 
     def __init__(self, collection, _iterator_gen, sort=None, skip=None, limit=None, fields=None, as_class=dict):
+        if fields is not None and '_id' not in fields:
+            f = ['_id']
+            f.extend(fields)
+            fields = f
+
         self._collection = collection
         self._iterator_gen = _iterator_gen
         self._sort = sort
