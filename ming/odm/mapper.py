@@ -57,8 +57,12 @@ class Mapper(object):
 
     @with_hooks('update')
     def update(self, obj, state, session, **kwargs):
+        fields = state.options.get('fields', None)
+        if fields is None:
+            fields = ()
+
         doc = self.collection(state.document, skip_from_bson=True)
-        session.impl.save(doc, validate=False)
+        session.impl.save(doc, *fields, validate=False)
         state.status = state.clean
 
     @with_hooks('delete')

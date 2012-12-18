@@ -189,6 +189,32 @@ class TestBasicMapping(TestCase):
         self.Basic.query.remove({})
         self.assertEqual(self.Basic.query.find().count(), 0)
 
+    def test_query_fields(self):
+        doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
+        self.session.flush()
+        self.session.clear()
+
+        q = self.Basic.query.find(dict(a=1), fields=['b'])
+        self.assertEqual(q.count(), 1)
+
+        o = q.first()
+        self.assertEqual(o.b, [2,3])
+        self.assertEqual(o.a, None)
+        o.b = [4,5]
+        self.session.flush()
+        self.session.clear()
+
+        q = self.Basic.query.find(dict(a=1))
+        self.assertEqual(q.count(), 1)
+
+        o = q.first()
+        self.assertEqual(o.a, 1)
+        self.assertEqual(o.b, [4, 5])
+        self.assertEqual(o.c, dict(d=4, e=5))
+
+        self.Basic.query.remove({})
+        self.assertEqual(self.Basic.query.find().count(), 0)
+
     def test_delete(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.session.flush()

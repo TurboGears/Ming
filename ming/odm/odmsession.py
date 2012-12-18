@@ -99,7 +99,7 @@ class ODMSession(object):
         m = mapper(cls)
         # args = map(deinstrument, args)
         ming_cursor = self.impl.find(m.collection, *args, **kwargs)
-        odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh, decorate=decorate)
+        odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh, decorate=decorate, fields=kwargs.get('fields'))
         call_hook(self, 'cursor_created', odm_cursor, 'find', cls, *args, **kwargs)
         return odm_cursor
 
@@ -235,7 +235,7 @@ class ContextualODMSession(ContextualProxy):
 
 class ODMCursor(object):
 
-    def __init__(self, session, cls, ming_cursor, refresh=False, decorate=None):
+    def __init__(self, session, cls, ming_cursor, refresh=False, decorate=None, fields=None):
         self.session = session
         self.cls = cls
         self.mapper = mapper(cls)
@@ -243,6 +243,7 @@ class ODMCursor(object):
         self._options = Object(
             refresh=refresh,
             decorate=decorate,
+            fields=fields,
             instrument=True)
 
     def __iter__(self):
