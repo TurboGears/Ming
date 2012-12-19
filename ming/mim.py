@@ -628,6 +628,8 @@ def compare(op, a, b):
         return a != () if b else a == ()
     if op == '$all':
         return set(a).issuperset(b)
+    if op == '$elemMatch':
+        return match(b, a)
     raise NotImplementedError, op
         
 def update(doc, updates):
