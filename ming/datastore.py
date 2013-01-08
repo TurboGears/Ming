@@ -9,8 +9,7 @@ try:
 except ImportError:
     gevent = None
 
-from pymongo import Connection, ReplicaSetConnection
-from pymongo.master_slave_connection import MasterSlaveConnection
+from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
 from . import mim
@@ -20,51 +19,20 @@ def create_engine(*args, **kwargs):
     '''Wrapper for creating Engines, setting the connection class
     appropriately'''
     use_class = kwargs.pop('use_class', None)
-    master = kwargs.pop('master', None)
-    slaves = kwargs.pop('slaves', [])
-    if slaves:
-        if master is None:
-            master = args[0]
-            args = args[1:]
-        return create_ms_engine(master, slaves, *args, **kwargs)
     connect_retry = kwargs.pop('connect_retry', 3)
     sleep = kwargs.pop('sleep', None)
     if use_class is None:
         if args and args[0].startswith('mim:'):
             use_class = lambda *a, **kw: mim.Connection.get()
             args = args[1:]
-        elif 'replicaSet' in kwargs:
-            use_class = ReplicaSetConnection
         else:
-            use_class = Connection
+            use_class = MongoClient
     if sleep is None:
         if kwargs.get('use_greenlets', False):
             sleep = gevent.sleep
         else:
             sleep = time.sleep
     return Engine(use_class, args, kwargs, connect_retry, sleep)
-
-def create_ms_engine(master, slaves,
-                     document_class=dict, tz_aware=False,
-                     **kwargs):
-    connect_retry = kwargs.pop('connect_retry', 3)
-    sleep = kwargs.pop('sleep', None)
-    def _to_connection(x):
-        if isinstance(x, basestring):
-            return Connection(
-                x, 
-                document_class=document_class,
-                tz_aware=tz_aware, **kwargs)
-        else:
-            return x
-    def master_slave_factory(master, slaves):
-        master = _to_connection(master)
-        slaves = map(_to_connection, slaves)
-        return MasterSlaveConnection(
-            master, slaves,
-            document_class=document_class, tz_aware=tz_aware)
-    return Engine(master_slave_factory, (master, slaves), {},
-                  connect_retry, sleep)
 
 def create_datastore(uri, **kwargs):
     '''Wrapper for creating DataStores, setting the connection class

@@ -1,9 +1,9 @@
 #{initial-imports
 from ming import Session
-from ming.datastore import DataStore
+from ming import create_datastore
 from ming.odm import ThreadLocalODMSession
 
-bind = DataStore('mongodb://localhost:27017/', database='odm_tutorial')
+bind = create_datastore('odm_tutorial')
 doc_session = Session(bind)
 session = ThreadLocalODMSession(doc_session=doc_session)
 #}

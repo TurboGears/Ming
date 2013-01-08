@@ -58,6 +58,9 @@ class Connection(object):
         for db in self._databases.values():
             db.clear()
 
+    def start_request(self):
+        return _DummyRequest()
+
     def end_request(self):
         pass
 
@@ -140,6 +143,8 @@ class Database(database.Database):
             collection = self._collections[command['distinct']]
             key = command['key']
             return list(set(_lookup(d, key) for d in collection.find()))
+        elif 'getlasterror' in command:
+            return dict(connectionId=None, err=None, n=0, ok=1.0)
         else:
             raise NotImplementedError, repr(command)
 
@@ -408,6 +413,10 @@ class Collection(collection.Collection):
         if index is None: return
         keys = tuple(i[0] for i in index)
         self._unique_indexes.pop(keys, None)
+
+    def _get_wc_override(self):
+        '''For gridfs compatibility'''
+        return {}
 
     def __repr__(self):
         return 'mim.Collection(%r, %s)' % (self._database, self.name)
@@ -693,3 +702,14 @@ def wrap_as_class(value, as_class):
         return [ wrap_as_class(v, as_class) for v in value ]
     else:
         return value
+
+class _DummyRequest(object):
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, ex_type, ex_value, ex_tb):
+        pass
+    
+    def end(self):
+        pass

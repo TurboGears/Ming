@@ -16,3 +16,6 @@ install/*
 build/*
 dist/*
 docs/_build/*
+Vagrantfile
+parser_*.out
+parsetab_*

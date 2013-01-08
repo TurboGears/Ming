@@ -1,7 +1,15 @@
 Ming News / Release Notes
 =====================================
 
-0.3.2 (July 26, 2012)
+0.3.2 (rc1) (January 8, 2013)
+------------------------------------------------
+
+Some of the larger changes:
+
+* Update to use MongoClient everywhere instead of variants of `pymongo.Connection`
+* Remove MasterSlaveConnection and ReplicaSetConnection support
+
+0.3.2 (dev) (July 26, 2012)
 ------------------------------------------------
 
 Whoops, skipped a version there. Anyway, the bigger changes:

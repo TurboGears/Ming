@@ -1,9 +1,9 @@
-======================
-Intro to Ming
-======================
+===============
+ Intro to Ming
+===============
 
 MongoDB and Ming
-----------------
+================
 
 MongoDB_ is a high-performance schemaless database that allows you to store and
 retrieve JSON-like documents.  MongoDB stores these documents in collections,
@@ -20,24 +20,18 @@ the schema for your data in Python code and then develop in confidence, knowing
 the format of data you get from a query.
 
 Installing MongoDB and Ming
----------------------------
+===========================
 
 To begin working with Ming, you'll need to download and install a copy of
-MongoDB.  On a Linux system, this is fairly straightforward::
+MongoDB.  You can find download instructions at http://www.mongodb.org/downloads
 
-    $ wget http://github.com/mongodb/mongo/tarball/r1.0.1
-    $ tar xzf mongodb-mongo-*.tar.gz
-    $ rm mongodb-mongo-*.tar.gz
-    $ cd mongodb-mongo-*
-    $ scons
-
-To run the server for this tutorial, just create a directory and start mongod
+In order to run the server for this tutorial, just create a directory and start mongod
 there::
 
     $ mkdir var
     $ cd var
     $ mkdir mongodata
-    $ <wherever you ran scons>/mongod --dbpath mongodata
+    $ <wherever you installed mongodb>/mongod --dbpath mongodata
 
 In order to install ming, you simply use setuptools/Distribute's `easy_install`
 command.  (We recommend using a virtualenv_ for development.)
@@ -49,18 +43,19 @@ command.  (We recommend using a virtualenv_ for development.)
     (ming_env)$ easy_install -UZ Ming
 
 Connecting to the Database
---------------------------
+==========================
 
 Ming manages your connection to the MongoBD database using an object known as a
-:class:`Datastore <ming.datastore.DataStore>`.  The DataStore is actually just a thin wrapper around a pymongo_
-Database object.  (The actual Database object can always be accessed via the `db`
-property of the DataStore instance.  For this tutorial, we will be using a
-single, global DataStore::
+:class:`Datastore <ming.datastore.DataStore>`.  The DataStore is actually just a
+thin wrapper around a pymongo_ Database object.  
+(The actual Database object can always be accessed via the `db` property of the
+DataStore instance.  For this tutorial, we will be using a single, global DataStore::
 
     from ming import create_datastore
     bind = create_datastore('mongodb://localhost:27017/tutorial')
 
-Note that if you're connecting to MongoDB on the default host (localhost) and port (27017), you can just provide the database name here::
+Note that if you're connecting to MongoDB on the default host (localhost) and
+port (27017), you can just provide the database name here::
 
     bind = create_datastore('tutorial')
 
@@ -72,29 +67,28 @@ this tutorial, we will be using a single global Session::
     from ming import Session
     session = Session(bind)
 
-We can also :class:`configure() <ming.configure>` ming with a set of urls, using a config dict of "ming.*" keys.
+We can also :class:`configure() <ming.configure>` ming with a set of urls, using
+a config dict of "ming.*" keys.  
 The first part must be 'ming', the second part is a session name, and the third
-parts are used as parameters to construct a :class:`Datastore <ming.datastore.DataStore>` object.  Master and slave
-parameters should be comma-sepearated mongodb://host:port[,host:port] if there are multiple.
+parts are used as parameters to construct a :class:`Datastore
+<ming.datastore.DataStore>` object.  
 
 .. sidebar:: Mongo-in-Memory
 
     Ming also provides a "mongo in memory" implementation, which is non-persistent,
-    in python, and possibly much faster than mongo.  To use it, just change the
-    connection url to `mim://`
+    in Python, and possibly much faster than MongoDB for very small data sets, as
+    you might use in testing.
+    To use it, just change the connection url to `mim://`
 
 ::
 
-    config = {'ming.example.master': 'mongodb://localhost:27017',
-              'ming.example.slave': None,
-              'ming.example.database':'tutorial'
-             }
+    config = {'ming.example.uri': 'mongodb://localhost:27017/tutorial' }
     ming.configure(**config)
     # and later access the named session with:
     Session.by_name('example')
 
 Collection objects
---------------------------
+==================
 
 .. sidebar:: Declarative versus Imperative
 
@@ -163,7 +157,7 @@ in `@property` decorators or other access controls.
 
 
 Using Ming Objects to Represent Mongo Records
----------------------------------------------
+=============================================
 
 Now that we've defined a basic schema, let's start playing around with Ming in
 the interactive interpreter.  First, make sure you've saved the code below in a
@@ -197,13 +191,16 @@ create a `WikiPage`::
     >>> page['title']
     'MyPage'
 
-As you can see, Ming :class:`documents <ming.base.Document>` can be accessed either using dictionary-style
-lookups (`page['title']`) or attribute-style lookups (`page.title`).  In fact,
-all Ming documents are `dict` subclasses, so all the standard methods on
+As you can see, Ming :class:`documents <ming.base.Document>` can be accessed
+either using dictionary-style lookups (`page['title']`) or attribute-style
+lookups (`page.title`).  
+In fact, all Ming documents are `dict` subclasses, so all the standard methods on
 Python `dict` objects  are available.
 
 In order to actually interact with the database, Ming provides a standard
-attribute `.m`, short for :class:`Manager <ming.base.Manager>`, on each mapped class.  In order to save the
+attribute `.m`, short for :class:`Manager <ming.base.Manager>`, on each mapped
+class.  
+In order to save the
 document we just created to the database, for instance, we would simply type::
 
     >>> page.m.save()
@@ -230,13 +227,16 @@ method.  This is the main method we'll use to query the database, and is covered
 in the next section.
 
 Querying the Database
----------------------
+=====================
 
-Ming provides an `.m.find()` method on class :class:`managers <ming.base.Manager>` that works just like the
-`.find()` method on collection objects in pymongo_ and is used for performing
-queries.  The result of a query is a Python iterator that wraps a pymongo cursor,
-converting each result to a :class:`ming.Document <ming.base.Document>` before yielding it.  Like
-SQLAlchemy_, we provide several convenice methods on query results (:class:`Cursor <ming.base.Cursor>`):
+Ming provides an `.m.find()` method on class :class:`managers
+<ming.base.Manager>` that works just like the `.find()` method on collection
+objects in pymongo_ and is used for performing queries.  
+The result of a query is a Python iterator that wraps a pymongo cursor,
+converting each result to a :class:`ming.Document <ming.base.Document>` before
+yielding it.  
+Like SQLAlchemy_, we provide several convenice methods on query results
+(:class:`Cursor <ming.base.Cursor>`):
 
 one()
   Retrieve a single result from a query.  Raises an exception if the query
@@ -257,7 +257,9 @@ sort(\*args, \*\*kwargs)
   `pymongo.Cursor.sort()` method
 
 Ming also provides a convenience method `.m.get(**kwargs)` which is equivalent to
-`.m.find(kwargs).first()` for simple queries that are expected to return one result.  Some examples:
+`.m.find(kwargs).first()` for simple queries that are expected to return one
+result.  
+Some examples: 
 
     >>> tutorial.WikiPage.m.find({'title': 'MyPage'}).first()
     {'text': u'', '_id': ObjectId('4b1d638ceb033028a0000000'), 'title': u'MyPage'}
@@ -269,10 +271,11 @@ Ming also provides a convenience method `.m.get(**kwargs)` which is equivalent t
 
 
 Other Sessions
---------------
+==============
 
 If we have a special case where we want to use a different database session for a model,
-other than the one specified in :class:`__mongometa__ <ming.base.Document.__mongometa__>`, we can do::
+other than the one specified in :class:`__mongometa__
+<ming.base.Document.__mongometa__>`, we can do::
 
     foobar = Session.by_name('foobar')
     foobar.save(my_model_instance)
@@ -286,7 +289,7 @@ This could be useful if you have a database session that is connected to a maste
 and another one that is used for the slave (readonly).
 
 Bad Data
---------
+========
 
 .. sidebar:: Schema Validation
 
@@ -311,8 +314,9 @@ defined in the object::
         Extra keys: set(['fooBar'])
 
 OK, that's nice and all, but wouldn't it be nicer if we could be warned at
-creation time?  Ming provides a convenice method :meth:`make() <ming.base.Document.make>` on the :class:`ming.Document <ming.base.Document>` with
-just such behavior::
+creation time?  
+Ming provides a convenice method :meth:`make() <ming.base.Document.make>` on the
+:class:`ming.Document <ming.base.Document>` with just such behavior::
 
     >>> page = tutorial.WikiPage.make(dict(title='MyPage', text='', fooBar=''))
     Traceback (most recent call last):
@@ -320,9 +324,9 @@ just such behavior::
     formencode.api.Invalid: <class 'tutorial.WikiPage'>:
         Extra keys: set(['fooBar'])
 
-We can also provide default values for properties via the `if_missing`
-parameter on a :class:`Field <ming.base.Field>`.  Change the definition of the `text` property in `tutorial.py` to
-read::
+We can also provide default values for properties via the `if_missing` parameter
+on a :class:`Field <ming.base.Field>`.  
+Change the definition of the `text` property in `tutorial.py` to read::
 
     text = Field(str, if_missing='')
 
@@ -343,7 +347,7 @@ the creation date in a WikiPage like this::
     creation_date = Field(datetime, if_missing=datetime.utcnow)
 
 Compound Validators
--------------------
+===================
 
 .. sidebar:: `ming.schema`
 
@@ -352,10 +356,11 @@ Compound Validators
    finger-typing.  Sometimes, however, you'll need to directly specify the actual
    validator used.  These validators are defined in the :mod:`ming.schema` module.
 
-Ming, like MongoDB, allows for documents to be arbitrarily nested.  For instance,
-we might want to keep a `metadata` property on our `WikiPage` that kept tag and
-category information.  To do this, we just need to add a little more complex
-schema.  Add the following line to the `WikiPage` definition::
+Ming, like MongoDB, allows for documents to be arbitrarily nested.  
+For instance, we might want to keep a `metadata` property on our `WikiPage` that
+kept tag and category information.  
+To do this, we just need to add a little more complex schema.  
+Add the following line to the `WikiPage` definition::
 
     metadata = Field(dict(
             tags=[str],
@@ -368,16 +373,16 @@ Now, what happens when we create a page?
     >>> tutorial.WikiPage.make(dict(title='MyPage', metadata=dict(tags=['foo', 'bar', 'baz'])))
     {'text': '', 'title': 'MyPage', 'metadata': {'categories': [], 'tags': ['foo', 'bar', 'baz']}}
 
-Ming creates the structure for us automatically.  (If we had wanted to specify a
-different default value for the `metadata` property, we could have done so using
-the `if_missing` parameter, of course.)
+Ming creates the structure for us automatically.  
+(If we had wanted to specify a different default value for the `metadata`
+property, we could have done so using the `if_missing` parameter, of course.)
 
 Specifying a Migration
-----------------------
+======================
 
 One of the most irritating parts of maintaining an application for a while is the
-need to do data migrations from one version of the schema to another.  While Ming
-can't completely remove the pain of migrations, it does seek to make migrations
+need to do data migrations from one version of the schema to another.
+While Ming can't completely remove the pain of migrations, it does seek to make migrations
 as simple as possible.
 
 Let's see what's in the database right now::
@@ -387,7 +392,8 @@ Let's see what's in the database right now::
 
 Suppose we decided that we didn't want the `metadata` property; we'd like to
 "promote" the `categories` and `tags` properties to be top-level attributes of
-the `WikiPage`.  We might write our new schema as follows::
+the `WikiPage`.  
+We might write our new schema as follows::
 
     class WikiPage(Document):
 
@@ -401,19 +407,18 @@ the `WikiPage`.  We might write our new schema as follows::
         tags = Field([str])
         categories = Field([str])
 
-But now if we try to .find() things in our database, our query dies a horrible
-death::
+But now if we try to .find() things in our database, our data has gone missing::
 
     >>> tutorial = reload(tutorial)
     >>> tutorial.WikiPage.m.find().all()
-    Traceback (most recent call last):
-    ...
-    formencode.api.Invalid: <class 'tutorial.WikiPage'>:
-        Extra keys: set([u'metadata'])
+    [{'text': u'This is some text on my page', '_id': ObjectId('...'), 
+      'title': u'MyPage', 'tags': [], 'categories': [] }]
 
-What we need now is a migration.  Luckily, Ming makes migrations manageable.  All
-we need to do is include the previous schema and a migration function in our
-:class:`__mongometa__ <ming.base.Document.__mongometa__>` object.  We'll also throw in a schema version number for good measure::
+What we need now is a migration.  Luckily, Ming makes migrations manageable.  
+All we need to do is include the previous schema, a migration function in our
+:class:`__mongometa__ <ming.base.Document.__mongometa__>` object, and a way to
+force the migration. For the 'forcing' part, we'll add a version field to the new
+schema::
 
     class OldWikiPage(Document):
         _id = Field(schema.ObjectId)
@@ -438,14 +443,15 @@ we need to do is include the previous schema and a migration function in our
                 del result['metadata']
                 return result
 
-        version = Field(1)
+        version = Field(1, required=True)
         ...
 
 OK, now let's reload and try that query again::
 
     >>> tutorial = reload(tutorial)
     >>> tutorial.WikiPage.m.find().all()
-    [{'title': u'MyPage', 'text': u'This is some text on my page', 'tags': [], 'version': 1, '_id': ObjectId('4b1d638ceb033028a0000000'), 'categories': []}]
+    [{'title': u'MyPage', 'text': u'This is some text on my page', 
+      'tags': [], 'version': 1, '_id': ObjectId('...'), 'categories': []}]
 
 And that's it.  Migrations are performed lazily as the objects are loaded
 from the database.  Note that we can make the `OldWikiPage` a `version_of` and

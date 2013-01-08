@@ -14,28 +14,28 @@ class DummyConnection(object):
 
 class TestEngineConnection(TestCase):
 
-    @patch('ming.datastore.Connection', spec=True)
+    @patch('ming.datastore.MongoClient', spec=True)
     def test_normal(self, MockConnection):
-        from pymongo import Connection
+        from pymongo import MongoClient
         result = create_engine('master')
         conn = result.connect()
-        assert isinstance(conn, Connection)
+        assert isinstance(conn, MongoClient)
 
-    @patch('ming.datastore.Connection', spec=True)
+    @patch('ming.datastore.MongoClient', spec=True)
     def test_get_db(self, MockConnection):
-        from pymongo import Connection
+        from pymongo import MongoClient
         result = create_engine('master')
         conn = result.connect()
-        assert isinstance(conn, Connection)
+        assert isinstance(conn, MongoClient)
         self.assertEqual(conn.read_preference, result.read_preference)
 
-    @patch('ming.datastore.Connection', spec=True)
+    @patch('ming.datastore.MongoClient', spec=True)
     @patch('ming.datastore.gevent')
     def test_greenlets(self, gevent, MockConnection):
-        from pymongo import Connection
+        from pymongo import MongoClient
         result = create_engine('master', use_greenlets=True)
         conn = result.connect()
-        assert isinstance(conn, Connection)
+        assert isinstance(conn, MongoClient)
 
 class TestConnectionFailure(TestCase):
 
@@ -56,50 +56,21 @@ class TestEngineMim(TestCase):
             conn = result.connect()
             assert conn is Connection.get()
 
-class TestMasterSlave(TestCase):
-    
-    @patch('ming.datastore.Connection', spec=True)
-    @patch('ming.datastore.MasterSlaveConnection', spec=True)
-    def test_with_strings(self, MockMasterSlaveConnection, MockConnection):
-        from pymongo.master_slave_connection import MasterSlaveConnection
-        result = create_engine(
-            'master', slaves=['slave1', 'slave2'])
-        conn = result.connect()
-        assert isinstance(conn, MasterSlaveConnection)
-        mock_conn = MockConnection()
-        MockMasterSlaveConnection.assert_called_with(
-            mock_conn, [mock_conn, mock_conn],
-            document_class=dict, tz_aware=False)
-
-    @patch('ming.datastore.Connection', spec=True)
-    @patch('ming.datastore.MasterSlaveConnection', spec=True)
-    def test_with_connections(self, MockMasterSlaveConnection, MockConnection):
-        from pymongo.master_slave_connection import MasterSlaveConnection
-        master = Mock()
-        slaves = [ Mock(), Mock() ]
-        result = create_engine(master, slaves=slaves)
-        conn = result.connect()
-        assert isinstance(conn, MasterSlaveConnection)
-        MockMasterSlaveConnection.assert_called_with(
-            master, slaves,
-            document_class=dict, tz_aware=False)
-
 class TestReplicaSet(TestCase):
 
-    @patch('ming.datastore.Connection', spec=True)
-    @patch('ming.datastore.ReplicaSetConnection', spec=True)
-    def test_replica_set(self, MockRSConn, MockConn):
-        from pymongo import ReplicaSetConnection
+    @patch('ming.datastore.MongoClient', spec=True)
+    def test_replica_set(self, MockConn):
+        from pymongo import MongoClient
         result = create_engine(
             'mongodb://localhost:23,localhost:27017,localhost:999/',
             replicaSet='foo')
         conn = result.connect()
-        assert isinstance(conn, ReplicaSetConnection)
+        assert isinstance(conn, MongoClient)
 
 class TestDatastore(TestCase):
 
     def setUp(self):
-        self.patcher_conn = patch('ming.datastore.Connection')
+        self.patcher_conn = patch('ming.datastore.MongoClient')
         self.MockConn = self.patcher_conn.start()
 
     def tearDown(self):
@@ -127,7 +98,7 @@ class TestDatastore(TestCase):
             ds._authenticate,
             dict(name='user', password='pass'))
 
-    @patch('ming.datastore.Connection', spec=True)
+    @patch('ming.datastore.MongoClient', spec=True)
     def test_configure(self, Connection):
         ming.configure(**{
                 'ming.main.uri':'mongodb://localhost:27017/test_db',
