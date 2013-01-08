@@ -455,7 +455,8 @@ class Collection(collection.Collection):
 
 class Cursor(object):
 
-    def __init__(self, collection, _iterator_gen, sort=None, skip=None, limit=None, fields=None, as_class=dict):
+    def __init__(self, collection, _iterator_gen,
+                 sort=None, skip=None, limit=None, fields=None, as_class=dict):
         if fields is not None and '_id' not in fields:
             f = ['_id']
             f.extend(fields)
@@ -482,11 +483,27 @@ class Cursor(object):
             result = itertools.islice(result, abs(self._limit))
         return iter(result)
 
+    def clone(self, **overrides):
+        result = Cursor(
+            collection=self._collection,
+            _iterator_gen=self._iterator_gen,
+            sort=self._sort,
+            skip=self._skip,
+            limit=self._limit,
+            fields=self._fields,
+            as_class=self._as_class)
+        for k,v in overrides.items():
+            setattr(result, k, v)
+        return result
+
     def count(self):
         return sum(1 for x in self._iterator_gen())
 
     def __getitem__(self, key):
-        return self.skip(key).next()
+        # Le *sigh* -- this is the only place apparently where pymongo *does*
+        # clone
+        clone = self.clone()
+        return clone.skip(key).next()
 
     def __iter__(self):
         return self
@@ -510,7 +527,7 @@ class Cursor(object):
             else:
                 keys.append(t, ASCENDING)
         self._sort = keys
-        return self
+        return self # I'd rather clone, but that's not what pymongo does here
 
     def all(self):
         return list(self._iterator_gen())
@@ -519,13 +536,13 @@ class Cursor(object):
         if not self._safe_to_chain:
             raise InvalidOperation('cannot set options after executing query')
         self._skip = skip
-        return self
+        return self # I'd rather clone, but that's not what pymongo does here
 
     def limit(self, limit):
         if not self._safe_to_chain:
             raise InvalidOperation('cannot set options after executing query')
-        self._limit = limit
-        return self
+        self._skip = limit
+        return self # I'd rather clone, but that's not what pymongo does here
 
     def distinct(self, key):
         return list(set(_lookup(d, key) for d in self.all()))

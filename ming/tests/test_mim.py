@@ -249,6 +249,14 @@ class TestCollection(TestCase):
         self.bind = create_datastore('mim:///testdb')
         self.bind.conn.drop_all()
 
+    def test_getitem_clones(self):
+        test = self.bind.db.test
+        test.insert({'a':'b'})
+        cursor = test.find()
+        doc = cursor[0]
+        self.assertEqual(cursor.next(), doc)
+
+
     def test_upsert_simple(self):
         test = self.bind.db.test
         test.update(
