@@ -496,6 +496,11 @@ class Cursor(object):
             setattr(result, k, v)
         return result
 
+    def rewind(self):
+        if not self._safe_to_chain:
+            del self.iterator
+            self._safe_to_chain = True
+
     def count(self):
         return sum(1 for x in self._iterator_gen())
 

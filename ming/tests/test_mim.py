@@ -78,6 +78,16 @@ class TestDatastore(TestCase):
         assert o['_id'] == 'foo'
         assert 'c' not in o
 
+    def test_rewind(self):
+        collection = self.bind.db.coll
+        collection.insert({'a':'b'}, safe=True)
+
+        cursor = collection.find()
+        doc = cursor[0]
+        cursor.next()
+        cursor.rewind()
+        assert cursor.next() == doc        
+
 class TestCommands(TestCase):
         
     sum_js = '''function(key,values) {
