@@ -174,8 +174,13 @@ class Database(database.Database):
             if isinstance(obj, spidermonkey.Object):
                 tmp_j.add_global('x', obj)
                 js_source = tmp_j.execute('x.toSource()')
-                if 'new Date' in js_source:
+                if js_source.startswith('(new Date'):
+                    # Date object by itself
                     obj = datetime.fromtimestamp(tmp_j.execute('x.valueOf()')/1000.)
+                elif js_source.startswith('({'):
+                    # Handle recursive conversion in case we got back a
+                    # mapping with multiple values.
+                    obj = dict((a, topy(obj[a])) for a in obj)
                 else:
                     assert False, 'Cannot convert %s to Python' % (js_source)
             elif isinstance(obj, collections.Mapping):

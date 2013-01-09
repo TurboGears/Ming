@@ -166,6 +166,48 @@ class TestMRCommands(TestCommands):
         self.assertEqual(result['results'][0]['_id'], 1)
         self.assert_(isinstance(result['results'][0]['value'], datetime))
 
+    # MAP_TIMESTAMP and REDUCE_MIN_MAX are based on the recipe
+    # http://cookbook.mongodb.org/patterns/finding_max_and_min_values_for_a_key
+    MAP_TIMESTAMP = bson.code.Code("""
+    function () {
+        emit('timestamp', { min : this.timestamp,
+                            max : this.timestamp } )
+    }
+    """)
+
+    REDUCE_MIN_MAX = bson.code.Code("""
+    function (key, values) {
+        var res = values[0];
+        for ( var i=1; i<values.length; i++ ) {
+            if ( values[i].min < res.min )
+               res.min = values[i].min;
+            if ( values[i].max > res.max )
+               res.max = values[i].max;
+        }
+        return res;
+    }
+    """)
+
+    def test_mr_inline_multi_date_response(self):
+        # Calculate the min and max timestamp with one mapreduce call,
+        # and return a mapping containing both values.
+        docs = [{'timestamp': datetime(2013, 1, 1, 14, 0)},
+                {'timestamp': datetime(2013, 1, 9, 14, 0)},
+                {'timestamp': datetime(2013, 1, 19, 14, 0)},
+                ]
+        for d in docs:
+            self.bind.db.coll.insert(d)
+        result = self.bind.db.coll.map_reduce(
+            map=self.MAP_TIMESTAMP,
+            reduce=self.REDUCE_MIN_MAX,
+            out={'inline': 1})
+        expected = [{'value': {'min': docs[0]['timestamp'],
+                               'max': docs[-1]['timestamp']},
+                     '_id': 'timestamp'}]
+        print 'RESULTS:', result['results']
+        print 'EXPECTED:', expected
+        self.assertEqual(result['results'], expected)
+
     def test_mr_inline_collection(self):
         result = self.bind.db.coll.map_reduce(
             map='function(){ emit(1, this.a); }',
