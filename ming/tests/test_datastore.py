@@ -102,7 +102,6 @@ class TestDatastore(TestCase):
     def test_configure(self, Connection):
         ming.configure(**{
                 'ming.main.uri':'mongodb://localhost:27017/test_db',
-                'ming.main.network_timeout':'0.1',
                 'ming.main.connect_retry': 1,
                 'ming.main.tz_aware': False,
                 })
