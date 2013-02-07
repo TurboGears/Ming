@@ -9,6 +9,7 @@ try:
 except ImportError:
     gevent = None
 
+urlparse.uses_query.append('mongodb')
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
@@ -65,7 +66,7 @@ def create_datastore(uri, **kwargs):
         if bind: raise exc.MingConfigError("bind not allowed with full URI")
         bind_uri = parts._replace(
             netloc=parts.netloc.split('@')[-1],
-            path='').geturl()
+            path='/').geturl()
         bind = create_engine(bind_uri, **kwargs)
 
     # extract the auth information
