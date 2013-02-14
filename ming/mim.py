@@ -162,6 +162,8 @@ class Database(database.Database):
             temp_coll[k].append(v)
         def emit_reduced(k, v):
             print k,v 
+        # Add some special MongoDB functions
+        j.execute('var NumberInt = Number;')
         j.add_global('emit', emit)
         j.add_global('emit_reduced', emit_reduced)
         j.execute('var map=%s;' % map)
