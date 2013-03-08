@@ -699,7 +699,7 @@ def update(doc, updates):
                 doc[kk] = [
                     vvv for vvv in doc[kk] if vvv != vv ]
         elif k == '$set':
-            doc.update(v)
+            deep_update(doc, v)
         elif k.startswith('$'):
             raise NotImplementedError, k
     validate(doc)
@@ -729,6 +729,15 @@ def wrap_as_class(value, as_class):
         return [ wrap_as_class(v, as_class) for v in value ]
     else:
         return value
+
+def deep_update(doc, updates):
+    for k, v in updates.items():
+        if '.' in k:
+            prefix, rest = k.split('.', 1)
+            deep_update(doc.setdefault(prefix, {}),
+                        { rest: v })
+        else:
+            doc[k] = v
 
 class _DummyRequest(object):
 
