@@ -86,7 +86,66 @@ class TestDatastore(TestCase):
         doc = cursor[0]
         cursor.next()
         cursor.rewind()
-        assert cursor.next() == doc        
+        assert cursor.next() == doc
+
+
+class TestDottedOperators(TestCase):
+
+    def setUp(self):
+        self.bind = create_datastore('mim:///testdb')
+        self.bind.conn.drop_all()
+        self.bind.db.coll.insert(
+            {'_id':'foo', 'a':2,
+             'b': { 'c': 1, 'd': 2, 'e': [1,2,3],
+                    'f': [ { 'g': 1 }, { 'g': 2 } ] } })
+        self.coll = self.bind.db.coll
+
+    def test_find_dotted(self):
+        self.assertEqual(self.coll.find({'b.c': 1}).count(), 1)
+        self.assertEqual(self.coll.find({'b.c': 2}).count(), 0)
+
+    def test_inc_dotted(self):
+        self.coll.update({}, { '$inc': { 'b.c': 4 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.c': 1 })
+        self.assertEqual(obj, { 'b': { 'c': 5 } })
+
+    def test_set_dotted(self):
+        self.coll.update({}, { '$set': { 'b.c': 4 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.c': 1 })
+        self.assertEqual(obj, { 'b': { 'c': 4 } })
+
+    def test_push_dotted(self):
+        self.coll.update({}, { '$push': { 'b.e': 4 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
+        self.assertEqual(obj, { 'b': { 'e': [1,2,3,4] } })
+
+    def test_addToSet_dotted(self):
+        self.coll.update({}, { '$addToSet': { 'b.e': 4 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
+        self.assertEqual(obj, { 'b': { 'e': [1,2,3,4] } })
+        self.coll.update({}, { '$addToSet': { 'b.e': 4 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
+        self.assertEqual(obj, { 'b': { 'e': [1,2,3,4] } })
+
+    def test_project_dotted(self):
+        obj = self.coll.find_one({}, { 'b.e': 1 })
+        self.assertEqual(obj, { '_id': 'foo', 'b': { 'e': [ 1,2,3] } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
+        self.assertEqual(obj, { 'b': { 'e': [ 1,2,3] } })
+
+    def test_lt_dotted(self):
+        obj = self.coll.find_one({'b.c': { '$lt': 1 } })
+        self.assertEqual(obj, None)
+        obj = self.coll.find_one({'b.c': { '$lt': 2 } })
+        self.assertNotEqual(obj, None)
+
+    def test_pull_dotted(self):
+        self.coll.update(
+            {},
+            { '$pull': { 'b.f': { 'g': { '$gt': 1 } } } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 } )
+        self.assertEqual(obj, { 'b': { 'f': [ {'g': 1 } ] } } )
+
 
 class TestCommands(TestCase):
         

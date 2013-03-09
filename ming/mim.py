@@ -464,8 +464,10 @@ class Cursor(object):
     def __init__(self, collection, _iterator_gen,
                  sort=None, skip=None, limit=None, fields=None, as_class=dict):
         if fields is not None and '_id' not in fields:
-            f = ['_id']
-            f.extend(fields)
+            if isinstance(fields, list):
+                fields = dict((f, 1) for f in fields)
+            f = { '_id': 1 }
+            f.update(fields)
             fields = f
 
         self._collection = collection
@@ -690,9 +692,7 @@ def update(doc, updates):
         elif k == '$addToSet':
             _addToSet(doc, v)
         elif k == '$pull':
-            for kk, vv in v.iteritems():
-                doc[kk] = [
-                    vvv for vvv in doc[kk] if vvv != vv ]
+            _pull(doc, v)
         elif k == '$set':
             _set(doc, v)
         elif k.startswith('$'):
@@ -753,12 +753,21 @@ def _addToSet(doc, updates):
     for k, v in updates.items():
         subdoc, key = _traverse_doc(doc, k)
         l = subdoc.setdefault(key, [])
-        if key not in l:
+        if v not in l:
             l.append(v)
+
+def _pull(doc, updates):
+    for k, v in updates.items():
+        subdoc, key = _traverse_doc(doc, k)
+        l = subdoc.setdefault(key, [])
+        subdoc[key] = [
+            vv for vv in l
+            if not match(v, vv) ]
 
 def _project(doc, fields):
     result = {}
-    for name in fields:
+    for name, value in fields.items():
+        if not value: continue
         sub_doc, key = _traverse_doc(doc, name)
         sub_result, key = _traverse_doc(result, name)
         sub_result[key] = sub_doc[key]
