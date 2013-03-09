@@ -274,6 +274,14 @@ class TestMRCommands(TestCommands):
             out=dict(inline=1))
         self.assertEqual(result['results'], [ dict(_id=1, value=2) ])
 
+    def test_mr_finalize(self):
+        result = self.bind.db.coll.map_reduce(
+            map='function(){ emit(1, this.a); }',
+            reduce=self.sum_js,
+            out=dict(inline=1),
+            finalize='function(k, v){ return v + 42; }')
+        self.assertEqual(result['results'], [ dict(_id=1, value=44) ])
+
     def test_mr_merge(self):
         result = self.bind.db.command(
             'mapreduce', 'coll',

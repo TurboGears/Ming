@@ -149,7 +149,7 @@ class Database(database.Database):
             raise NotImplementedError, repr(command)
 
     def _handle_mapreduce(self, collection,
-                          query=None, map=None, reduce=None, out=None):
+                          query=None, map=None, reduce=None, out=None, finalize=None):
         if self._jsruntime is None:
             raise ImportError, 'Cannot import spidermonkey, required for MIM mapreduce'
         j = self._jsruntime.new_context()
@@ -166,6 +166,8 @@ class Database(database.Database):
         j.add_global('emit_reduced', emit_reduced)
         j.execute('var map=%s;' % map)
         j.execute('var reduce=%s;' % reduce)
+        if finalize:
+            j.execute('var finalize=%s;' % finalize)
         if query is None: query = {}
         # Run the map phase
         def topy(obj):
@@ -212,6 +214,11 @@ class Database(database.Database):
         reduced = topy(dict(
             (k, j.execute('reduce')(k, tojs(values)))
             for k, values in temp_coll.iteritems()))
+        # Run the finalize phase
+        if finalize:
+            reduced = topy(dict(
+                (k, j.execute('finalize')(k, tojs(value)))
+                for k, value in reduced.iteritems()))
         # Handle the output phase
         result = dict()
         assert len(out) == 1
@@ -463,9 +470,10 @@ class Cursor(object):
 
     def __init__(self, collection, _iterator_gen,
                  sort=None, skip=None, limit=None, fields=None, as_class=dict):
+        if isinstance(fields, list):
+            fields = dict((f, 1) for f in fields)
+        
         if fields is not None and '_id' not in fields:
-            if isinstance(fields, list):
-                fields = dict((f, 1) for f in fields)
             f = { '_id': 1 }
             f.update(fields)
             fields = f
