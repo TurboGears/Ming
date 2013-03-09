@@ -375,14 +375,21 @@ class Collection(collection.Collection):
     def update(self, spec, document, upsert=False, safe=False, multi=False):
         bson_safe(spec)
         bson_safe(document)
-        updated = False
+        result = dict(
+            connectionId=None,
+            updatedExisting=False,
+            err=None,
+            ok=1.0,
+            n=0)
         for doc in self._find(spec):
             self._deindex(doc) 
             update(doc, document)
             self._index(doc) 
-            updated = True
+            result['n'] += 1
             if not multi: break
-        if updated: return
+        if result['n']:
+            result['updatedExisting'] = True
+            return result
         if upsert:
             doc = dict(spec)
             update(doc, document)
@@ -391,7 +398,10 @@ class Collection(collection.Collection):
                 _id = doc['_id'] = bson.ObjectId()
             self._index(doc) 
             self._data[_id] = bcopy(doc)
-            return _id
+            result['upserted'] = _id
+            return result
+        else:
+            return result
 
     def remove(self, spec=None, **kwargs):
         if spec is None: spec = {}
