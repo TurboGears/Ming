@@ -334,7 +334,8 @@ class Collection(collection.Collection):
                 self.insert(before)
             else:
                 return None
-        self.update(query, update)
+        before = self.find_one(query, sort=kwargs.get('sort'))
+        self.update({'_id': before['_id']}, update)
         if kwargs.get('new', False) or upserted:
             return self.find_one(dict(_id=before['_id']))
         return before
@@ -522,7 +523,7 @@ class Cursor(object):
         value = self.iterator.next()
         value = bcopy(value)
         if self._fields:
-            value = dict((k, value[k]) for k in self._fields)
+            value = _project(value, self._fields)
         return wrap_as_class(value, self._as_class)
 
     def sort(self, key_or_list, direction=ASCENDING):
@@ -683,23 +684,17 @@ def update(doc, updates):
         doc.update(newdoc)
     for k, v in updates.iteritems():
         if k == '$inc':
-            for kk, vv in v.iteritems():
-                doc[kk] = doc.get(kk, 0) + vv
+            _inc(doc, v)
         elif k == '$push':
-            for kk, vv in v.iteritems():
-                l = doc.setdefault(kk, [])
-                l.append(vv)
+            _push(doc, v)
         elif k == '$addToSet':
-            for kk, vv in v.iteritems():
-                l = doc.setdefault(kk, [])
-                if vv not in l:
-                    l.append(vv)
+            _addToSet(doc, v)
         elif k == '$pull':
             for kk, vv in v.iteritems():
                 doc[kk] = [
                     vvv for vvv in doc[kk] if vvv != vv ]
         elif k == '$set':
-            deep_update(doc, v)
+            _set(doc, v)
         elif k.startswith('$'):
             raise NotImplementedError, k
     validate(doc)
@@ -730,14 +725,44 @@ def wrap_as_class(value, as_class):
     else:
         return value
 
-def deep_update(doc, updates):
+def _traverse_doc(doc, key):
+    path = key.split('.')
+    cur = doc
+    for part in path[:-1]:
+        cur = cur.setdefault(part, {})
+    return cur, path[-1]
+
+def _inc(doc, updates):
+    for k,v in updates.items():
+        subdoc, key = _traverse_doc(doc, k)
+        subdoc.setdefault(key, 0)
+        subdoc[key] += v
+
+def _set(doc, updates):
     for k, v in updates.items():
-        if '.' in k:
-            prefix, rest = k.split('.', 1)
-            deep_update(doc.setdefault(prefix, {}),
-                        { rest: v })
-        else:
-            doc[k] = v
+        subdoc, key = _traverse_doc(doc, k)
+        subdoc[key] = v
+
+def _push(doc, updates):
+    for k, v in updates.items():
+        subdoc, key = _traverse_doc(doc, k)
+        l = subdoc.setdefault(key, [])
+        l.append(v)
+
+def _addToSet(doc, updates):
+    for k, v in updates.items():
+        subdoc, key = _traverse_doc(doc, k)
+        l = subdoc.setdefault(key, [])
+        if key not in l:
+            l.append(v)
+
+def _project(doc, fields):
+    result = {}
+    for name in fields:
+        sub_doc, key = _traverse_doc(doc, name)
+        sub_result, key = _traverse_doc(result, name)
+        sub_result[key] = sub_doc[key]
+    return result
 
 class _DummyRequest(object):
 
