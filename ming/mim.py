@@ -300,7 +300,8 @@ class Collection(collection.Collection):
         bson_safe(spec)
         def _gen():
             for doc in self._data.itervalues():
-                if match(spec, doc): yield doc
+                mspec = match(spec, doc)
+                if mspec is not None: yield doc, mspec
         return _gen()
 
     def find(self, spec=None, fields=None, as_class=dict, **kwargs):
@@ -369,9 +370,9 @@ class Collection(collection.Collection):
             err=None,
             ok=1.0,
             n=0)
-        for doc in self._find(spec):
+        for doc, mspec in self._find(spec):
             self._deindex(doc) 
-            update(doc, document)
+            update(doc, mspec, document)
             self._index(doc) 
             result['n'] += 1
             if not multi: break
@@ -380,7 +381,7 @@ class Collection(collection.Collection):
             return result
         if upsert:
             doc = dict(spec)
-            update(doc, document)
+            update(doc, MatchDoc(doc), document)
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
@@ -490,7 +491,7 @@ class Cursor(object):
     @LazyProperty
     def iterator(self):
         self._safe_to_chain = False
-        result = self._iterator_gen()
+        result = (doc for doc,match in self._iterator_gen())
         if self._sort is not None:
             result = sorted(result, cmp=cursor_comparator(self._sort))
         if self._skip is not None:
@@ -708,9 +709,10 @@ class Match(object):
             return self[key]
         except KeyError:
             return default
-    
+
 class MatchDoc(Match):
     def __init__(self, doc):
+        self._orig = doc
         self._doc = {}
         for k,v in doc.iteritems():
             if isinstance(v, list):
@@ -721,6 +723,8 @@ class MatchDoc(Match):
                 self._doc[k] = v
     def traverse(self, first, *rest):
         if not rest:
+            if '.' in first:
+                return self.traverse(*(first.split('.')))
             return self, first
         return self[first].traverse(*rest)
     def iteritems(self):
@@ -733,9 +737,16 @@ class MatchDoc(Match):
         return 'M%r' % (self._doc,)
     def __getitem__(self, key):
         return self._doc[key]
+    def __setitem__(self, key, value):
+        self._doc[key] = value
+        self._orig[key] = value
+    def setdefault(self, key, default):
+        self._doc.setdefault(key, default)
+        return self._orig.setdefault(key, default)
 
 class MatchList(Match):
     def __init__(self, doc, pos=None):
+        self._orig = doc
         self._doc = []
         for ele in doc:
             if isinstance(ele, list):
@@ -770,12 +781,29 @@ class MatchList(Match):
     def __getitem__(self, key):
         try:
             if key == '$':
-                return self._doc[self._pos]
+                if self._pos is None:
+                    return self._doc[0]
+                else:
+                    return self._doc[self._pos]
             else:
                 return self._doc[int(key)]
         except IndexError:
             raise KeyError, key
-                
+    def __setitem__(self, key, value):
+        if key == '$':
+            key = self._pos
+        self._doc[key] = value
+        self._orig[key] = value
+    def setdefault(self, key, default):
+        if key == '$':
+            key = self._pos
+        if key <= len(self._orig):
+            return self._orig[key]
+        while key >= len(self._orig):
+            self._doc.append(None)
+            self._orig.append(None)
+        self._doc[key] = default
+        self._orig[key] = default
 
 
 def _parse_query(v):
@@ -836,7 +864,7 @@ def compare(op, a, b):
         return match(b, a)
     raise NotImplementedError, op
         
-def update(doc, updates):
+def update(doc, mspec, updates):
     newdoc = {}
     for k, v in updates.iteritems():
         if k.startswith('$'): continue
@@ -846,15 +874,15 @@ def update(doc, updates):
         doc.update(newdoc)
     for k, v in updates.iteritems():
         if k == '$inc':
-            _inc(doc, v)
+            _inc(mspec, v)
         elif k == '$push':
-            _push(doc, v)
+            _push(mspec, v)
         elif k == '$addToSet':
-            _addToSet(doc, v)
+            _addToSet(mspec, v)
         elif k == '$pull':
-            _pull(doc, v)
+            _pull(mspec, v)
         elif k == '$set':
-            _set(doc, v)
+            _set(mspec, v)
         elif k.startswith('$'):
             raise NotImplementedError, k
     validate(doc)
@@ -892,33 +920,33 @@ def _traverse_doc(doc, key):
         cur = cur.setdefault(part, {})
     return cur, path[-1]
 
-def _inc(doc, updates):
+def _inc(mspec, updates):
     for k,v in updates.items():
-        subdoc, key = _traverse_doc(doc, k)
+        subdoc, key = mspec.traverse(k)
         subdoc.setdefault(key, 0)
         subdoc[key] += v
 
-def _set(doc, updates):
+def _set(mspec, updates):
     for k, v in updates.items():
-        subdoc, key = _traverse_doc(doc, k)
+        subdoc, key = mspec.traverse(k)
         subdoc[key] = v
 
-def _push(doc, updates):
+def _push(mspec, updates):
     for k, v in updates.items():
-        subdoc, key = _traverse_doc(doc, k)
+        subdoc, key = mspec.traverse(k)
         l = subdoc.setdefault(key, [])
         l.append(v)
 
-def _addToSet(doc, updates):
+def _addToSet(mspec, updates):
     for k, v in updates.items():
-        subdoc, key = _traverse_doc(doc, k)
+        subdoc, key = mspec.traverse(k)
         l = subdoc.setdefault(key, [])
         if v not in l:
             l.append(v)
 
-def _pull(doc, updates):
+def _pull(mspec, updates):
     for k, v in updates.items():
-        subdoc, key = _traverse_doc(doc, k)
+        subdoc, key = mspec.traverse(k)
         l = subdoc.setdefault(key, [])
         subdoc[key] = [
             vv for vv in l
