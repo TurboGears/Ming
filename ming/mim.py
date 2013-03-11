@@ -6,6 +6,7 @@ import sys
 import time
 import itertools
 import collections
+import logging
 from datetime import datetime
 from hashlib import md5
 
@@ -20,6 +21,8 @@ from ming.utils import LazyProperty
 import bson
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo import database, collection, ASCENDING
+
+log = logging.getLogger(__name__)
 
 class Connection(object):
     _singleton = None
@@ -193,13 +196,8 @@ class Database(database.Database):
                 return result
             else: return obj
         for obj in self._collections[collection].find(query):
-            print obj, topy(tojs(obj))
             obj = tojs(obj)
             j.execute('map').apply(obj)
-            for k, vs in temp_coll.items():
-                print '%s:' % k
-                for v in vs:
-                    print '    - %r' % topy(v)
         # Run the reduce phase
         reduced = topy(dict(
             (k, j.execute('reduce')(k, tojs(values)))
@@ -664,8 +662,8 @@ def match(spec, doc):
 
 class Match(object): 
     def match(self, key, op, value):
-        print 'match(%r, %r, %r, %r)' % (
-            self, key, op, value)
+        log.debug('match(%r, %r, %r, %r)',
+                  self, key, op, value)
         val = self.get(key, ())
         if isinstance(val, MatchList):
             if val.match('$', op, value): return True
