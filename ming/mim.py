@@ -21,23 +21,6 @@ import bson
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo import database, collection, ASCENDING
 
-_bson_types = [
-    [ type(None) ],
-    [ int, long, float ],
-    [ str, unicode ],
-    [ dict ],
-    [ list ],
-    [ bson.Binary ],
-    [ bson.ObjectId ],
-    [ bool ],
-    [ datetime ],
-    [ type(re.compile('foo')) ]
-    ]
-_bson_type_index = {}
-for i, types in enumerate(_bson_types):
-    for t in types:
-        _bson_type_index[t] = i
-
 class Connection(object):
     _singleton = None
 
@@ -210,8 +193,13 @@ class Database(database.Database):
                 return result
             else: return obj
         for obj in self._collections[collection].find(query):
+            print obj, topy(tojs(obj))
             obj = tojs(obj)
             j.execute('map').apply(obj)
+            for k, vs in temp_coll.items():
+                print '%s:' % k
+                for v in vs:
+                    print '    - %r' % topy(v)
         # Run the reduce phase
         reduced = topy(dict(
             (k, j.execute('reduce')(k, tojs(values)))
@@ -603,40 +591,192 @@ def cursor_comparator(keys):
         for k,d in keys:
             x = _lookup(a, k, None)
             y = _lookup(b, k, None)
-            part = bson_compare(x, y)
+            part = BsonArith.cmp(x, y)
             if part: return part * d
         return 0
     return comparator
 
-def bson_compare(x, y):
-    tx = _bson_type_index[type(x)]
-    ty = _bson_type_index[type(y)]
-    if tx == ty:
-        return cmp(x, y)
-    else:
-        return cmp(tx, ty)
+class BsonArith(object):
+    _types = None
+    _index = None
+
+    @classmethod
+    def cmp(cls, x, y):
+        return cmp(cls.to_bson(x), cls.to_bson(y))
+
+    @classmethod
+    def to_bson(cls, val):
+        tp = cls.bson_type(val)
+        return (tp, cls._types[tp][0](val))
+
+    @classmethod
+    def bson_type(cls, value):
+        if cls._index is None:
+            cls._build_index()
+        tp = cls._index.get(type(value), None)
+        if tp is not None: return tp
+        for tp, (conv, types) in enumerate(cls._types):
+            if isinstance(value, tuple(types)):
+                cls._index[type(value)] = tp
+                return tp
+        raise KeyError, type(value)
+
+    @classmethod
+    def _build_index(cls):
+        cls._build_types()
+        cls._index = {}
+        for tp, (conv, types) in enumerate(cls._types):
+            for t in types:
+                cls._index[t] = tp
+
+    @classmethod
+    def _build_types(cls):
+        cls._types = [
+            (lambda x:x, [ type(None) ]),
+            (lambda x:x, [ int, long, float ]),
+            (lambda x:x, [ str, unicode ]),
+            (lambda x:dict(x), [ dict, MatchDoc ]),
+            (lambda x:list(x), [ list, MatchList ]),
+            (lambda x:x, [ bson.Binary ]),
+            (lambda x:x, [ bson.ObjectId ]),
+            (lambda x:x, [ bool ]),
+            (lambda x:x, [ datetime ]),
+            (lambda x:x, [ type(re.compile('foo')) ] )
+            ]        
 
 def match(spec, doc):
-    '''TODO:
-    currently this should match, but it doesn't:
-    match({'tags.tag':'test'}, {'tags':[{'tag':'test'}]})
-    '''
+    if '$or' in spec:
+        assert len(spec) == 1
+        if any(match(branch, doc) for branch in spec['$or']):
+            return True
+        return None
+    mspec = MatchDoc(doc)
     try:
         for k,v in spec.iteritems():
-            if k == '$or':
-                if not isinstance(spec[k], list):
-                    raise InvalidOperation('$or clauses must be provided in a list')
-                for query in v:
-                    if match(query, doc): break
-                else:
+            subdoc, subdoc_key = mspec.traverse(*k.split('.'))
+            for op, value in _parse_query(v):
+                if not subdoc.match(subdoc_key, op, value): return None
+    except KeyError:
+        raise
+        return None
+    return mspec
+
+class Match(object): 
+    def match(self, key, op, value):
+        print 'match(%r, %r, %r, %r)' % (
+            self, key, op, value)
+        val = self.get(key, ())
+        if isinstance(val, MatchList):
+            if val.match('$', op, value): return True
+        if op == '$eq': return BsonArith.cmp(val, value) == 0
+        if op == '$neq': return BsonArith.cmp(val, value) != 0
+        if op == '$gt': return BsonArith.cmp(val, value) > 0
+        if op == '$gte': return BsonArith.cmp(val, value) >= 0
+        if op == '$lt': return BsonArith.cmp(val, value) < 0
+        if op == '$lte': return BsonArith.cmp(val, value) <= 0
+        if op == '$in':
+            for ele in value:
+                if self.match(key, '$eq', ele):
+                    return True
+            return False
+        if op == '$nin':
+            for ele in value:
+                if self.match(key, '$eq', ele):
                     return False
+            return True
+        if op == '$exists':
+            if value: return val != ()
+            else: return val == ()
+        if op == '$all':
+            for ele in value:
+                if not self.match(key, '$eq', ele):
+                    return False
+            return True
+        if op == '$elemMatch':
+            if not isinstance(val, MatchList): return False
+            for ele in val:
+                m = match(value, ele)
+                if m: return True
+            return False
+        raise NotImplementedError, op
+    def getvalue(self, path):
+        parts = path.split('.')
+        subdoc, key = self.traverse(*parts)
+        return subdoc[key]
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+    
+class MatchDoc(Match):
+    def __init__(self, doc):
+        self._doc = {}
+        for k,v in doc.iteritems():
+            if isinstance(v, list):
+                self._doc[k] = MatchList(v)
+            elif isinstance(v, dict):
+                self._doc[k] = MatchDoc(v)
             else:
-                for op, value in _parse_query(v):
-                    if not _part_match(op, value, k.split('.'), doc):
-                        return False
-    except (AttributeError, KeyError), ex:
-        return False
-    return True
+                self._doc[k] = v
+    def traverse(self, first, *rest):
+        if not rest:
+            return self, first
+        return self[first].traverse(*rest)
+    def iteritems(self):
+        return self._doc.iteritems()
+    def __eq__(self, o):
+        return isinstance(o, MatchDoc) and self._doc == o._doc
+    def __hash__(self):
+        return hash(self._doc)
+    def __repr__(self):
+        return 'M%r' % (self._doc,)
+    def __getitem__(self, key):
+        return self._doc[key]
+
+class MatchList(Match):
+    def __init__(self, doc, pos=None):
+        self._doc = []
+        for ele in doc:
+            if isinstance(ele, list):
+                self._doc.append(MatchList(ele))
+            elif isinstance(ele, dict):
+                self._doc.append(MatchDoc(ele))
+            else:
+                self._doc.append(ele)
+        self._pos = pos
+    def __iter__(self):
+        return iter(self._doc)
+    def traverse(self, first, *rest):
+        if not rest:
+            return self, first
+        return self[first].traverse(*rest)
+    def match(self, key, op, value):
+        if key == '$':
+            for i, item in enumerate(self._doc):
+                if self.match(i, op, value):
+                    if self._pos is None:
+                        self._pos = i
+                    return True
+            return None
+        return super(MatchList, self).match(key, op, value)
+
+    def __eq__(self, o):
+        return isinstance(o, MatchList) and self._doc == o._doc
+    def __hash__(self):
+        return hash(self._doc)
+    def __repr__(self):
+        return 'M<%r>%r' % (self._pos, self._doc)
+    def __getitem__(self, key):
+        try:
+            if key == '$':
+                return self._doc[self._pos]
+            else:
+                return self._doc[int(key)]
+        except IndexError:
+            raise KeyError, key
+                
+
 
 def _parse_query(v):
     if isinstance(v, dict) and all(k.startswith('$') for k in v.keys()):
@@ -666,10 +806,10 @@ def _lookup(doc, k, default=()):
     return doc
 
 def compare(op, a, b):
-    if op == '$gt': return bson_compare(a, b) > 0
-    if op == '$gte': return bson_compare(a, b) >= 0
-    if op == '$lt': return bson_compare(a, b) < 0
-    if op == '$lte': return bson_compare(a, b) <= 0
+    if op == '$gt': return BsonArith.cmp(a, b) > 0
+    if op == '$gte': return BsonArith.cmp(a, b) >= 0
+    if op == '$lt': return BsonArith.cmp(a, b) < 0
+    if op == '$lte': return BsonArith.cmp(a, b) <= 0
     if op == '$eq':
         if hasattr(b, 'match'):
             return b.match(a)
@@ -803,3 +943,4 @@ class _DummyRequest(object):
     
     def end(self):
         pass
+

@@ -2,8 +2,7 @@ from datetime import datetime
 from unittest import TestCase
 
 import bson
-from ming import create_datastore
-from ming.mim import bson_compare
+from ming import create_datastore, mim
 from pymongo.errors import OperationFailure
 from nose import SkipTest
 
@@ -99,6 +98,11 @@ class TestDottedOperators(TestCase):
              'b': { 'c': 1, 'd': 2, 'e': [1,2,3],
                     'f': [ { 'g': 1 }, { 'g': 2 } ] } })
         self.coll = self.bind.db.coll
+
+    def test_inc_dotted_dollar(self):
+        self.coll.update({'b.e': 2}, { '$inc': { 'b.e.$': 1 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
+        self.assertEqual(obj, { 'b': { 'e': [ 1,3,3 ] } })
 
     def test_find_dotted(self):
         self.assertEqual(self.coll.find({'b.c': 1}).count(), 1)
@@ -250,13 +254,14 @@ class TestMRCommands(TestCommands):
     def test_mr_inline_multi_date_response(self):
         # Calculate the min and max timestamp with one mapreduce call,
         # and return a mapping containing both values.
+        self.bind.db.coll.remove()
         docs = [{'timestamp': datetime(2013, 1, 1, 14, 0)},
                 {'timestamp': datetime(2013, 1, 9, 14, 0)},
                 {'timestamp': datetime(2013, 1, 19, 14, 0)},
                 ]
         for d in docs:
-            self.bind.db.coll.insert(d)
-        result = self.bind.db.coll.map_reduce(
+            self.bind.db.date_coll.insert(d)
+        result = self.bind.db.date_coll.map_reduce(
             map=self.MAP_TIMESTAMP,
             reduce=self.REDUCE_MIN_MAX,
             out={'inline': 1})
@@ -432,9 +437,88 @@ class TestCollection(TestCase):
 class TestBsonCompare(TestCase):
 
     def test_boolean_bson_type(self):
-        assert bson_compare(True, True) == 0
-        assert bson_compare(True, False) == 1
-        assert bson_compare(False, True) == -1
-        assert bson_compare(False, False) == 0
-        assert bson_compare(False, bson.ObjectId()) == 1
-        assert bson_compare(True, datetime.fromordinal(1)) == -1
+        assert mim.BsonArith.cmp(True, True) == 0
+        assert mim.BsonArith.cmp(True, False) == 1
+        assert mim.BsonArith.cmp(False, True) == -1
+        assert mim.BsonArith.cmp(False, False) == 0
+        assert mim.BsonArith.cmp(False, bson.ObjectId()) == 1
+        assert mim.BsonArith.cmp(True, datetime.fromordinal(1)) == -1
+
+class TestMatch(TestCase):
+
+    def test_simple_match(self):
+        mspec = mim.match({'foo': 4}, { 'foo': 4 })
+        self.assertEqual(mspec, mim.MatchDoc({'foo': 4}))
+
+    def test_dotted_match(self):
+        mspec = mim.match({'foo.bar': 4}, { 'foo': { 'bar': 4 } })
+        self.assertEqual(mspec, mim.MatchDoc({'foo': mim.MatchDoc({'bar': 4}) } ))
+
+    def test_list_match(self):
+        mspec = mim.match({'foo.bar': 4}, { 'foo': { 'bar': [1,2,3,4,5] } })
+        self.assertEqual(mspec, mim.MatchDoc({
+                    'foo': mim.MatchDoc({'bar': mim.MatchList([1,2,3,4,5], pos=3) } ) }))
+        self.assertEqual(mspec.getvalue('foo.bar.$'), 4)
+
+    def test_elem_match(self):
+        mspec = mim.match({'foo': { '$elemMatch': { 'bar': 1, 'baz': 2 } } },
+                          {'foo': [ { 'bar': 1, 'baz': 2 } ] })
+        self.assertIsNotNone(mspec)
+        mspec = mim.match({'foo': { '$elemMatch': { 'bar': 1, 'baz': 2 } } },
+                          {'foo': [ { 'bar': 1, 'baz': 1 }, { 'bar': 2, 'baz': 2 } ] })
+        self.assertIsNone(mspec)
+
+    def test_gt(self):
+        spec = { 'd': { '$gt': 2 } }
+        self.assertIsNone(mim.match(spec, { 'd': 1 } ))
+        self.assertIsNone(mim.match(spec, { 'd': 2 } ))
+        self.assertIsNotNone(mim.match(spec, { 'd': 3 } ))
+
+    def test_gte(self):
+        spec = { 'd': { '$gte': 2 } }
+        self.assertIsNone(mim.match(spec, { 'd': 1} ))
+        self.assertIsNotNone(mim.match(spec, { 'd': 2 } ))
+        self.assertIsNotNone(mim.match(spec, { 'd': 3} ))
+
+    def test_lt(self):
+        spec = { 'd': { '$lt': 2 } }
+        self.assertIsNotNone(mim.match(spec, { 'd': 1 } ))
+        self.assertIsNone(mim.match(spec, { 'd': 2 } ))
+        self.assertIsNone(mim.match(spec, { 'd': 3 } ))
+
+    def test_lte(self):
+        spec = { 'd': { '$lte': 2 } }
+        self.assertIsNotNone(mim.match(spec, { 'd': 1 } ))
+        self.assertIsNotNone(mim.match(spec, { 'd': 2 } ))
+        self.assertIsNone(mim.match(spec, { 'd': 3 } ))
+
+    def test_range(self):
+        doc = { 'd': 2 }
+        self.assertIsNotNone(mim.match({'d': { '$gt': 1, '$lt': 3 } }, doc))
+        self.assertIsNone(mim.match({'d': { '$gt': 1, '$lt': 2 } }, doc))
+        self.assertIsNotNone(mim.match({'d': { '$gt': 1, '$lte': 2 } }, doc))
+
+    def test_exists(self):
+        doc = { 'd': 2 }
+        self.assertIsNotNone(mim.match({'d': { '$exists': 1 } }, doc))
+        self.assertIsNone(mim.match({'d': { '$exists': 0 } }, doc))
+        self.assertIsNone(mim.match({'e': { '$exists': 1 } }, doc))
+        self.assertIsNotNone(mim.match({'e': { '$exists': 0 } }, doc))
+
+    def test_all(self):
+        doc = { 'c': [ 1, 2 ] }
+        self.assertIsNotNone(mim.match({'c': {'$all': [] } }, doc))
+        self.assertIsNotNone(mim.match({'c': {'$all': [1] } }, doc))
+        self.assertIsNotNone(mim.match({'c': {'$all': [1, 2] } }, doc))
+        self.assertIsNone(mim.match({'c': {'$all': [1, 2, 3] } }, doc))
+
+    def test_or(self):
+        doc = { 'd': 2 }
+        self.assertIsNotNone(mim.match(
+                {'$or': [ { 'd': 1 }, { 'd': 2 } ] },
+                doc))
+        self.assertIsNone(mim.match(
+                {'$or': [ { 'd': 1 }, { 'd': 3 } ] },
+                doc))
+
+    
