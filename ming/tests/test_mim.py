@@ -521,4 +521,6 @@ class TestMatch(TestCase):
                 {'$or': [ { 'd': 1 }, { 'd': 3 } ] },
                 doc))
 
-    
+    def test_traverse_list(self):
+        doc = { 'a': [ { 'b': 1 }, { 'b': 2 } ] }
+        self.assertIsNotNone(mim.match( {'a.b': 1 }, doc))

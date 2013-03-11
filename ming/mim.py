@@ -808,7 +808,15 @@ class MatchList(Match):
                         self._pos = i
                     return True
             return None
-        return super(MatchList, self).match(key, op, value)
+        try:
+            m = super(MatchList, self).match(key, op, value)
+            if m: return m
+        except:
+            pass
+        for ele in self:
+            if (isinstance(ele, Match)
+                and ele.match(key, op, value)):
+                return True
 
     def __eq__(self, o):
         return isinstance(o, MatchList) and self._doc == o._doc
