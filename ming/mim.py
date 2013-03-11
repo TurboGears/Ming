@@ -361,9 +361,9 @@ class Collection(collection.Collection):
             self.update({'_id':_id}, doc, upsert=True, safe=safe)
             return _id
 
-    def update(self, spec, document, upsert=False, safe=False, multi=False):
+    def update(self, spec, updates, upsert=False, safe=False, multi=False):
         bson_safe(spec)
-        bson_safe(document)
+        bson_safe(updates)
         result = dict(
             connectionId=None,
             updatedExisting=False,
@@ -372,7 +372,7 @@ class Collection(collection.Collection):
             n=0)
         for doc, mspec in self._find(spec):
             self._deindex(doc) 
-            update(doc, mspec, document)
+            mspec.update(updates)
             self._index(doc) 
             result['n'] += 1
             if not multi: break
@@ -381,7 +381,7 @@ class Collection(collection.Collection):
             return result
         if upsert:
             doc = dict(spec)
-            update(doc, MatchDoc(doc), document)
+            MatchDoc(doc).update(updates)
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
@@ -709,6 +709,46 @@ class Match(object):
             return self[key]
         except KeyError:
             return default
+    def update(self, updates):
+        newdoc = {}
+        for k, v in updates.iteritems():
+            if k.startswith('$'): break
+            newdoc[k] = bcopy(v)
+        if newdoc:
+            self._orig.clear()
+            self._orig.update(newdoc)
+            return
+        for op, update_parts in updates.iteritems():
+            func = getattr(self, '_op_' + op[1:], None)
+            if func is None:
+                raise NotImplementedError, op
+            for k,arg in update_parts.items():
+                subdoc, key = self.traverse(k)
+                func(subdoc, key, arg)
+        validate(self._orig)
+
+    def _op_inc(self, subdoc, key, arg):
+        subdoc.setdefault(key, 0)
+        subdoc[key] += arg
+
+    def _op_set(self, subdoc, key, arg):
+        subdoc[key] = arg
+        
+    def _op_push(self, subdoc, key, arg):
+        l = subdoc.setdefault(key, [])
+        l.append(arg)
+
+    def _op_addToSet(self, subdoc, key, arg):
+        l = subdoc.setdefault(key, [])
+        if arg not in l:
+            l.append(arg)
+
+    def _op_pull(self, subdoc, key, arg):
+        l = subdoc.setdefault(key, [])
+        subdoc[key] = [
+            vv for vv in l
+            if not match(arg, vv) ]
+
 
 class MatchDoc(Match):
     def __init__(self, doc):
@@ -864,29 +904,6 @@ def compare(op, a, b):
         return match(b, a)
     raise NotImplementedError, op
         
-def update(doc, mspec, updates):
-    newdoc = {}
-    for k, v in updates.iteritems():
-        if k.startswith('$'): continue
-        newdoc[k] = bcopy(v)
-    if newdoc:
-        doc.clear()
-        doc.update(newdoc)
-    for k, v in updates.iteritems():
-        if k == '$inc':
-            _inc(mspec, v)
-        elif k == '$push':
-            _push(mspec, v)
-        elif k == '$addToSet':
-            _addToSet(mspec, v)
-        elif k == '$pull':
-            _pull(mspec, v)
-        elif k == '$set':
-            _set(mspec, v)
-        elif k.startswith('$'):
-            raise NotImplementedError, k
-    validate(doc)
-                
 def validate(doc):
     for k,v in doc.iteritems():
         assert '$' not in k
@@ -919,38 +936,6 @@ def _traverse_doc(doc, key):
     for part in path[:-1]:
         cur = cur.setdefault(part, {})
     return cur, path[-1]
-
-def _inc(mspec, updates):
-    for k,v in updates.items():
-        subdoc, key = mspec.traverse(k)
-        subdoc.setdefault(key, 0)
-        subdoc[key] += v
-
-def _set(mspec, updates):
-    for k, v in updates.items():
-        subdoc, key = mspec.traverse(k)
-        subdoc[key] = v
-
-def _push(mspec, updates):
-    for k, v in updates.items():
-        subdoc, key = mspec.traverse(k)
-        l = subdoc.setdefault(key, [])
-        l.append(v)
-
-def _addToSet(mspec, updates):
-    for k, v in updates.items():
-        subdoc, key = mspec.traverse(k)
-        l = subdoc.setdefault(key, [])
-        if v not in l:
-            l.append(v)
-
-def _pull(mspec, updates):
-    for k, v in updates.items():
-        subdoc, key = mspec.traverse(k)
-        l = subdoc.setdefault(key, [])
-        subdoc[key] = [
-            vv for vv in l
-            if not match(v, vv) ]
 
 def _project(doc, fields):
     result = {}
