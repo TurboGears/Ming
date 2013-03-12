@@ -340,6 +340,7 @@ class Collection(collection.Collection):
         if not isinstance(doc_or_docs, list):
             doc_or_docs = [ doc_or_docs ]
         for doc in doc_or_docs:
+            doc = bcopy(doc)
             bson_safe(doc)
             _id = doc.get('_id', ())
             if _id == ():
@@ -714,7 +715,7 @@ class Match(object):
             newdoc[k] = bcopy(v)
         if newdoc:
             self._orig.clear()
-            self._orig.update(newdoc)
+            self._orig.update(bcopy(newdoc))
             return
         for op, update_parts in updates.iteritems():
             func = getattr(self, '_op_' + op[1:], None)
@@ -730,22 +731,32 @@ class Match(object):
         subdoc[key] += arg
 
     def _op_set(self, subdoc, key, arg):
-        subdoc[key] = arg
+        subdoc[key] = bcopy(arg)
         
     def _op_push(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
-        l.append(arg)
+        l.append(bcopy(arg))
+
+    def _op_pushAll(self, subdoc, key, arg):
+        l = subdoc.setdefault(key, [])
+        l.extend(bcopy(arg))
 
     def _op_addToSet(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
         if arg not in l:
-            l.append(arg)
+            l.append(bcopy(arg))
 
     def _op_pull(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
-        subdoc[key] = [
-            vv for vv in l
-            if not match(arg, vv) ]
+        if isinstance(arg, dict):
+            subdoc[key] = [
+                vv for vv in l
+                if not match(arg, vv) ]
+        else:
+            subdoc[key] = [
+                vv for vv in l
+                if not compare('$eq', arg, vv) ]
+            
 
 
 class MatchDoc(Match):
@@ -923,6 +934,8 @@ def bson_safe(obj):
 def bcopy(obj):
     if isinstance(obj, dict):
         return bson.BSON.encode(obj).decode()
+    elif isinstance(obj, list):
+        return map(bcopy, obj)
     else:
         return obj
         
