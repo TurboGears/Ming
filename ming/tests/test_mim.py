@@ -15,6 +15,14 @@ class TestDatastore(TestCase):
         for r in range(4):
             self.bind.db.rcoll.insert({'_id':'r%s' % r, 'd':r})
 
+    def test_eq(self):
+        f = self.bind.db.rcoll.find
+        assert 1 == f(dict(d={'$eq': 0})).count()
+
+    def test_ne(self):
+        f = self.bind.db.rcoll.find
+        assert 3 == f(dict(d={'$ne': 0})).count()
+
     def test_gt(self):
         f = self.bind.db.rcoll.find
         assert 1 == f(dict(d={'$gt': 2})).count()

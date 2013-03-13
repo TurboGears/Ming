@@ -669,7 +669,7 @@ class Match(object):
         if isinstance(val, MatchList):
             if val.match('$', op, value): return True
         if op == '$eq': return BsonArith.cmp(val, value) == 0
-        if op == '$neq': return BsonArith.cmp(val, value) != 0
+        if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
         if op == '$gte': return BsonArith.cmp(val, value) >= 0
         if op == '$lt': return BsonArith.cmp(val, value) < 0
