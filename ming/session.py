@@ -2,6 +2,8 @@ from __future__ import absolute_import
 import logging
 from functools import update_wrapper
 
+import bson.errors
+
 import pymongo
 import pymongo.errors
 
@@ -18,8 +20,8 @@ def annotate_doc_failure(func):
     def wrapper(self, doc, *args, **kwargs):
         try:
             return func(self, doc, *args, **kwargs)
-        except pymongo.errors.OperationFailure, opf:
-            opf.args = opf.args + (('doc:  ' + str(doc)),)
+        except (pymongo.errors.OperationFailure, bson.errors.BSONError) as e:
+            e.args = e.args + (('doc:  ' + str(doc)),)
             raise
     return update_wrapper(wrapper, func)
 
