@@ -761,7 +761,6 @@ class Match(object):
                 if not compare('$eq', arg, vv) ]
 
 
-
 class MatchDoc(Match):
     def __init__(self, doc):
         self._orig = doc
@@ -778,7 +777,7 @@ class MatchDoc(Match):
             if '.' in first:
                 return self.traverse(*(first.split('.')))
             return self, first
-        return self[first].traverse(*rest)
+        return self.get(first, MatchDoc({})).traverse(*rest)
     def iteritems(self):
         return self._doc.iteritems()
     def __eq__(self, o):
@@ -795,6 +794,7 @@ class MatchDoc(Match):
     def setdefault(self, key, default):
         self._doc.setdefault(key, default)
         return self._orig.setdefault(key, default)
+
 
 class MatchList(Match):
     def __init__(self, doc, pos=None):

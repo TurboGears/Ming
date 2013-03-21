@@ -117,7 +117,8 @@ class TestDottedOperators(TestCase):
         self.bind.db.coll.insert(
             {'_id':'foo', 'a':2,
              'b': { 'c': 1, 'd': 2, 'e': [1,2,3],
-                    'f': [ { 'g': 1 }, { 'g': 2 } ] } })
+                    'f': [ { 'g': 1 }, { 'g': 2 } ] },
+             'x': {} })
         self.coll = self.bind.db.coll
 
     def test_inc_dotted_dollar(self):
@@ -128,6 +129,7 @@ class TestDottedOperators(TestCase):
     def test_find_dotted(self):
         self.assertEqual(self.coll.find({'b.c': 1}).count(), 1)
         self.assertEqual(self.coll.find({'b.c': 2}).count(), 0)
+        self.assertEqual(0, len(self.coll.find({'x.y.z': 1}).all()))
 
     def test_inc_dotted(self):
         self.coll.update({}, { '$inc': { 'b.c': 4 } })
