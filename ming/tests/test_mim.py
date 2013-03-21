@@ -16,6 +16,11 @@ class TestDatastore(TestCase):
         for r in range(4):
             self.bind.db.rcoll.insert({'_id':'r%s' % r, 'd':r})
 
+    def test_limit(self):
+        f = self.bind.db.rcoll.find
+        self.assertEqual(2, len(f({}).limit(2).all()))
+        self.assertEqual(4, len(f({}).limit(0).all()))
+
     def test_regex(self):
         f = self.bind.db.rcoll.find
         assert 4 == f(dict(_id=re.compile(r'r\d+'))).count()
@@ -166,7 +171,7 @@ class TestDottedOperators(TestCase):
 
 
 class TestCommands(TestCase):
-        
+
     sum_js = '''function(key,values) {
         var total = 0;
         for(var i = 0; i < values.length; i++) {
@@ -196,7 +201,7 @@ class TestCommands(TestCase):
         self.assertEqual(result['value'], self.doc)
         newdoc = self.bind.db.coll.find().next()
         self.assertEqual(newdoc['a'], 3, newdoc)
-        
+
     def test_findandmodify_new(self):
         result = self.bind.db.command(
             'findandmodify', 'coll',
@@ -382,7 +387,7 @@ class TestMRCommands(TestCommands):
             [ dict(_id=1, value=45) ])
 
 class TestCollection(TestCase):
-    
+
     def setUp(self):
         self.bind = create_datastore('mim:///testdb')
         self.bind.conn.drop_all()
@@ -403,7 +408,7 @@ class TestCollection(TestCase):
             upsert=True)
         doc = test.find_one()
         self.assertEqual(doc, dict(_id=0, a=5, b=6))
-        
+
     def test_upsert_inc(self):
         test = self.bind.db.test
         test.update(
@@ -412,7 +417,7 @@ class TestCollection(TestCase):
             upsert=True)
         doc = test.find_one()
         self.assertEqual(doc, dict(_id=0, a=7, b=3))
-        
+
     def test_upsert_push(self):
         test = self.bind.db.test
         test.update(
@@ -442,7 +447,7 @@ class TestCollection(TestCase):
         self.assertEqual(type(cursor), type(self.bind.db.coll.find()))
         cursor = self.bind.db.coll.find().hint(None)
         self.assertEqual(type(cursor), type(self.bind.db.coll.find()))
-    
+
     def test_hint_invalid(self):
         self.assertRaises(OperationFailure, self.bind.db.coll.find().hint, [('foobar', 1)])
         self.assertRaises(OperationFailure, self.bind.db.coll.find().hint, 'foobar')

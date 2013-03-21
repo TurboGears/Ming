@@ -551,7 +551,7 @@ class Cursor(object):
         return self # I'd rather clone, but that's not what pymongo does here
 
     def all(self):
-        return list(self._iterator_gen())
+        return list(self.iterator)
 
     def skip(self, skip):
         if not self._safe_to_chain:
@@ -562,7 +562,7 @@ class Cursor(object):
     def limit(self, limit):
         if not self._safe_to_chain:
             raise InvalidOperation('cannot set options after executing query')
-        self._skip = limit
+        self._limit = limit or None
         return self # I'd rather clone, but that's not what pymongo does here
 
     def distinct(self, key):
