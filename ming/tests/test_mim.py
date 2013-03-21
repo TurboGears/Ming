@@ -89,6 +89,8 @@ class TestDatastore(TestCase):
         assert 1 == f(dict({'$or': [{'c':{'$all':[1,2,3]}}]})).count()
         assert 0 == f(dict({'$or': [{'c':{'$all':[4,2,3]}}]})).count()
         assert 1 == f(dict({'$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count()
+        self.assertEqual(0, f(dict({'_id': 'bar', '$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count())
+        self.assertEqual(1, f(dict({'_id': 'foo', '$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count())
 
     def test_find_with_fields(self):
         o = self.bind.db.coll.find_one({'a':2}, fields=['a'])

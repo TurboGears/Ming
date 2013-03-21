@@ -647,9 +647,8 @@ class BsonArith(object):
 
 def match(spec, doc):
     if '$or' in spec:
-        assert len(spec) == 1
-        if any(match(branch, doc) for branch in spec['$or']):
-            return True
+        if any(match(branch, doc) for branch in spec.pop('$or')):
+            return match(spec, doc)
         return None
     mspec = MatchDoc(doc)
     try:
