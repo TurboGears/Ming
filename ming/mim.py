@@ -646,6 +646,7 @@ class BsonArith(object):
             ]
 
 def match(spec, doc):
+    spec = spec.copy()
     if '$or' in spec:
         if any(match(branch, doc) for branch in spec.pop('$or')):
             return match(spec, doc)
