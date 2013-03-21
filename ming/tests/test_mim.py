@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from unittest import TestCase
 
@@ -14,6 +15,11 @@ class TestDatastore(TestCase):
         self.bind.db.coll.insert({'_id':'foo', 'a':2, 'c':[1,2,3]})
         for r in range(4):
             self.bind.db.rcoll.insert({'_id':'r%s' % r, 'd':r})
+
+    def test_regex(self):
+        f = self.bind.db.rcoll.find
+        assert 4 == f(dict(_id=re.compile(r'r\d+'))).count()
+        assert 2 == f(dict(_id=re.compile(r'r[0-1]'))).count()
 
     def test_eq(self):
         f = self.bind.db.rcoll.find
@@ -532,3 +538,9 @@ class TestMatch(TestCase):
     def test_traverse_list(self):
         doc = { 'a': [ { 'b': 1 }, { 'b': 2 } ] }
         self.assertIsNotNone(mim.match( {'a.b': 1 }, doc))
+
+    def test_regex_match(self):
+        doc = { 'a': 'bar', 'b': 'bat' }
+        regex = re.compile(r'ba[rz]')
+        self.assertIsNotNone(mim.match( {'a': regex}, doc))
+        self.assertIsNone(mim.match( {'b': regex}, doc))

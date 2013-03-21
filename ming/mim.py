@@ -147,7 +147,7 @@ class Database(database.Database):
                 k = bson.BSON.encode(k)
             temp_coll[k].append(v)
         def emit_reduced(k, v):
-            print k,v 
+            print k,v
         # Add some special MongoDB functions
         j.execute('var NumberInt = Number;')
         j.add_global('emit', emit)
@@ -238,7 +238,7 @@ class Database(database.Database):
         else:
             raise TypeError, 'Unsupported out type: %s' % out.keys()
         return result
-                
+
 
     def __getattr__(self, name):
         return self[name]
@@ -370,9 +370,9 @@ class Collection(collection.Collection):
             ok=1.0,
             n=0)
         for doc, mspec in self._find(spec):
-            self._deindex(doc) 
+            self._deindex(doc)
             mspec.update(updates)
-            self._index(doc) 
+            self._index(doc)
             result['n'] += 1
             if not multi: break
         if result['n']:
@@ -384,7 +384,7 @@ class Collection(collection.Collection):
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
-            self._index(doc) 
+            self._index(doc)
             self._data[_id] = bcopy(doc)
             result['upserted'] = _id
             return result
@@ -472,7 +472,7 @@ class Cursor(object):
                  sort=None, skip=None, limit=None, fields=None, as_class=dict):
         if isinstance(fields, list):
             fields = dict((f, 1) for f in fields)
-        
+
         if fields is not None and '_id' not in fields:
             f = { '_id': 1 }
             f.update(fields)
@@ -637,12 +637,13 @@ class BsonArith(object):
             (lambda x:x, [ str, unicode ]),
             (lambda x:dict(x), [ dict, MatchDoc ]),
             (lambda x:list(x), [ list, MatchList ]),
+            (lambda x:x, [ tuple ]),
             (lambda x:x, [ bson.Binary ]),
             (lambda x:x, [ bson.ObjectId ]),
             (lambda x:x, [ bool ]),
             (lambda x:x, [ datetime ]),
-            (lambda x:x, [ type(re.compile('foo')) ] )
-            ]        
+            (lambda x:x, [ type(bson.RE_TYPE) ] )
+            ]
 
 def match(spec, doc):
     if '$or' in spec:
@@ -661,14 +662,17 @@ def match(spec, doc):
         return None
     return mspec
 
-class Match(object): 
+class Match(object):
     def match(self, key, op, value):
         log.debug('match(%r, %r, %r, %r)',
                   self, key, op, value)
         val = self.get(key, ())
         if isinstance(val, MatchList):
             if val.match('$', op, value): return True
-        if op == '$eq': return BsonArith.cmp(val, value) == 0
+        if op == '$eq':
+            if isinstance(value, bson.RE_TYPE):
+                return bool(value.match(val))
+            return BsonArith.cmp(val, value) == 0
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
         if op == '$gte': return BsonArith.cmp(val, value) >= 0
@@ -732,7 +736,7 @@ class Match(object):
 
     def _op_set(self, subdoc, key, arg):
         subdoc[key] = bcopy(arg)
-        
+
     def _op_push(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
         l.append(bcopy(arg))
@@ -756,7 +760,7 @@ class Match(object):
             subdoc[key] = [
                 vv for vv in l
                 if not compare('$eq', arg, vv) ]
-            
+
 
 
 class MatchDoc(Match):
@@ -920,14 +924,14 @@ def compare(op, a, b):
     if op == '$elemMatch':
         return match(b, a)
     raise NotImplementedError, op
-        
+
 def validate(doc):
     for k,v in doc.iteritems():
         assert '$' not in k
         assert '.' not in k
         if hasattr(v, 'iteritems'):
             validate(v)
-            
+
 def bson_safe(obj):
     bson.BSON.encode(obj)
 
@@ -938,7 +942,7 @@ def bcopy(obj):
         return map(bcopy, obj)
     else:
         return obj
-        
+
 def wrap_as_class(value, as_class):
     if isinstance(value, dict):
         return as_class(dict(
@@ -972,7 +976,7 @@ class _DummyRequest(object):
 
     def __exit__(self, ex_type, ex_value, ex_tb):
         pass
-    
+
     def end(self):
         pass
 
