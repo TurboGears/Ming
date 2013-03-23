@@ -606,6 +606,7 @@ class BsonArith(object):
 
     @classmethod
     def to_bson(cls, val):
+        if val is (): return val
         tp = cls.bson_type(val)
         return (tp, cls._types[tp][0](val))
 
@@ -741,6 +742,13 @@ class Match(object):
         l = subdoc.setdefault(key, [])
         l.append(bcopy(arg))
 
+    def _op_pop(self, subdoc, key, arg):
+        l = subdoc.setdefault(key, [])
+        if arg == 1:
+            del l[-1]
+        else:
+            del l[1]
+
     def _op_pushAll(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
         l.extend(bcopy(arg))
@@ -778,7 +786,9 @@ class MatchDoc(Match):
             if '.' in first:
                 return self.traverse(*(first.split('.')))
             return self, first
-        return self.get(first, MatchDoc({})).traverse(*rest)
+        if first not in self._doc:
+            self._doc[first] = MatchDoc({})
+        return self[first].traverse(*rest)
     def iteritems(self):
         return self._doc.iteritems()
     def __eq__(self, o):
@@ -855,6 +865,8 @@ class MatchList(Match):
             key = self._pos
         self._doc[key] = value
         self._orig[key] = value
+    def __delitem__(self, key):
+        del self._doc[key]
     def setdefault(self, key, default):
         if key == '$':
             key = self._pos

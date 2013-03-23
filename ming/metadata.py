@@ -1,6 +1,7 @@
 import logging
 
 from copy import copy
+from threading import Lock
 
 import pymongo
 from pymongo.errors import ConnectionFailure
@@ -300,17 +301,19 @@ class _ManagerDescriptor(object):
     def __init__(self, manager):
         self.manager = manager
         self.indexes_ensured = False
+        self._lock = Lock()
 
     def _ensure_indexes(self):
         session = self.manager.session
         if session is None: return
         if session.bind is None: return
         collection = self.manager.collection
-        for idx in self.manager.indexes:
-            collection.ensure_index(
-                idx.index_spec,
-                unique=idx.unique,
-                sparse=idx.sparse)
+        with self._lock:
+            for idx in self.manager.indexes:
+                collection.ensure_index(
+                    idx.index_spec,
+                    unique=idx.unique,
+                    sparse=idx.sparse)
 
     def __get__(self, inst, cls=None):
         if not self.indexes_ensured:
