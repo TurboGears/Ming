@@ -747,7 +747,7 @@ class Match(object):
         if arg == 1:
             del l[-1]
         else:
-            del l[1]
+            del l[0]
 
     def _op_pushAll(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
