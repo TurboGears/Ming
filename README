@@ -1,4 +1,17 @@
 # Release/build process
 
+## Dependencies
 pip install paramiko
+
+## Make sure the local commands are available
+python setup.py develop
+
+## Comment out the dev tagging in setup.cfg
+ [egg_info]
+-tag_build=dev
+-tag_date=True
++#tag_build=dev
++#tag_date=True
+
+## Build and upload the package
 python setup.py sdist git_tag sf_upload -u /sf_username/ register
