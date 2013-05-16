@@ -313,7 +313,9 @@ class _ManagerDescriptor(object):
                 collection.ensure_index(
                     idx.index_spec,
                     unique=idx.unique,
-                    sparse=idx.sparse)
+                    sparse=idx.sparse,
+                    background=True,
+                    )
 
     def __get__(self, inst, cls=None):
         if not self.indexes_ensured:

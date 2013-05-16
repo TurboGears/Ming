@@ -167,13 +167,13 @@ class TestIndexes(TestCase):
             print a
         indexes = [
             ( ([ ('test1', pymongo.ASCENDING), ('test2', pymongo.ASCENDING) ],),
-              dict(unique=False, sparse=False) ),
+              dict(unique=False, sparse=False, background=True) ),
             ( ([ ('test1', pymongo.ASCENDING) ], ),
-              dict(unique=True, sparse=False) ),
+              dict(unique=True, sparse=False, background=True) ),
             ( ( [ ('test7', pymongo.ASCENDING) ],),
-              dict(unique=True, sparse=True) ),
+              dict(unique=True, sparse=True, background=True) ),
             ( ( [ ('test8', pymongo.ASCENDING) ],),
-              dict(unique=False, sparse=True) ) ]
+              dict(unique=False, sparse=True, background=True) ) ]
         for i in indexes:
             self.assert_(i in args, args)
 

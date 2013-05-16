@@ -105,9 +105,9 @@ class TestIndexes(TestCase):
         args = ensure_index.call_args_list
         indexes = [
             ( ([ ('test1', pymongo.DESCENDING), ('test2', pymongo.DESCENDING) ],),
-              dict(unique=False, sparse=False) ),
+              dict(unique=False, sparse=False, background=True) ),
             ( ([ ('test1', pymongo.ASCENDING) ], ),
-              dict(unique=True, sparse=False) ), ]
+              dict(unique=True, sparse=False, background=True) ), ]
         for i in indexes:
             self.assert_(i in args, args)
 
