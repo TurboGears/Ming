@@ -141,6 +141,11 @@ class TestDottedOperators(TestCase):
         obj = self.coll.find_one({}, { '_id': 0, 'b.c': 1 })
         self.assertEqual(obj, { 'b': { 'c': 4 } })
 
+    def test_unset_dotted(self):
+        self.coll.update({}, { '$unset': { 'b.f.1.g': 1 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
+        self.assertEqual(obj, { 'b': { 'f': [{u'g': 1}, {}] } })
+
     def test_push_dotted(self):
         self.coll.update({}, { '$push': { 'b.e': 4 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
@@ -170,6 +175,20 @@ class TestDottedOperators(TestCase):
         self.coll.update(
             {},
             { '$pull': { 'b.f': { 'g': { '$gt': 1 } } } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 } )
+        self.assertEqual(obj, { 'b': { 'f': [ {'g': 1 } ] } } )
+
+    def test_pull_all_dotted(self):
+        self.coll.update(
+            {},
+            { '$pullAll': { 'b.f': [{'g': 1 }] } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 } )
+        self.assertEqual(obj, { 'b': { 'f': [ {'g': 2 } ] } } )
+
+    def test_pop_dotted(self):
+        self.coll.update(
+            {},
+            { '$pop': { 'b.f': 1 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 } )
         self.assertEqual(obj, { 'b': { 'f': [ {'g': 1 } ] } } )
 
@@ -430,6 +449,37 @@ class TestCollection(TestCase):
             upsert=True)
         doc = test.find_one()
         self.assertEqual(doc, dict(_id=0, a=5, c=[1]))
+
+    def test_update_addToSet_with_each(self):
+        self.bind.db.coll.insert({'_id': 0, 'a': [1, 2, 3]})
+        self.bind.db.coll.update({},
+                                 {'$addToSet': {'a': {'$each': [0, 2, 4]}}})
+        doc = self.bind.db.coll.find_one()
+        self.assertEqual(len(doc['a']), 5)
+
+    def test_find_with_skip(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result = self.bind.db.coll.find({}, skip=2)
+        result = list(result)
+        self.assertEqual(len(result), 3)
+
+    def test_find_with_limit(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result = self.bind.db.coll.find({}, limit=2)
+        result = list(result)
+        self.assertEqual(len(result), 2)
+
+    def test_find_with_paging(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result_all = self.bind.db.coll.find()
+        result_all = list(result_all)
+        result_page1 = self.bind.db.coll.find({}, skip=0, limit=3)
+        result_page2 = self.bind.db.coll.find({}, skip=3, limit=3)
+        result_paging = list(result_page1) + list(result_page2)
+        self.assertEqual(result_all, result_paging)
 
     def test_distinct(self):
         for i in range(5):

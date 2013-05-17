@@ -302,11 +302,10 @@ class Collection(collection.Collection):
                 if mspec is not None: yield doc, mspec
         return _gen()
 
-    def find(self, spec=None, fields=None, as_class=dict, **kwargs):
+    def find(self, spec=None, fields=None, sort=None, limit=None, skip=None, as_class=dict, **kwargs):
         if spec is None:
             spec = {}
-        sort = kwargs.pop('sort', None)
-        cur = Cursor(collection=self, fields=fields, as_class=as_class,
+        cur = Cursor(collection=self, fields=fields, limit=limit, skip=skip, as_class=as_class,
                      _iterator_gen=lambda: self._find(spec, **kwargs))
         if sort:
             cur = cur.sort(sort)
@@ -319,21 +318,22 @@ class Collection(collection.Collection):
             return result
         return None
 
-    def find_and_modify(self, query=None, update=None, upsert=False, **kwargs):
+    def find_and_modify(self, query=None, update=None, fields=None, upsert=False, **kwargs):
         if query is None: query = {}
         before = self.find_one(query, sort=kwargs.get('sort'))
         upserted = False
         if before is None:
             upserted = True
             if upsert:
-                before = dict(query)
-                self.insert(before)
+                self.update(query, update, upsert)
             else:
                 return None
-        before = self.find_one(query, sort=kwargs.get('sort'))
-        self.update({'_id': before['_id']}, update)
+        before = self.find_one(query, fields, sort=kwargs.get('sort'))
+        if not upserted:
+            self.update({'_id': before['_id']}, update)
         if kwargs.get('new', False) or upserted:
-            return self.find_one(dict(_id=before['_id']))
+            return self.find_one(dict(_id=before['_id']), fields)
+
         return before
 
     def insert(self, doc_or_docs, safe=False):
@@ -407,7 +407,10 @@ class Collection(collection.Collection):
             keys = tuple(k[0] for k in key_or_list)
         else:
             keys = (key_or_list,)
-        index_name = '_'.join(keys)
+        if name:
+            index_name = name
+        else:
+            index_name = '_'.join(keys)
         self._indexes[index_name] =[ (k, 0) for k in keys ]
         if not unique: return
         self._unique_indexes[keys] = index = {}
@@ -738,9 +741,17 @@ class Match(object):
     def _op_set(self, subdoc, key, arg):
         subdoc[key] = bcopy(arg)
 
+    def _op_unset(self, subdoc, key, arg):
+        del subdoc[key]
+
     def _op_push(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
-        l.append(bcopy(arg))
+        if isinstance(arg, dict) and "$each" in arg:
+            args = arg.get("$each")
+        else:
+            args = [arg]
+        for member in args:
+            l.append(bcopy(member))
 
     def _op_pop(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
@@ -755,8 +766,14 @@ class Match(object):
 
     def _op_addToSet(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
-        if arg not in l:
-            l.append(bcopy(arg))
+        
+        if isinstance(arg, dict) and "$each" in arg:
+            args = arg.get("$each")
+        else:
+            args = [arg]
+        for member in args:
+            if member not in l:
+                l.append(bcopy(member))
 
     def _op_pull(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
@@ -768,6 +785,12 @@ class Match(object):
             subdoc[key] = [
                 vv for vv in l
                 if not compare('$eq', arg, vv) ]
+
+    def _op_pullAll(self, subdoc, key, arg):
+        l = subdoc.setdefault(key, [])
+        subdoc[key] = [
+            vv for vv in l
+            if not compare('$in', vv, arg) ]
 
 
 class MatchDoc(Match):
@@ -799,6 +822,9 @@ class MatchDoc(Match):
         return 'M%r' % (self._doc,)
     def __getitem__(self, key):
         return self._doc[key]
+    def __delitem__(self, key):
+        del self._doc[key]
+        del self._orig[key]
     def __setitem__(self, key, value):
         self._doc[key] = value
         self._orig[key] = value
@@ -866,7 +892,10 @@ class MatchList(Match):
         self._doc[key] = value
         self._orig[key] = value
     def __delitem__(self, key):
-        del self._doc[key]
+        if key == '$':
+            key = self._pos
+        del self._doc[int(key)]
+        del self._orig[int(key)]
     def setdefault(self, key, default):
         if key == '$':
             key = self._pos
@@ -978,7 +1007,11 @@ def _project(doc, fields):
         if not value: continue
         sub_doc, key = _traverse_doc(doc, name)
         sub_result, key = _traverse_doc(result, name)
-        sub_result[key] = sub_doc[key]
+        try:
+            sub_result[key] = sub_doc[key]
+        except KeyError:
+            log.debug("Field %s doesn't in %s, skip..." % (key, sub_doc.keys()))
+            pass
     return result
 
 class _DummyRequest(object):
