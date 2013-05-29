@@ -401,7 +401,7 @@ class Collection(collection.Collection):
                 new_data[id] = doc
         self._data = new_data
 
-    def ensure_index(self, key_or_list, unique=False, ttl=300,
+    def ensure_index(self, key_or_list, unique=False, cache_for=300,
                      name=None, background=None, sparse=False):
         if isinstance(key_or_list, list):
             keys = tuple(k[0] for k in key_or_list)
