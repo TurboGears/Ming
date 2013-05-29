@@ -507,6 +507,15 @@ class TestCollection(TestCase):
         self.assertRaises(OperationFailure, self.bind.db.coll.find().hint, 'foobar')
         self.assertRaises(TypeError, self.bind.db.coll.find().hint, 123)
 
+    def test_index_information(self):
+        self.bind.db.coll.ensure_index([('myfield', 1)],
+                                       background=True,
+                                       expireAfterSeconds=42)
+        info = self.bind.db.coll.index_information()
+        self.assertEqual(info['myfield']['key']['myfield'], 0)
+        self.assertEqual(info['myfield']['background'], 1)
+        self.assertEqual(info['myfield']['expireAfterSeconds'], 42)
+
 class TestBsonCompare(TestCase):
 
     def test_boolean_bson_type(self):

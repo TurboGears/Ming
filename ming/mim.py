@@ -402,7 +402,7 @@ class Collection(collection.Collection):
         self._data = new_data
 
     def ensure_index(self, key_or_list, unique=False, cache_for=300,
-                     name=None, background=None, sparse=False):
+                     name=None, **kwargs):
         if isinstance(key_or_list, list):
             keys = tuple(k[0] for k in key_or_list)
         else:
@@ -411,7 +411,8 @@ class Collection(collection.Collection):
             index_name = name
         else:
             index_name = '_'.join(keys)
-        self._indexes[index_name] =[ (k, 0) for k in keys ]
+        self._indexes[index_name] = { "key": dict((k, 0) for k in keys) }
+        self._indexes[index_name].update(kwargs)
         if not unique: return
         self._unique_indexes[keys] = index = {}
         for id, doc in self._data.iteritems():
@@ -421,7 +422,7 @@ class Collection(collection.Collection):
 
     def index_information(self):
         return dict(
-            (index_name, dict(key=fields))
+            (index_name, fields)
             for index_name, fields in self._indexes.iteritems())
 
     def drop_index(self, iname):
@@ -576,9 +577,9 @@ class Cursor(object):
         if type(index) == list:
             # ignoring direction, since mim's ensure_index doesn't preserve it (set to 0)
             test_idx = [(i, 0) for i, direction in index if i != '$natural']
-            if test_idx and test_idx not in self._collection._indexes.values():
-                raise OperationFailure('database error: bad hint. Valid values: %s' %
-                        self._collection._indexes.values())
+            values = [[(k, 0) for k in i["key"].keys()] for i in self._collection._indexes.values()]
+            if test_idx and test_idx not in values:
+                raise OperationFailure('database error: bad hint. Valid values: %s' % values)
         elif isinstance(index, basestring):
             if index not in self._collection._indexes.keys():
                 raise OperationFailure('database error: bad hint. Valid values: %s'
