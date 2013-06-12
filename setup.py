@@ -29,25 +29,18 @@ setup(name='Ming',
       install_requires=[
         "FormEncode >= 1.2.1",
         "pymongo>=2.4",
-        "PasteScript", # used by flyway
-        "WebOb",
-        # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
-        # tests:
-        "mock >=0.8.0",
+      ],
+      tests_require = [
         "nose",
+        "mock >=0.8.0",
+        "WebOb",
         "webtest",
+        # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
       ],
       entry_points="""
       # -*- Entry points: -*-
       [paste.filter_factory]
       ming_autoflush=ming.odm.middleware:make_ming_autoflush_middleware
-
-      [flyway.test_migrations]
-      a = flyway.tests.migrations_a
-      b = flyway.tests.migrations_b
-
-      [paste.paster_command]
-      flyway = flyway.command:MigrateCommand
       """,
       test_suite='nose.collector'
       )
