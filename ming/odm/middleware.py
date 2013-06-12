@@ -1,4 +1,8 @@
-from webob import exc
+try:
+    from webob import exc
+    DEFAULT_FLUSH_ERRORS = (exc.HTTPRedirection,)
+except ImportError:
+    DEFAULT_FLUSH_ERRORS = tuple()
 
 from ming.odm import ThreadLocalODMSession, ContextualODMSession
 
@@ -6,7 +10,7 @@ class MingMiddleware(object):
 
     def __init__(self, app,
                  context_func=None,
-                 flush_on_errors=(exc.HTTPRedirection,)):
+                 flush_on_errors=DEFAULT_FLUSH_ERRORS):
         self.app = app
         self.flush_on_errors = flush_on_errors
         self._context_func = context_func or (lambda:None)
