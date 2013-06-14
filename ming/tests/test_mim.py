@@ -519,6 +519,14 @@ class TestCollection(TestCase):
     def test_insert_manipulate_false(self):
         self.bind.db.coll.insert({'x': 1}, manipulate=False)
 
+    def test_unique_index_subdocument(self):
+        coll = self.bind.db.coll
+
+        coll.ensure_index([('x.y', 1)], unique=True)
+        coll.insert({'x': {'y': 1}})
+        coll.insert({'x': {'y': 2}})
+
+
 class TestBsonCompare(TestCase):
 
     def test_boolean_bson_type(self):
