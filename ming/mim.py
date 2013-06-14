@@ -336,7 +336,7 @@ class Collection(collection.Collection):
 
         return before
 
-    def insert(self, doc_or_docs, safe=False):
+    def insert(self, doc_or_docs, safe=False, **kwargs):
         if not isinstance(doc_or_docs, list):
             doc_or_docs = [ doc_or_docs ]
         for doc in doc_or_docs:
