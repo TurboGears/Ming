@@ -516,6 +516,9 @@ class TestCollection(TestCase):
         self.assertEqual(info['myfield']['background'], 1)
         self.assertEqual(info['myfield']['expireAfterSeconds'], 42)
 
+    def test_insert_manipulate_false(self):
+        self.bind.db.coll.insert({'x': 1}, manipulate=False)
+
 class TestBsonCompare(TestCase):
 
     def test_boolean_bson_type(self):
