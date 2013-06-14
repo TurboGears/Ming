@@ -416,7 +416,7 @@ class Collection(collection.Collection):
         if not unique: return
         self._unique_indexes[keys] = index = {}
         for id, doc in self._data.iteritems():
-            key_values = tuple(doc.get(key, None) for key in keys)
+            key_values = self._extract_index_key(doc, keys)
             index[key_values] =id
         return index_name
 
@@ -438,10 +438,17 @@ class Collection(collection.Collection):
     def __repr__(self):
         return 'mim.Collection(%r, %s)' % (self._database, self.name)
 
+    def _extract_index_key(self, doc, keys):
+        key_values = list()
+        for key in keys:
+            sub, key = _traverse_doc(doc, key)
+            key_values.append(sub.get(key, None))
+        return tuple(key_values)
+
     def _index(self, doc):
         if '_id' not in doc: return
         for keys, index in self._unique_indexes.iteritems():
-            key_values = tuple(doc.get(key, None) for key in keys)
+            key_values = self._extract_index_key(doc, keys)
             old_id = index.get(key_values, ())
             if old_id == doc['_id']: continue
             if old_id in self._data:
@@ -450,7 +457,7 @@ class Collection(collection.Collection):
 
     def _deindex(self, doc):
         for keys, index in self._unique_indexes.iteritems():
-            key_values = tuple(doc.get(key, None) for key in keys)
+            key_values = self._extract_index_key(doc, keys)
             index.pop(key_values, None)
 
     def map_reduce(self, map, reduce, out, full_response=False, **kwargs):
