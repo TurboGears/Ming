@@ -303,31 +303,41 @@ class _ManagerDescriptor(object):
         self.indexes_ensured = False
         self._lock = Lock()
 
+    @property
+    def engine(self):
+        try:
+            return self.manager.session.bind.bind
+        except AttributeError as e:
+            return None # engine not yet configured
+
     def _ensure_indexes(self):
         session = self.manager.session
         if session is None: return
         if session.bind is None: return
         collection = self.manager.collection
-        with self._lock:
-            for idx in self.manager.indexes:
-                collection.ensure_index(
-                    idx.index_spec,
-                    unique=idx.unique,
-                    sparse=idx.sparse,
-                    background=True,
-                    )
+        try:
+            with self._lock:
+                for idx in self.manager.indexes:
+                    collection.ensure_index(
+                        idx.index_spec,
+                        unique=idx.unique,
+                        sparse=idx.sparse,
+                        background=True,
+                        )
+        except (MongoGone, ConnectionFailure) as e:
+            if e.args[0] == 'not master':
+                log.info('Could not run ensure_indexes because the connection is not to a master.  This is expected when connecting to a slave')
+            else:
+                # raise all other connection issues
+                raise
+        self.indexes_ensured = True
+
+    def _auto_ensure_indexes(self):
+        if not self.indexes_ensured and self.engine and self.engine._auto_ensure_indexes:
+            self._ensure_indexes()
 
     def __get__(self, inst, cls=None):
-        if not self.indexes_ensured:
-            try:
-                self._ensure_indexes()
-            except (MongoGone, ConnectionFailure) as e:
-                if e.args[0] == 'not master':
-                    log.info('Could not run ensure_indexes because the connection is not to a master.  This is expected when connecting to a slave')
-                else:
-                    # raise all other connection issues
-                    raise
-        self.indexes_ensured = True
+        self._auto_ensure_indexes()
         if inst is None:
             return self.manager
         else:
