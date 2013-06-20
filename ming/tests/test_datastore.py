@@ -118,7 +118,7 @@ class TestDatastore(TestCase):
                 'ming.main.uri':'mongodb://localhost:27017/test_db',
                 'ming.main.connect_retry': 1,
                 'ming.main.tz_aware': False,
-                'ming.main.auto_ensure_indexes': False,
+                'ming.main.auto_ensure_indexes': 'False',
                 })
         session = Session.by_name('main')
         assert session.bind.conn is not None

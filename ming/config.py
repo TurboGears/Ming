@@ -14,7 +14,7 @@ class DatastoreSchema(schema.Schema):
     authenticate=AuthenticateSchema(if_missing=None, if_empty=None)
     connect_retry=validators.Number(if_missing=3, if_empty=0)
     use_greenlets = validators.Bool(if_missing=False)
-    auto_ensure_indexes = validators.Bool(if_missing=True)
+    auto_ensure_indexes = validators.StringBool(if_missing=True)
     # pymongo
     tz_aware=validators.Bool(if_missing=False)
     slave_okay=validators.Bool(if_missing=False)
