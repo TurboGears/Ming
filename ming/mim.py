@@ -411,7 +411,7 @@ class Collection(collection.Collection):
             index_name = name
         else:
             index_name = '_'.join(keys)
-        self._indexes[index_name] = { "key": dict((k, 0) for k in keys) }
+        self._indexes[index_name] = { "key": collections.OrderedDict((k, 0) for k in keys) }
         self._indexes[index_name].update(kwargs)
         if not unique: return
         self._unique_indexes[keys] = index = {}
