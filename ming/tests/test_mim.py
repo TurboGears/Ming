@@ -512,7 +512,7 @@ class TestCollection(TestCase):
                                        background=True,
                                        expireAfterSeconds=42)
         info = self.bind.db.coll.index_information()
-        self.assertEqual(info['myfield']['key']['myfield'], 0)
+        self.assertEqual(info['myfield']['key'][0], ('myfield', 1))
         self.assertEqual(info['myfield']['background'], 1)
         self.assertEqual(info['myfield']['expireAfterSeconds'], 42)
 

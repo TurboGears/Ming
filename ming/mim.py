@@ -404,19 +404,19 @@ class Collection(collection.Collection):
     def ensure_index(self, key_or_list, unique=False, cache_for=300,
                      name=None, **kwargs):
         if isinstance(key_or_list, list):
-            keys = tuple(k[0] for k in key_or_list)
+            keys = tuple(tuple(k) for k in key_or_list)
         else:
-            keys = (key_or_list,)
+            keys = ((key_or_list, ASCENDING),)
         if name:
             index_name = name
         else:
-            index_name = '_'.join(keys)
-        self._indexes[index_name] = { "key": collections.OrderedDict((k, 0) for k in keys) }
+            index_name = '_'.join([k[0] for k in keys])
+        self._indexes[index_name] = { "key": keys }
         self._indexes[index_name].update(kwargs)
         if not unique: return
         self._unique_indexes[keys] = index = {}
         for id, doc in self._data.iteritems():
-            key_values = tuple(doc.get(key, None) for key in keys)
+            key_values = tuple(doc.get(key[0], None) for key in keys)
             index[key_values] =id
         return index_name
 
@@ -441,7 +441,7 @@ class Collection(collection.Collection):
     def _index(self, doc):
         if '_id' not in doc: return
         for keys, index in self._unique_indexes.iteritems():
-            key_values = tuple(doc.get(key, None) for key in keys)
+            key_values = tuple(doc.get(key[0], None) for key in keys)
             old_id = index.get(key_values, ())
             if old_id == doc['_id']: continue
             if old_id in self._data:
@@ -450,7 +450,7 @@ class Collection(collection.Collection):
 
     def _deindex(self, doc):
         for keys, index in self._unique_indexes.iteritems():
-            key_values = tuple(doc.get(key, None) for key in keys)
+            key_values = tuple(doc.get(key[0], None) for key in keys)
             index.pop(key_values, None)
 
     def map_reduce(self, map, reduce, out, full_response=False, **kwargs):
@@ -575,9 +575,8 @@ class Cursor(object):
     def hint(self, index):
         # checks indexes, but doesn't actually use hinting
         if type(index) == list:
-            # ignoring direction, since mim's ensure_index doesn't preserve it (set to 0)
-            test_idx = [(i, 0) for i, direction in index if i != '$natural']
-            values = [[(k, 0) for k in i["key"].keys()] for i in self._collection._indexes.values()]
+            test_idx = [(i, direction) for i, direction in index if i != '$natural']
+            values = [[k for k in i["key"]] for i in self._collection._indexes.values()]
             if test_idx and test_idx not in values:
                 raise OperationFailure('database error: bad hint. Valid values: %s' % values)
         elif isinstance(index, basestring):
