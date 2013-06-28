@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import bson
 from ming import create_datastore, mim
-from pymongo.errors import OperationFailure
+from pymongo.errors import OperationFailure, DuplicateKeyError
 from nose import SkipTest
 
 class TestDatastore(TestCase):
@@ -525,6 +525,7 @@ class TestCollection(TestCase):
         coll.ensure_index([('x.y', 1)], unique=True)
         coll.insert({'x': {'y': 1}})
         coll.insert({'x': {'y': 2}})
+        self.assertRaises(DuplicateKeyError, coll.insert, {'x': {'y': 2}})
 
 
 class TestBsonCompare(TestCase):
