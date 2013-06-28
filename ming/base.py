@@ -64,9 +64,6 @@ class Cursor(object):
     def __iter__(self):
         return self
 
-    def __len__(self):
-        return self.count()
-
     def next(self):
         doc = self.cursor.next()
         if doc is None: return None

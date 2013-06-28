@@ -197,7 +197,6 @@ class TestCursor(TestCase):
 
     def test_cursor(self):
         obj = dict(a=None, b=dict(a=None))
-        self.assertEqual(len(self.cursor), 3)
         self.assertEqual(self.cursor.count(), 3)
         self.assertEqual(self.cursor.next(), obj)
         self.cursor.limit(100)
