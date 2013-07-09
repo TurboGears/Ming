@@ -490,6 +490,11 @@ class TestCollection(TestCase):
     def test_find_and_modify_returns_none_on_no_entries(self):
         self.assertEqual(None, self.bind.db.foo.find_and_modify({'i': 1}, {'$set': {'i': 2}}))
 
+    def test_find_and_modify_with_remove(self):
+        self.bind.db.col.insert({'_id': 1})
+        self.assertEqual({'_id': 1}, self.bind.db.col.find_and_modify({'_id': 1}, remove=True))
+        self.assertEqual(0, self.bind.db.col.count())
+
     def test_hint_simple(self):
         self.bind.db.coll.ensure_index([('myindex', 1)])
 
