@@ -30,10 +30,12 @@ setup(name='Ming',
       install_requires=[
         "FormEncode >= 1.2.1",
         "pymongo>=2.4",
+        "pytz"
       ],
       tests_require = [
         "nose",
         "mock >=0.8.0",
+        "pytz",
         "WebOb",
         "webtest",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
