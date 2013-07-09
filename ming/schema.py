@@ -61,7 +61,7 @@ class Invalid(Exception):
         val = self.msg
         #if self.value:
         #    val += " (value: %s)" % repr(self.value)
-        return val    
+        return val
 
     def __unicode__(self):
         if isinstance(self.msg, unicode):
@@ -85,7 +85,7 @@ class SchemaItem(object):
     @classmethod
     def make(cls, field, *args, **kwargs):
         '''Build a SchemaItem from a "shorthand" schema.  The `field` param:
-        
+
         * int - int or long
         * str - string or unicode
         * float - float, int, or long
@@ -97,7 +97,7 @@ class SchemaItem(object):
         * { fld: type... } - dict-like object with field "fld" of type "type"
         * { type: type... } - dict-like object with fields of type "type"
         * anything else (e.g. literal values), must match exactly
-        
+
         ``*args`` and ``**kwargs`` are passed on to the specific class of ``SchemaItem`` created.
         '''
         if isinstance(field, list):
@@ -262,7 +262,7 @@ class Object(FancySchemaItem):
         l = [ super(Object, self).__repr__() ]
         for k,f in self.fields.iteritems():
             l.append('  %s: %s' % (k, repr(f).replace('\n', '\n    ')))
-        return '\n'.join(l) 
+        return '\n'.join(l)
 
     def if_missing(self):
         return BaseObject(
@@ -408,7 +408,7 @@ class Array(FancySchemaItem):
     def __repr__(self):
         l = [ super(Array, self).__repr__() ]
         l.append('  ' + repr(self.field_type).replace('\n', '\n    '))
-        return '\n'.join(l) 
+        return '\n'.join(l)
 
     @LazyProperty
     def field_type(self):
@@ -443,7 +443,7 @@ class Array(FancySchemaItem):
                         for i,v in enumerate(error_list)
                         if v is not None)
         raise Invalid(msg, d, None, error_list=error_list)
-        
+
 
 class Scalar(FancySchemaItem):
     '''Validate that a value is NOT an array or dict'''
@@ -487,7 +487,7 @@ class Value(FancySchemaItem):
     def __init__(self, value, **kw):
         self.value = value
         FancySchemaItem.__init__(self, **kw)
-        
+
     def _validate(self, value, **kw):
         if value != self.value:
             raise Invalid('%r != %r' % (value, self.value),
@@ -547,5 +547,5 @@ SHORTHAND={
     float:Float,
     bool:Bool,
     datetime:DateTime}
-    
+
 
