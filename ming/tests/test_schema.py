@@ -2,6 +2,7 @@ from unittest import TestCase, main
 from datetime import datetime
 
 import ming.datastore
+import pytz
 from ming import Document, Field
 from ming import schema as S
 
@@ -66,6 +67,13 @@ class TestSchemaItem(TestCase):
         self.assertEqual(
             datetime(2012,2,8,12,42,14,123000),
             si.validate(datetime(2012,2,8,12,42,14,123456)))
+
+    def test_timezone_conversion(self):
+        si = S.SchemaItem.make(datetime)
+        self.assertEqual(
+            datetime(2012,2,8,20,42,14,123000),
+            si.validate(datetime(2012,2,8,12,42,14,123456,
+                                 tzinfo=pytz.timezone('US/Pacific'))))
 
     def test_migrate(self):
         si = S.Migrate(int, str, str)

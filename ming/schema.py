@@ -6,6 +6,7 @@ from datetime import datetime
 
 import bson
 import pymongo
+import pytz
 
 from .utils import LazyProperty
 from .base import Object as BaseObject, Missing, NoDefault
@@ -514,8 +515,10 @@ class DateTime(DateTimeTZ):
             raise Invalid('%s is not a %r' % (value, self.type),
                           value, None)
         # Truncate microseconds and keep milliseconds only (mimics BSON datetime)
-        value = value.replace(microsecond=(value.microsecond // 1000) * 1000,
-                              tzinfo=None)
+        value = value.replace(microsecond=(value.microsecond // 1000) * 1000)
+        # Convert a local timestamp to UTC
+        if value.tzinfo:
+            value = value.astimezone(pytz.utc).replace(tzinfo=None)
         return value
 class Bool(ParticularScalar):
     type=bool
