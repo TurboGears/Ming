@@ -318,7 +318,8 @@ class Collection(collection.Collection):
             return result
         return None
 
-    def find_and_modify(self, query=None, update=None, fields=None, upsert=False, **kwargs):
+    def find_and_modify(self, query=None, update=None, fields=None,
+                        upsert=False, remove=False, **kwargs):
         if query is None: query = {}
         before = self.find_one(query, sort=kwargs.get('sort'))
         upserted = False
@@ -329,7 +330,9 @@ class Collection(collection.Collection):
             else:
                 return None
         before = self.find_one(query, fields, sort=kwargs.get('sort'))
-        if not upserted:
+        if remove:
+            self.remove({'_id': before['_id']})
+        elif not upserted:
             self.update({'_id': before['_id']}, update)
         if kwargs.get('new', False) or upserted:
             return self.find_one(dict(_id=before['_id']), fields)
