@@ -31,6 +31,7 @@ setup(name='Ming',
         "FormEncode >= 1.2.1",
         "pymongo>=2.4",
         "PasteScript", # used by flyway
+        "pytz",
         "WebOb",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
         # tests:
