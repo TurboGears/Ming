@@ -45,7 +45,7 @@ class TestSchemaItem(TestCase):
         self.assertEqual(S.Anything, si_any.field_type.__class__)
         self.assertEqual(S.Int, si_int.field_type.__class__)
         self.assertRaises(ValueError, S.SchemaItem.make, [int, str])
-        
+
     def test_dont_allow_none(self):
         si = S.Int(allow_none=False)
         self.assertRaises(S.Invalid, si.validate, None)
@@ -56,7 +56,7 @@ class TestSchemaItem(TestCase):
             validate_ranges=[slice(0, 2) ])
         si.validate([1,2,'foo', 'bar'])
         self.assertRaises(S.Invalid, si.validate, [1,'foo', 'bar'])
-    
+
     def test_dict_is_not_array(self):
         si = S.SchemaItem.make([])
         self.assertRaises(S.Invalid, si.validate, {})
@@ -110,11 +110,11 @@ class TestSchemaItem(TestCase):
         self.assertEqual(si.validate(dict(a=5)), dict(a=5))
         self.assertRaises(S.Invalid, si.validate, dict(a='as'))
         self.assertRaises(S.Invalid, si.validate, {5:5})
-    
+
     def test_validate_base(self):
         si = S.SchemaItem()
         self.assertRaises(NotImplementedError, si.validate, None)
-    
+
     def test_nested_objects(self):
         nested_object = S.Object(dict(a=int, b=int), if_missing=None)
         si = S.SchemaItem.make(dict(
@@ -132,7 +132,7 @@ class TestSchemaItem(TestCase):
 
     def test_nodefault(self):
         self.assertEqual(repr(S.NoDefault), '<NoDefault>')
-    
+
 if __name__ == '__main__':
     main()
 
