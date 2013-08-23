@@ -471,6 +471,37 @@ class TestCollection(TestCase):
         result = list(result)
         self.assertEqual(len(result), 2)
 
+    def test_find_with_slice_skip(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result = self.bind.db.coll.find().sort('a')[3:]
+        result = list(result)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['a'], 3)
+
+    def test_find_with_slice_limit(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result = self.bind.db.coll.find().sort('a')[:2]
+        result = list(result)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['a'], 0)
+
+    def test_find_with_slice_skip_limit(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result = self.bind.db.coll.find().sort('a')[2:4]
+        result = list(result)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['a'], 2)
+
+    def test_find_with_slice_invalid(self):
+        try:
+            self.bind.db.coll.find()['random']
+        except TypeError:
+            return
+        self.fail('No TypeError exception raised')
+
     def test_find_with_paging(self):
         for i in range(5):
             self.bind.db.coll.insert({'_id':str(i), 'a':i})
