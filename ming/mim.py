@@ -538,7 +538,18 @@ class Cursor(object):
         # Le *sigh* -- this is the only place apparently where pymongo *does*
         # clone
         clone = self.clone()
-        return clone.skip(key).next()
+        if isinstance(key, slice):
+            _clone = clone
+            start, end = key.start, key.stop # step not supported
+            if start is None:
+                start = 0
+            _clone = _clone.skip(start)
+            if end is not None:
+                _clone = _clone.limit(end-start)
+            return _clone
+        elif isinstance(key, int):
+            return clone.skip(key).next()
+        raise TypeError('indicies must be integers, not %s' % type(key))
 
     def __iter__(self):
         return self
