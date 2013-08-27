@@ -640,3 +640,7 @@ class TestMatch(TestCase):
         self.assertIsNotNone(mim.match({'a': {'b': 1}}, doc))
         self.assertIsNone(mim.match({'a': {'b': 2}}, doc))
         self.assertIsNone(mim.match({'a': {'b': 1, 'c': 1}}, doc))
+
+    def test_traverse_none(self):
+        doc = {'a': None}
+        self.assertIsNone(mim.match({'a.b.c': 1}, doc))
