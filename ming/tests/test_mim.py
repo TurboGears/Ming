@@ -629,3 +629,14 @@ class TestMatch(TestCase):
         regex = re.compile(r'ba[rz]')
         self.assertIsNotNone(mim.match( {'a': regex}, doc))
         self.assertIsNone(mim.match( {'b': regex}, doc))
+
+    def test_subdoc_partial(self):
+        doc = {'a': {'b': 1, 'c': 1}}
+        self.assertIsNotNone(mim.match({'a.b': 1}, doc))
+        self.assertIsNone(mim.match({'a.b': 2}, doc))
+
+    def test_subdoc_exact(self):
+        doc = {'a': {'b': 1}}
+        self.assertIsNotNone(mim.match({'a': {'b': 1}}, doc))
+        self.assertIsNone(mim.match({'a': {'b': 2}}, doc))
+        self.assertIsNone(mim.match({'a': {'b': 1, 'c': 1}}, doc))
