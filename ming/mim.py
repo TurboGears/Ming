@@ -821,6 +821,8 @@ class MatchDoc(Match):
             return self, first
         if first not in self._doc:
             self._doc[first] = MatchDoc({})
+        if self._doc[first] is None:
+            return MatchDoc({}), None
         return self[first].traverse(*rest)
     def iteritems(self):
         return self._doc.iteritems()
