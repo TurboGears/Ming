@@ -841,6 +841,8 @@ class MatchDoc(Match):
     def setdefault(self, key, default):
         self._doc.setdefault(key, default)
         return self._orig.setdefault(key, default)
+    def keys(self):
+        return self._doc.keys()
 
 
 class MatchList(Match):
