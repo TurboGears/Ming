@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import bson
 from ming import create_datastore, mim
-from pymongo.errors import OperationFailure
+from pymongo.errors import OperationFailure, DuplicateKeyError
 from nose import SkipTest
 
 class TestDatastore(TestCase):
@@ -512,9 +512,21 @@ class TestCollection(TestCase):
                                        background=True,
                                        expireAfterSeconds=42)
         info = self.bind.db.coll.index_information()
-        self.assertEqual(info['myfield']['key']['myfield'], 0)
+        self.assertEqual(info['myfield']['key'][0], ('myfield', 1))
         self.assertEqual(info['myfield']['background'], 1)
         self.assertEqual(info['myfield']['expireAfterSeconds'], 42)
+
+    def test_insert_manipulate_false(self):
+        self.bind.db.coll.insert({'x': 1}, manipulate=False)
+
+    def test_unique_index_subdocument(self):
+        coll = self.bind.db.coll
+
+        coll.ensure_index([('x.y', 1)], unique=True)
+        coll.insert({'x': {'y': 1}})
+        coll.insert({'x': {'y': 2}})
+        self.assertRaises(DuplicateKeyError, coll.insert, {'x': {'y': 2}})
+
 
 class TestBsonCompare(TestCase):
 

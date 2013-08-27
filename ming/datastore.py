@@ -22,6 +22,7 @@ def create_engine(*args, **kwargs):
     use_class = kwargs.pop('use_class', None)
     connect_retry = kwargs.pop('connect_retry', 3)
     sleep = kwargs.pop('sleep', None)
+    auto_ensure_indexes = kwargs.pop('auto_ensure_indexes', True)
     if use_class is None:
         if args and args[0].startswith('mim:'):
             use_class = lambda *a, **kw: mim.Connection.get()
@@ -33,7 +34,7 @@ def create_engine(*args, **kwargs):
             sleep = gevent.sleep
         else:
             sleep = time.sleep
-    return Engine(use_class, args, kwargs, connect_retry, sleep)
+    return Engine(use_class, args, kwargs, connect_retry, sleep, auto_ensure_indexes)
 
 def create_datastore(uri, **kwargs):
     '''Wrapper for creating DataStores, setting the connection class
@@ -89,12 +90,13 @@ class Engine(object):
     providing for lazily creating the actual connection.'''
 
     def __init__(self, Connection,
-                 conn_args, conn_kwargs, connect_retry, sleep):
+                 conn_args, conn_kwargs, connect_retry, sleep, auto_ensure_indexes):
         self._Connection = Connection
         self._conn_args = conn_args
         self._conn_kwargs = conn_kwargs
         self._connect_retry = connect_retry
         self._sleep = sleep
+        self._auto_ensure_indexes = auto_ensure_indexes
         self._log = logging.getLogger(__name__)
         self._conn = None
         self._lock = Lock()

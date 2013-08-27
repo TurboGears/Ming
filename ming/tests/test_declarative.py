@@ -189,6 +189,12 @@ class TestIndexes(TestCase):
         self.MyDoc.m
         assert ensure_index.call_count == 1, ensure_index.call_args_list
 
+    def test_auto_ensure_indexes_option(self):
+        ensure_index = self.MockSession.db[self.MyDoc.__mongometa__.name].ensure_index
+        self.MockSession.bind.bind._auto_ensure_indexes = False
+        self.MyDoc.m
+        assert not ensure_index.called
+
     def test_ensure_indexes_other_error(self):
         # same as above, but no swallowing
         collection = self.MockSession.db[self.MyDoc.__mongometa__.name]
@@ -306,7 +312,6 @@ class TestCursor(TestCase):
 
     def test_cursor(self):
         obj = dict(a=None, b=dict(a=None))
-        self.assertEqual(len(self.cursor), 3)
         self.assertEqual(self.cursor.count(), 3)
         self.assertEqual(self.cursor.next(), obj)
         self.cursor.limit(100)

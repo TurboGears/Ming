@@ -7,7 +7,7 @@ exec open('ming/version.py')
 setup(name='Ming',
       version=__version__,
       description="Bringing order to Mongo since 2009",
-      long_description="""Database mapping layer for MongoDB on Python. Includes schema enforcement and some facilities for schema migration. 
+      long_description="""Database mapping layer for MongoDB on Python. Includes schema enforcement and some facilities for schema migration.
 """,
       classifiers=[
         'Development Status :: 4 - Beta',
@@ -22,6 +22,7 @@ setup(name='Ming',
       author='Rick Copeland',
       author_email='rick@geek.net',
       url='http://merciless.sourceforge.net',
+      bugtrack_url='http://sourceforge.net/p/merciless/bugs/',
       license='MIT',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
       include_package_data=True,

@@ -249,9 +249,6 @@ class ODMCursor(object):
     def __iter__(self):
         return self
 
-    def __len__(self):
-        return self.count()
-
     @property
     def extensions(self):
         return self.session.extensions
