@@ -1,6 +1,15 @@
 Ming News / Release Notes
 =====================================
 
+0.4.1 and 0.3.9 (Aug 30, 2013)
+------------------------------------------------
+
+* MIM: Support slicing cursors
+* MIM: Fixed exact dot-notation queries
+* MIM: Fixed dot-notation queries against null fields
+* MIM: Translate time-zone aware timestamps to UTC timestamps.  `pytz` added as dependency
+* MIM: Allow the remove argument to `find_and_modify`
+
 0.4 (June 28, 2013)
 ------------------------------------------------
 
@@ -9,6 +18,10 @@ Ming News / Release Notes
 * WebOb dependency is optional.
 * removed `cursor.__len__`  You must change `len(query)` to `query.count()` now.  This prevents
   inadvertent extra count queries from running.  https://sourceforge.net/p/merciless/bugs/18/
+
+0.3.2 through 0.3.8
+------------------------------------------------
+
 * many improvements to make MIM more like actual mongo
 * various fixes and improvements
 
