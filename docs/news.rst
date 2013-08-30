@@ -1,6 +1,17 @@
 Ming News / Release Notes
 =====================================
 
+0.4 (June 28, 2013)
+------------------------------------------------
+
+* removed 'flyway' package from ming.  It is now available from https://github.com/amol-/ming-flyway 
+  This removes the dependency on PasteScript and will make Python 3 migration easier.
+* WebOb dependency is optional.
+* removed `cursor.__len__`  You must change `len(query)` to `query.count()` now.  This prevents
+  inadvertent extra count queries from running.  https://sourceforge.net/p/merciless/bugs/18/
+* many improvements to make MIM more like actual mongo
+* various fixes and improvements
+
 0.3.2 (rc1) (January 8, 2013)
 ------------------------------------------------
 
