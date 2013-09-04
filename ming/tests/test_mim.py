@@ -6,6 +6,7 @@ import bson
 from ming import create_datastore, mim
 from pymongo.errors import OperationFailure, DuplicateKeyError
 from nose import SkipTest
+from mock import patch
 
 class TestDatastore(TestCase):
 
@@ -553,7 +554,16 @@ class TestCollection(TestCase):
         self.assertEqual(info['myfield']['expireAfterSeconds'], 42)
 
     def test_insert_manipulate_false(self):
-        self.bind.db.coll.insert({'x': 1}, manipulate=False)
+        doc = {'x': 1}
+        self.bind.db.coll.insert(doc, manipulate=False)
+        self.assertEqual(doc, {'x': 1})
+
+    def test_insert_manipulate_true(self):
+        doc = {'x': 1}
+        sample_id = bson.ObjectId()
+        with patch('bson.ObjectId', return_value=sample_id):
+            self.bind.db.coll.insert(doc, manipulate=True)
+        self.assertEqual(doc, {'x': 1, '_id': sample_id})
 
     def test_unique_index_subdocument(self):
         coll = self.bind.db.coll
