@@ -170,7 +170,9 @@ class Database(database.Database):
                 elif js_source.startswith('({'):
                     # Handle recursive conversion in case we got back a
                     # mapping with multiple values.
-                    obj = dict((a, topy(obj[a])) for a in obj)
+                    # spidermonkey changes all js number strings to int/float
+                    # changing back to string here for key protion, since bson requires it
+                    obj = dict((str(a), topy(obj[a])) for a in obj)
                 else:
                     assert False, 'Cannot convert %s to Python' % (js_source)
             elif isinstance(obj, collections.Mapping):

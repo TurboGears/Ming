@@ -410,6 +410,36 @@ class TestMRCommands(TestCommands):
             list(self.bind.db.reduce.find()),
             [ dict(_id=1, value=45) ])
 
+    def test_mr_replace_number_key_obj(self):
+        # testing numerical keys nested in objects being reduced
+        self.bind.db.coll.remove()
+        docs = [ {'val': {'id': 1, 'c': 5}} ]
+        for d in docs:
+            self.bind.db.date_coll.insert(d)
+        result = self.bind.db.date_coll.map_reduce(
+            map='function(){ var d = {}; d[new String(this.val.id)] = this.val.c; emit("val", d); }',
+            reduce=self.first_js,
+            out=dict(replace='coll'))
+        self.assertEqual(result['result'], 'coll')
+        expected = [{u'_id': u'val', u'value': {u'1': 5}}]
+        self.assertEqual(
+            list(self.bind.db.coll.find()),
+            expected)
+
+    def test_mr_inline_number_key_obj(self):
+        # testing numerical keys nested in objects being reduced
+        self.bind.db.coll.remove()
+        docs = [ {'val': {'id': 1, 'c': 5}} ]
+        for d in docs:
+            self.bind.db.date_coll.insert(d)
+        result = self.bind.db.date_coll.map_reduce(
+            map='function(){ var d = {}; d[new String(this.val.id)] = this.val.c; emit("val", d); }',
+            reduce=self.first_js,
+            out=dict(inline=1))
+        expected = [{'_id': u'val', 'value': {'1': 5}}]
+        self.assertEqual(result['results'], expected)
+
+
 class TestCollection(TestCase):
 
     def setUp(self):
