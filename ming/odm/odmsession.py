@@ -148,6 +148,27 @@ class ODMSession(object):
     def update_indexes(self, cls, **kwargs):
         return self.impl.update_indexes(cls, **kwargs)
 
+    def group(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.group(m.collection, *args, **kwargs)
+
+    def aggregate(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.aggregate(m.collection, *args, **kwargs)
+
+    def distinct(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.distinct(m.collection, *args, **kwargs)
+
+    def map_reduce(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.map_reduce(m.collection, *args, **kwargs)
+
+    def inline_map_reduce(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.inline_map_reduce(m.collection, *args, **kwargs)
+
+
 class SessionExtension(object):
 
     def __init__(self, session):

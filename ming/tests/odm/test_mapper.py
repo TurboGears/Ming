@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from mock import Mock
+from mock import Mock, patch
 
 from ming import create_datastore
 from ming import schema as S
@@ -242,6 +242,31 @@ class TestBasicMapping(TestCase):
         self.session.expunge(doc)
         self.session.expunge(doc)
         self.session.expunge(doc)
+
+    @patch('pymongo.collection.Collection.aggregate')
+    def test_aggregate(self, pymongo_aggregate):
+        self.Basic.query.aggregate([])
+        assert pymongo_aggregate.called
+
+    @patch('ming.mim.Collection.map_reduce')
+    def test_map_reduce(self, mim_map_reduce):
+        self.Basic.query.map_reduce('...', '...', {})
+        assert mim_map_reduce.called
+
+    @patch('ming.mim.Collection.distinct')
+    def test_distinct(self, mim_distinct):
+        self.Basic.query.distinct('field')
+        assert mim_distinct.called
+
+    @patch('pymongo.collection.Collection.inline_map_reduce')
+    def test_inline_map_reduce(self, pymongo_inline_map_reduce):
+        self.Basic.query.inline_map_reduce()
+        assert pymongo_inline_map_reduce.called
+
+    @patch('pymongo.collection.Collection.group')
+    def test_group(self, pymongo_group):
+        self.Basic.query.group()
+        assert pymongo_group.called
         
         
 class TestRelation(TestCase):
