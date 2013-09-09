@@ -184,7 +184,8 @@ class _ClassManager(object):
     _proxy_methods = (
         'get', 'find', 'find_by', 'remove', 'count', 'update_partial',
         'group', 'ensure_index', 'ensure_indexes', 'index_information',  'drop_indexes',
-        'find_and_modify')
+        'find_and_modify', 'aggregate', 'distinct', 'map_reduce', 'inline_map_reduce',
+        )
     InstanceManagerClass=_InstanceManager
 
     def __init__(

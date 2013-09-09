@@ -105,6 +105,18 @@ class Session(object):
     def group(self, cls, *args, **kwargs):
         return self._impl(cls).group(*args, **kwargs)
 
+    def aggregate(self, cls, *args, **kwargs):
+        return self._impl(cls).aggregate(*args, **kwargs)
+
+    def map_reduce(self, cls, *args, **kwargs):
+        return self._impl(cls).map_reduce(*args, **kwargs)
+
+    def inline_map_reduce(self, cls, *args, **kwargs):
+        return self._impl(cls).inline_map_reduce(*args, **kwargs)
+
+    def distinct(self, cls, *args, **kwargs):
+        return self._impl(cls).distinct(*args, **kwargs)
+
     def update_partial(self, cls, spec, fields, upsert=False, **kw):
         return self._impl(cls).update(spec, fields, upsert, safe=True, **kw)
 

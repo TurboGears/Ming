@@ -146,6 +146,15 @@ class TestSession(TestCase):
         TestDoc = self.TestDoc
         self.assertRaises(ValueError, sess.find, TestDoc, a=5)
 
+    def test_aggregations(self):
+        # just check that they exist & run, no input/output checks
+        self.TestDoc.m.aggregate()
+        self.TestDoc.m.map_reduce()
+        self.TestDoc.m.inline_map_reduce()
+        self.TestDoc.m.distinct()
+        self.TestDoc.m.group()
+
+
 
 class TestThreadLocalSession(TestSession):
 
