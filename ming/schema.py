@@ -132,10 +132,14 @@ class Migrate(SchemaItem):
     def validate(self, value, **kw):
         try:
             return self.new.validate(value, **kw)
-        except Invalid:
-            value = self.old.validate(value, **kw)
-            value = self.migration_function(value)
-            return self.new.validate(value, **kw)
+        except Invalid as new_error:
+            try:
+                value = self.old.validate(value, **kw)
+            except Invalid:
+                raise new_error
+            else:
+                value = self.migration_function(value)
+                return self.new.validate(value, **kw)
 
     @classmethod
     def obj_to_list(cls, key_name, value_name=None):

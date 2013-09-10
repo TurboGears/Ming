@@ -92,6 +92,17 @@ class TestSchemaItem(TestCase):
         self.assertEqual(si.validate(dict(foo=1)),
                          [ dict(key='foo', value=1) ])
 
+    def test_migrate_both_invalid(self):
+        def fixer(x):
+            x['a'] = [x['a']]
+            return x
+        si = S.Migrate(
+            {'a': str},
+            {'a': [str], 'b': int},
+            fixer)
+        with self.assertRaisesRegexp(S.Invalid, 'int'):
+            si.validate(dict(a=['a'], b='b'))
+
     def test_none(self):
         si = S.SchemaItem.make(None)
         si.validate(1)
