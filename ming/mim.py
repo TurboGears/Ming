@@ -1034,8 +1034,6 @@ def _traverse_doc(doc, key):
 def _traverse_doc_all(doc, key):
     '''Return *all* matches for the given key'''
     def _traverse(doc, first, *rest):
-        if key == 'emails':
-            import ipdb; ipdb.set_trace();
         if isinstance(doc, dict):
             if first in doc:
                 values = doc[first]
