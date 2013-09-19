@@ -244,9 +244,8 @@ class Object(FancySchemaItem):
     ParentClass._validate(...) sometimes will return an instance of ChildClass).
     '''
 
-    def __init__(self, fields=None, required=False, if_missing=NoDefault, as_class=BaseObject):
+    def __init__(self, fields=None, required=False, if_missing=NoDefault):
         if fields is None: fields = {}
-        self.as_class = as_class
         FancySchemaItem.__init__(self, required, if_missing)
         self.fields = dict((name, SchemaItem.make(field))
                            for name, field in fields.iteritems())
@@ -267,7 +266,7 @@ class Object(FancySchemaItem):
         return '\n'.join(l)
 
     def if_missing(self):
-        return self.as_class(
+        return BaseObject(
             (k, v.validate(Missing))
             for k,v in self.fields.iteritems()
             if isinstance(k, basestring))
@@ -290,7 +289,7 @@ class Object(FancySchemaItem):
             error_dict = dict(errors)
             msg = '\n'.join('%s:%s' % t for t in error_dict.iteritems())
             raise Invalid(msg, d, None, error_dict=error_dict)
-        return self.as_class(to_set)
+        return BaseObject(to_set)
 
     def _validate_core(self, d, to_set, errors, **kw):
         l_Missing = Missing
@@ -327,7 +326,7 @@ class Object(FancySchemaItem):
             error_dict = dict(errors)
             msg = '\n'.join('%s:%s' % t for t in errors)
             raise Invalid(msg, d, None, error_dict=error_dict)
-        result = self.as_class(to_set)
+        result = BaseObject(to_set)
         if not allow_extra:
             try:
                 extra_keys = set(d.iterkeys()) - set(self.fields.iterkeys())
