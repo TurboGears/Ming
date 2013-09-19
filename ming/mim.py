@@ -16,7 +16,7 @@ try:
 except ImportError:
     Runtime = None
 
-from ming.utils import LazyProperty
+from ming.utils import LazyProperty, cross_product
 
 import bson
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
@@ -422,8 +422,8 @@ class Collection(collection.Collection):
         if not unique: return
         self._unique_indexes[keys] = index = {}
         for id, doc in self._data.iteritems():
-            key_values = self._extract_index_key(doc, keys)
-            index[key_values] =id
+            for kval in self._extract_index_keys(doc, keys):
+                index[kval] = id
         return index_name
 
     def index_information(self):
@@ -444,27 +444,29 @@ class Collection(collection.Collection):
     def __repr__(self):
         return 'mim.Collection(%r, %s)' % (self._database, self.name)
 
-    def _extract_index_key(self, doc, keys):
+    def _extract_index_keys(self, doc, keys):
         key_values = list()
         for key in keys:
-            sub, key = _traverse_doc(doc, key[0])
-            key_values.append(sub.get(key, None))
-        return tuple(key_values)
+            values = list(_traverse_doc_all(doc, key[0]))
+            key_values.append(values)
+        return cross_product(*key_values)
 
     def _index(self, doc):
-        if '_id' not in doc: return
+        if '_id' not in doc:
+            return
         for keys, index in self._unique_indexes.iteritems():
-            key_values = self._extract_index_key(doc, keys)
-            old_id = index.get(key_values, ())
-            if old_id == doc['_id']: continue
-            if old_id in self._data:
-                raise DuplicateKeyError, '%r: %s' % (self, keys)
-            index[key_values] = doc['_id']
+            for kval in self._extract_index_keys(doc, keys):
+                old_id = index.get(kval, ())
+                if old_id == doc['_id']:
+                    continue
+                if old_id in self._data:
+                    raise DuplicateKeyError('%r: %s' % (self, keys))
+                index[kval] = doc['_id']
 
     def _deindex(self, doc):
         for keys, index in self._unique_indexes.iteritems():
-            key_values = self._extract_index_key(doc, keys)
-            index.pop(key_values, None)
+            for kval in self._extract_index_keys(doc, keys):
+                index.pop(kval, None)
 
     def map_reduce(self, map, reduce, out, full_response=False, **kwargs):
         if isinstance(out, basestring):
@@ -1028,6 +1030,42 @@ def _traverse_doc(doc, key):
     for part in path[:-1]:
         cur = cur.setdefault(part, {})
     return cur, path[-1]
+
+def _traverse_doc_all(doc, key):
+    '''Return *all* matches for the given key'''
+    def _traverse(doc, first, *rest):
+        if key == 'emails':
+            import ipdb; ipdb.set_trace();
+        if isinstance(doc, dict):
+            if first in doc:
+                values = doc[first]
+                if not isinstance(values, list):
+                    values = [values]
+            else:
+                values = None
+        elif isinstance(doc, list):
+            if first.isdigit():
+                values = [doc[int(first)]]
+            else:
+                values = doc
+                rest = (first,) + rest
+        else:
+            values = None
+        if values is None:
+            yield None
+        elif rest:
+            for value in values:
+                for x in _traverse(value, *rest):
+                    yield x
+        else:
+            for value in values:
+                yield value
+    return _traverse(doc, *key.split('.'))
+
+
+
+
+
 
 def _project(doc, fields):
     result = {}

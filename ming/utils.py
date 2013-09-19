@@ -116,6 +116,17 @@ def indent(s, level=2):
     prefix = ' ' * level
     return s.replace('\n', '\n' + prefix)
 
+
+def cross_product(first, *rest):
+    if rest:
+        for x in first:
+            for ys in cross_product(*rest):
+                yield (x,) + ys
+    else:
+        for x in first:
+            yield (x,)
+
+
 def fixup_index(index, direction=pymongo.ASCENDING):
 
     def _fixup(i):
