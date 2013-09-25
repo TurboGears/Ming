@@ -3,6 +3,7 @@ from collections import defaultdict
 from ming.session import Session
 from ming.utils import ThreadLocalProxy, ContextualProxy, indent
 from ming.base import Object
+from ming.exc import MingException
 from .base import state, ObjectState, session, with_hooks, call_hook
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
@@ -255,6 +256,10 @@ class ContextualODMSession(ContextualProxy):
         del cls._session_registry[context]
 
 class ODMCursor(object):
+
+    def __bool__(self):
+        raise MingException('Cannot evaluate ODMCursor to a boolean')
+    __nonzero__ = __bool__  # python 2
 
     def __init__(self, session, cls, ming_cursor, refresh=False, decorate=None, fields=None):
         self.session = session

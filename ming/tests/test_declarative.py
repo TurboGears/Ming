@@ -10,6 +10,7 @@ from ming.declarative import Document
 from ming.metadata import Field, Index
 from ming import schema as S
 from ming.session import Session
+from ming.exc import MingException
 
 def mock_datastore():
     def mock_collection():
@@ -323,6 +324,7 @@ class TestCursor(TestCase):
         self.cursor.cursor.skip.assert_called_with(10)
         self.cursor.cursor.hint.assert_called_with('foo')
         self.cursor.cursor.sort.assert_called_with('a')
+        self.assertRaises(MingException, lambda: bool(self.cursor))
 
     def test_first(self):
         obj = dict(a=None, b=dict(a=None))
