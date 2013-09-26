@@ -1,6 +1,19 @@
 Ming News / Release Notes
 =====================================
 
+0.4.2 (Sep 26, 2013)
+------------------------------------------------
+* bool(cursor) now raises an Exception.  Pre-0.4 it evaluated based on the value
+  of `__len__` but since 0.4 removed `__len__` it always returned True (python's default
+  behavior) which could be misleading and unexpected.  This forces application code to
+  be changed to perform correctly.
+* schema migration now raises the new schema error if both old & new are invalid
+* aggregation methods added to session.  `distinct`, `aggregate`, etc are now available
+  for convenience and pass through directly to pymongo
+* MIM: support for indexing multi-valued properties
+* MIM: forcing numerical keys as strings
+* MIM: add `manipulate` arg to `insert` for closer pymongo compatibility
+
 0.4.1 and 0.3.9 (Aug 30, 2013)
 ------------------------------------------------
 
