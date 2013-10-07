@@ -71,6 +71,116 @@ class TestRelation(TestCase):
         self.assertRaises(TypeError, parent.children.append, children[0])
         self.assertRaises(TypeError, setchild)
 
+
+class TestManyToManyListRelation(TestCase):
+
+    def setUp(self):
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+        class Parent(MappedClass):
+            class __mongometa__:
+                name='parent'
+                session = self.session
+            _id = FieldProperty(int)
+            children = RelationProperty('Child')
+            _children = ForeignIdProperty('Child', uselist=True)
+        class Child(MappedClass):
+            class __mongometa__:
+                name='child'
+                session = self.session
+            _id = FieldProperty(int)
+            parents = RelationProperty('Parent')
+        Mapper.compile_all()
+        self.Parent = Parent
+        self.Child = Child
+
+    def tearDown(self):
+        self.session.clear()
+        self.datastore.conn.drop_all()
+
+    def test_compiled_field(self):
+        self.assertEqual(self.Parent._children.field.type, [self.Child._id.field.type])
+
+    def test_parent(self):
+        children = [ self.Child(_id=i) for i in range(5) ]
+        parent = self.Parent(_id=1)
+        parent._children = [c._id for c in children]
+        other_parent = self.Parent(_id=2)
+        other_parent._children = [c._id for c in children[:2]]
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        self.assertEqual(len(parent.children), 5)
+        self.session.clear()
+
+        child = self.Child.query.get(_id=0)
+        self.assertEqual(len(child.parents), 2)
+
+    def test_readonly(self):
+        children = [ self.Child(_id=i) for i in range(5) ]
+        parent = self.Parent(_id=1)
+        parent._children = [c._id for c in children]
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        def clearchildren():
+            parent.children = []
+        def setchild():
+            parent.children[0] = children[0]
+        self.assertRaises(TypeError, clearchildren)
+        self.assertRaises(TypeError, parent.children.append, children[0])
+        self.assertRaises(TypeError, setchild)
+
+
+class TestManyToManyListReverseRelation(TestCase):
+
+    def setUp(self):
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+        class Parent(MappedClass):
+            class __mongometa__:
+                name='parent'
+                session = self.session
+            _id = FieldProperty(int)
+            children = RelationProperty('Child')
+        class Child(MappedClass):
+            class __mongometa__:
+                name='child'
+                session = self.session
+            _id = FieldProperty(int)
+            parents = RelationProperty('Parent')
+            _parents = ForeignIdProperty('Parent', uselist=True)
+        Mapper.compile_all()
+        self.Parent = Parent
+        self.Child = Child
+
+    def tearDown(self):
+        self.session.clear()
+        self.datastore.conn.drop_all()
+
+    def test_compiled_field(self):
+        self.assertEqual(self.Child._parents.field.type, [self.Parent._id.field.type])
+
+    def test_parent(self):
+        parent = self.Parent(_id=1)
+        other_parent = self.Parent(_id=2)
+
+        children = [ self.Child(_id=i, _parents=[parent._id]) for i in range(5) ]
+        for c in children[:2]:
+            c._parents.append(other_parent._id)
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        self.assertEqual(len(parent.children), 5)
+        self.session.clear()
+
+        child = self.Child.query.get(_id=0)
+        self.assertEqual(len(child.parents), 2)
+
+
 class TestBasicMapperExtension(TestCase):
     def setUp(self):
         self.datastore = create_datastore('mim:///test_db')

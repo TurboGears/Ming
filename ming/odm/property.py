@@ -117,10 +117,11 @@ class FieldPropertyWithMissingNone(FieldProperty):
 
 class ForeignIdProperty(FieldProperty):
 
-    def __init__(self, related, *args, **kwargs):
+    def __init__(self, related, uselist=False, *args, **kwargs):
         ORMProperty.__init__(self)
         self.args = args
         self.kwargs = kwargs
+        self.uselist = uselist
         if isinstance(related, type):
             self._compiled = True
             self.related = related
@@ -137,7 +138,10 @@ class ForeignIdProperty(FieldProperty):
     @LazyProperty
     def field(self):
         if not self._compiled: raise AttributeError, 'field'
-        return Field(self.name, self.related._id.field.type, **self.kwargs)
+        if self.uselist:
+            return Field(self.name, [self.related._id.field.type], **self.kwargs)
+        else:
+            return Field(self.name, self.related._id.field.type, **self.kwargs)
 
     def compile(self, mapper):
         if self._compiled: return
@@ -183,9 +187,15 @@ class RelationProperty(ORMProperty):
         if self.via:
             rel_props = [ p for p in rel_props if p.name == self.via ]
         if len(own_props) == 1:
-            return ManyToOneJoin(cls, rel, own_props[0])
+            if own_props[0].uselist:
+                return ManyToManyListJoin(cls, rel, own_props[0])
+            else:
+                return ManyToOneJoin(cls, rel, own_props[0])
         if len(rel_props) == 1:
-            return OneToManyJoin(cls, rel, rel_props[0])
+            if rel_props[0].uselist:
+                return ManyToManyListJoin(rel, cls, rel_props[0])
+            else:
+                return OneToManyJoin(cls, rel, rel_props[0])
         if own_props or rel_props:
             raise AmbiguousJoin, (
                 'Ambiguous join, satisfying keys are %r' %
@@ -260,3 +270,31 @@ class OneToManyTracker(object):
     removed_item = soil
     cleared = soil
 
+class ManyToManyListJoin(object):
+
+    def __init__(self, own_cls, rel_cls, prop):
+        self.own_cls, self.rel_cls, self.prop = own_cls, rel_cls, prop
+
+    def load(self, instance):
+        return instrument(
+            list(self.iterator(instance)),
+            ManyToManyListTracker(state(instance)))
+
+    def iterator(self, instance):
+        if isinstance(instance, self.own_cls):
+            # instance is the class owning the list
+            related_ids = self.prop.__get__(instance, self.prop.name)
+            field_name = self.rel_cls._id.field.name
+            return self.rel_cls.query.find({field_name: {'$in': related_ids}})
+        elif isinstance(instance, self.rel_cls):
+            # instance is the class without the list
+            instance_id = instance._id
+            return self.own_cls.query.find({self.prop.name: instance_id})
+        else:
+            raise NoJoin, 'Object is not an endpoint of the relationship'
+
+    def set(self, instance, value):
+        raise TypeError, 'read-only'
+
+class ManyToManyListTracker(OneToManyTracker):
+    pass
