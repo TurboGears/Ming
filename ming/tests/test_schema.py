@@ -2,6 +2,7 @@ from unittest import TestCase, main
 from datetime import datetime
 
 import ming.datastore
+import pytz
 from ming import Document, Field
 from ming import schema as S
 
@@ -45,7 +46,7 @@ class TestSchemaItem(TestCase):
         self.assertEqual(S.Anything, si_any.field_type.__class__)
         self.assertEqual(S.Int, si_int.field_type.__class__)
         self.assertRaises(ValueError, S.SchemaItem.make, [int, str])
-        
+
     def test_dont_allow_none(self):
         si = S.Int(allow_none=False)
         self.assertRaises(S.Invalid, si.validate, None)
@@ -56,7 +57,7 @@ class TestSchemaItem(TestCase):
             validate_ranges=[slice(0, 2) ])
         si.validate([1,2,'foo', 'bar'])
         self.assertRaises(S.Invalid, si.validate, [1,'foo', 'bar'])
-    
+
     def test_dict_is_not_array(self):
         si = S.SchemaItem.make([])
         self.assertRaises(S.Invalid, si.validate, {})
@@ -66,6 +67,13 @@ class TestSchemaItem(TestCase):
         self.assertEqual(
             datetime(2012,2,8,12,42,14,123000),
             si.validate(datetime(2012,2,8,12,42,14,123456)))
+
+    def test_timezone_conversion(self):
+        si = S.SchemaItem.make(datetime)
+        self.assertEqual(
+            datetime(2012,2,8,20,42,14,123000),
+            si.validate(datetime(2012,2,8,12,42,14,123456,
+                                 tzinfo=pytz.timezone('US/Pacific'))))
 
     def test_migrate(self):
         si = S.Migrate(int, str, str)
@@ -83,6 +91,17 @@ class TestSchemaItem(TestCase):
             S.Migrate.obj_to_list('key', 'value'))
         self.assertEqual(si.validate(dict(foo=1)),
                          [ dict(key='foo', value=1) ])
+
+    def test_migrate_both_invalid(self):
+        def fixer(x):
+            x['a'] = [x['a']]
+            return x
+        si = S.Migrate(
+            {'a': str},
+            {'a': [str], 'b': int},
+            fixer)
+        with self.assertRaisesRegexp(S.Invalid, 'int'):
+            si.validate(dict(a=['a'], b='b'))
 
     def test_none(self):
         si = S.SchemaItem.make(None)
@@ -110,11 +129,11 @@ class TestSchemaItem(TestCase):
         self.assertEqual(si.validate(dict(a=5)), dict(a=5))
         self.assertRaises(S.Invalid, si.validate, dict(a='as'))
         self.assertRaises(S.Invalid, si.validate, {5:5})
-    
+
     def test_validate_base(self):
         si = S.SchemaItem()
         self.assertRaises(NotImplementedError, si.validate, None)
-    
+
     def test_nested_objects(self):
         nested_object = S.Object(dict(a=int, b=int), if_missing=None)
         si = S.SchemaItem.make(dict(
@@ -132,7 +151,7 @@ class TestSchemaItem(TestCase):
 
     def test_nodefault(self):
         self.assertEqual(repr(S.NoDefault), '<NoDefault>')
-    
+
 if __name__ == '__main__':
     main()
 

@@ -1,6 +1,43 @@
 Ming News / Release Notes
 =====================================
 
+0.4.2 (Sep 26, 2013)
+------------------------------------------------
+* bool(cursor) now raises an Exception.  Pre-0.4 it evaluated based on the value
+  of `__len__` but since 0.4 removed `__len__` it always returned True (python's default
+  behavior) which could be misleading and unexpected.  This forces application code to
+  be changed to perform correctly.
+* schema migration now raises the new schema error if both old & new are invalid
+* aggregation methods added to session.  `distinct`, `aggregate`, etc are now available
+  for convenience and pass through directly to pymongo
+* MIM: support for indexing multi-valued properties
+* MIM: forcing numerical keys as strings
+* MIM: add `manipulate` arg to `insert` for closer pymongo compatibility
+
+0.4.1 and 0.3.9 (Aug 30, 2013)
+------------------------------------------------
+
+* MIM: Support slicing cursors
+* MIM: Fixed exact dot-notation queries
+* MIM: Fixed dot-notation queries against null fields
+* MIM: Translate time-zone aware timestamps to UTC timestamps.  `pytz` added as dependency
+* MIM: Allow the remove argument to `find_and_modify`
+
+0.4 (June 28, 2013)
+------------------------------------------------
+
+* removed 'flyway' package from ming.  It is now available from https://github.com/amol-/ming-flyway 
+  This removes the dependency on PasteScript and will make Python 3 migration easier.
+* WebOb dependency is optional.
+* removed `cursor.__len__`  You must change `len(query)` to `query.count()` now.  This prevents
+  inadvertent extra count queries from running.  https://sourceforge.net/p/merciless/bugs/18/
+
+0.3.2 through 0.3.8
+------------------------------------------------
+
+* many improvements to make MIM more like actual mongo
+* various fixes and improvements
+
 0.3.2 (rc1) (January 8, 2013)
 ------------------------------------------------
 

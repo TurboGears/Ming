@@ -3,6 +3,7 @@ from collections import defaultdict
 from ming.session import Session
 from ming.utils import ThreadLocalProxy, ContextualProxy, indent
 from ming.base import Object
+from ming.exc import MingException
 from .base import state, ObjectState, session, with_hooks, call_hook
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
@@ -148,6 +149,27 @@ class ODMSession(object):
     def update_indexes(self, cls, **kwargs):
         return self.impl.update_indexes(cls, **kwargs)
 
+    def group(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.group(m.collection, *args, **kwargs)
+
+    def aggregate(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.aggregate(m.collection, *args, **kwargs)
+
+    def distinct(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.distinct(m.collection, *args, **kwargs)
+
+    def map_reduce(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.map_reduce(m.collection, *args, **kwargs)
+
+    def inline_map_reduce(self, cls, *args, **kwargs):
+        m = mapper(cls)
+        return self.impl.inline_map_reduce(m.collection, *args, **kwargs)
+
+
 class SessionExtension(object):
 
     def __init__(self, session):
@@ -234,6 +256,10 @@ class ContextualODMSession(ContextualProxy):
         del cls._session_registry[context]
 
 class ODMCursor(object):
+
+    def __bool__(self):
+        raise MingException('Cannot evaluate ODMCursor to a boolean')
+    __nonzero__ = __bool__  # python 2
 
     def __init__(self, session, cls, ming_cursor, refresh=False, decorate=None, fields=None):
         self.session = session

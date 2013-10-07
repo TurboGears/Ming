@@ -6,6 +6,7 @@ from datetime import datetime
 
 import bson
 import pymongo
+import pytz
 
 from .utils import LazyProperty
 from .base import Object as BaseObject, Missing, NoDefault
@@ -61,7 +62,7 @@ class Invalid(Exception):
         val = self.msg
         #if self.value:
         #    val += " (value: %s)" % repr(self.value)
-        return val    
+        return val
 
     def __unicode__(self):
         if isinstance(self.msg, unicode):
@@ -85,7 +86,7 @@ class SchemaItem(object):
     @classmethod
     def make(cls, field, *args, **kwargs):
         '''Build a SchemaItem from a "shorthand" schema.  The `field` param:
-        
+
         * int - int or long
         * str - string or unicode
         * float - float, int, or long
@@ -97,7 +98,7 @@ class SchemaItem(object):
         * { fld: type... } - dict-like object with field "fld" of type "type"
         * { type: type... } - dict-like object with fields of type "type"
         * anything else (e.g. literal values), must match exactly
-        
+
         ``*args`` and ``**kwargs`` are passed on to the specific class of ``SchemaItem`` created.
         '''
         if isinstance(field, list):
@@ -131,10 +132,14 @@ class Migrate(SchemaItem):
     def validate(self, value, **kw):
         try:
             return self.new.validate(value, **kw)
-        except Invalid:
-            value = self.old.validate(value, **kw)
-            value = self.migration_function(value)
-            return self.new.validate(value, **kw)
+        except Invalid as new_error:
+            try:
+                value = self.old.validate(value, **kw)
+            except Invalid:
+                raise new_error
+            else:
+                value = self.migration_function(value)
+                return self.new.validate(value, **kw)
 
     @classmethod
     def obj_to_list(cls, key_name, value_name=None):
@@ -262,7 +267,7 @@ class Object(FancySchemaItem):
         l = [ super(Object, self).__repr__() ]
         for k,f in self.fields.iteritems():
             l.append('  %s: %s' % (k, repr(f).replace('\n', '\n    ')))
-        return '\n'.join(l) 
+        return '\n'.join(l)
 
     def if_missing(self):
         return BaseObject(
@@ -408,7 +413,7 @@ class Array(FancySchemaItem):
     def __repr__(self):
         l = [ super(Array, self).__repr__() ]
         l.append('  ' + repr(self.field_type).replace('\n', '\n    '))
-        return '\n'.join(l) 
+        return '\n'.join(l)
 
     @LazyProperty
     def field_type(self):
@@ -443,7 +448,7 @@ class Array(FancySchemaItem):
                         for i,v in enumerate(error_list)
                         if v is not None)
         raise Invalid(msg, d, None, error_list=error_list)
-        
+
 
 class Scalar(FancySchemaItem):
     '''Validate that a value is NOT an array or dict'''
@@ -487,7 +492,7 @@ class Value(FancySchemaItem):
     def __init__(self, value, **kw):
         self.value = value
         FancySchemaItem.__init__(self, **kw)
-        
+
     def _validate(self, value, **kw):
         if value != self.value:
             raise Invalid('%r != %r' % (value, self.value),
@@ -514,8 +519,10 @@ class DateTime(DateTimeTZ):
             raise Invalid('%s is not a %r' % (value, self.type),
                           value, None)
         # Truncate microseconds and keep milliseconds only (mimics BSON datetime)
-        value = value.replace(microsecond=(value.microsecond // 1000) * 1000,
-                              tzinfo=None)
+        value = value.replace(microsecond=(value.microsecond // 1000) * 1000)
+        # Convert a local timestamp to UTC
+        if value.tzinfo:
+            value = value.astimezone(pytz.utc).replace(tzinfo=None)
         return value
 class Bool(ParticularScalar):
     type=bool
@@ -547,5 +554,5 @@ SHORTHAND={
     float:Float,
     bool:Bool,
     datetime:DateTime}
-    
+
 

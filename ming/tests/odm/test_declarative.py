@@ -3,12 +3,14 @@ from unittest import TestCase
 from ming import schema as S
 from ming import create_datastore
 from ming import Session
+from ming.exc import MingException
 from ming.odm import ODMSession, Mapper
 from ming.odm import FieldProperty, RelationProperty, ForeignIdProperty
 from ming.odm import FieldPropertyWithMissingNone
 from ming.odm.declarative import MappedClass
 from ming.odm import state, mapper
 from ming.odm import MapperExtension, SessionExtension
+from ming.odm.odmsession import ODMCursor
 
 class TestIndex(TestCase):
 
@@ -261,4 +263,15 @@ class TestPolymorphic(TestCase):
         r = sorted(q.all())
         assert r[0].__class__ is self.Base
         assert r[1].__class__ is self.Derived
+
+class TestODMCursor(TestCase):
+
+    def test_bool_exc(self):
+        session = None
+        class Base(MappedClass):
+            pass
+        cls = Base
+        mongo_cursor = None
+        cursor = ODMCursor(session, cls, mongo_cursor)
+        self.assertRaises(MingException, lambda: bool(cursor))
 

@@ -6,6 +6,7 @@ import bson
 from ming import create_datastore, mim
 from pymongo.errors import OperationFailure, DuplicateKeyError
 from nose import SkipTest
+from mock import patch
 
 class TestDatastore(TestCase):
 
@@ -409,6 +410,36 @@ class TestMRCommands(TestCommands):
             list(self.bind.db.reduce.find()),
             [ dict(_id=1, value=45) ])
 
+    def test_mr_replace_number_key_obj(self):
+        # testing numerical keys nested in objects being reduced
+        self.bind.db.coll.remove()
+        docs = [ {'val': {'id': 1, 'c': 5}} ]
+        for d in docs:
+            self.bind.db.date_coll.insert(d)
+        result = self.bind.db.date_coll.map_reduce(
+            map='function(){ var d = {}; d[new String(this.val.id)] = this.val.c; emit("val", d); }',
+            reduce=self.first_js,
+            out=dict(replace='coll'))
+        self.assertEqual(result['result'], 'coll')
+        expected = [{u'_id': u'val', u'value': {u'1': 5}}]
+        self.assertEqual(
+            list(self.bind.db.coll.find()),
+            expected)
+
+    def test_mr_inline_number_key_obj(self):
+        # testing numerical keys nested in objects being reduced
+        self.bind.db.coll.remove()
+        docs = [ {'val': {'id': 1, 'c': 5}} ]
+        for d in docs:
+            self.bind.db.date_coll.insert(d)
+        result = self.bind.db.date_coll.map_reduce(
+            map='function(){ var d = {}; d[new String(this.val.id)] = this.val.c; emit("val", d); }',
+            reduce=self.first_js,
+            out=dict(inline=1))
+        expected = [{'_id': u'val', 'value': {'1': 5}}]
+        self.assertEqual(result['results'], expected)
+
+
 class TestCollection(TestCase):
 
     def setUp(self):
@@ -471,6 +502,37 @@ class TestCollection(TestCase):
         result = list(result)
         self.assertEqual(len(result), 2)
 
+    def test_find_with_slice_skip(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result = self.bind.db.coll.find().sort('a')[3:]
+        result = list(result)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['a'], 3)
+
+    def test_find_with_slice_limit(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result = self.bind.db.coll.find().sort('a')[:2]
+        result = list(result)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['a'], 0)
+
+    def test_find_with_slice_skip_limit(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id':str(i), 'a':i})
+        result = self.bind.db.coll.find().sort('a')[2:4]
+        result = list(result)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]['a'], 2)
+
+    def test_find_with_slice_invalid(self):
+        try:
+            self.bind.db.coll.find()['random']
+        except TypeError:
+            return
+        self.fail('No TypeError exception raised')
+
     def test_find_with_paging(self):
         for i in range(5):
             self.bind.db.coll.insert({'_id':str(i), 'a':i})
@@ -489,6 +551,11 @@ class TestCollection(TestCase):
 
     def test_find_and_modify_returns_none_on_no_entries(self):
         self.assertEqual(None, self.bind.db.foo.find_and_modify({'i': 1}, {'$set': {'i': 2}}))
+
+    def test_find_and_modify_with_remove(self):
+        self.bind.db.col.insert({'_id': 1})
+        self.assertEqual({'_id': 1}, self.bind.db.col.find_and_modify({'_id': 1}, remove=True))
+        self.assertEqual(0, self.bind.db.col.count())
 
     def test_hint_simple(self):
         self.bind.db.coll.ensure_index([('myindex', 1)])
@@ -517,7 +584,16 @@ class TestCollection(TestCase):
         self.assertEqual(info['myfield']['expireAfterSeconds'], 42)
 
     def test_insert_manipulate_false(self):
-        self.bind.db.coll.insert({'x': 1}, manipulate=False)
+        doc = {'x': 1}
+        self.bind.db.coll.insert(doc, manipulate=False)
+        self.assertEqual(doc, {'x': 1})
+
+    def test_insert_manipulate_true(self):
+        doc = {'x': 1}
+        sample_id = bson.ObjectId()
+        with patch('bson.ObjectId', return_value=sample_id):
+            self.bind.db.coll.insert(doc, manipulate=True)
+        self.assertEqual(doc, {'x': 1, '_id': sample_id})
 
     def test_unique_index_subdocument(self):
         coll = self.bind.db.coll
@@ -624,3 +700,18 @@ class TestMatch(TestCase):
         regex = re.compile(r'ba[rz]')
         self.assertIsNotNone(mim.match( {'a': regex}, doc))
         self.assertIsNone(mim.match( {'b': regex}, doc))
+
+    def test_subdoc_partial(self):
+        doc = {'a': {'b': 1, 'c': 1}}
+        self.assertIsNotNone(mim.match({'a.b': 1}, doc))
+        self.assertIsNone(mim.match({'a.b': 2}, doc))
+
+    def test_subdoc_exact(self):
+        doc = {'a': {'b': 1}}
+        self.assertIsNotNone(mim.match({'a': {'b': 1}}, doc))
+        self.assertIsNone(mim.match({'a': {'b': 2}}, doc))
+        self.assertIsNone(mim.match({'a': {'b': 1, 'c': 1}}, doc))
+
+    def test_traverse_none(self):
+        doc = {'a': None}
+        self.assertIsNone(mim.match({'a.b.c': 1}, doc))

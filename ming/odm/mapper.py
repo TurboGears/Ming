@@ -260,7 +260,8 @@ class _QueryDescriptor(object):
 
 class _ClassQuery(object):
     _proxy_methods = (
-        'find', 'find_and_modify', 'remove', 'update' )
+        'find', 'find_and_modify', 'remove', 'update', 'group', 'distinct',
+        'aggregate', 'map_reduce', 'inline_map_reduce')
 
     def __init__(self, mapper):
         self.mapper = mapper

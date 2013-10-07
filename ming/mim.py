@@ -170,7 +170,9 @@ class Database(database.Database):
                 elif js_source.startswith('({'):
                     # Handle recursive conversion in case we got back a
                     # mapping with multiple values.
-                    obj = dict((a, topy(obj[a])) for a in obj)
+                    # spidermonkey changes all js number strings to int/float
+                    # changing back to string here for key protion, since bson requires it
+                    obj = dict((str(a), topy(obj[a])) for a in obj)
                 else:
                     assert False, 'Cannot convert %s to Python' % (js_source)
             elif isinstance(obj, collections.Mapping):
@@ -318,7 +320,8 @@ class Collection(collection.Collection):
             return result
         return None
 
-    def find_and_modify(self, query=None, update=None, fields=None, upsert=False, **kwargs):
+    def find_and_modify(self, query=None, update=None, fields=None,
+                        upsert=False, remove=False, **kwargs):
         if query is None: query = {}
         before = self.find_one(query, sort=kwargs.get('sort'))
         upserted = False
@@ -329,18 +332,21 @@ class Collection(collection.Collection):
             else:
                 return None
         before = self.find_one(query, fields, sort=kwargs.get('sort'))
-        if not upserted:
+        if remove:
+            self.remove({'_id': before['_id']})
+        elif not upserted:
             self.update({'_id': before['_id']}, update)
         if kwargs.get('new', False) or upserted:
             return self.find_one(dict(_id=before['_id']), fields)
 
         return before
 
-    def insert(self, doc_or_docs, safe=False, **kwargs):
+    def insert(self, doc_or_docs, manipulate=True, safe=False, **kwargs):
         if not isinstance(doc_or_docs, list):
             doc_or_docs = [ doc_or_docs ]
         for doc in doc_or_docs:
-            doc = bcopy(doc)
+            if not manipulate:
+                doc = bcopy(doc)
             bson_safe(doc)
             _id = doc.get('_id', ())
             if _id == ():
@@ -535,7 +541,18 @@ class Cursor(object):
         # Le *sigh* -- this is the only place apparently where pymongo *does*
         # clone
         clone = self.clone()
-        return clone.skip(key).next()
+        if isinstance(key, slice):
+            _clone = clone
+            start, end = key.start, key.stop # step not supported
+            if start is None:
+                start = 0
+            _clone = _clone.skip(start)
+            if end is not None:
+                _clone = _clone.limit(end-start)
+            return _clone
+        elif isinstance(key, int):
+            return clone.skip(key).next()
+        raise TypeError('indicies must be integers, not %s' % type(key))
 
     def __iter__(self):
         return self
@@ -818,6 +835,8 @@ class MatchDoc(Match):
             return self, first
         if first not in self._doc:
             self._doc[first] = MatchDoc({})
+        if self._doc[first] is None:
+            return MatchDoc({}), None
         return self[first].traverse(*rest)
     def iteritems(self):
         return self._doc.iteritems()
@@ -838,6 +857,8 @@ class MatchDoc(Match):
     def setdefault(self, key, default):
         self._doc.setdefault(key, default)
         return self._orig.setdefault(key, default)
+    def keys(self):
+        return self._doc.keys()
 
 
 class MatchList(Match):

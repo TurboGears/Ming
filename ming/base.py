@@ -6,6 +6,8 @@ from datetime import datetime
 
 import bson
 
+from ming.exc import MingException
+
 class Missing(tuple):
     '''Missing is a sentinel used to indicate a missing key or missing keyword
     argument (used since None sometimes has meaning)'''
@@ -54,6 +56,10 @@ class Cursor(object):
     '''Python class proxying a MongoDB cursor, constructing and validating
     objects that it tracks
     '''
+
+    def __bool__(self):
+        raise MingException('Cannot evaluate Cursor to a boolean')
+    __nonzero__ = __bool__  # python 2
 
     def __init__(self, cls, cursor, allow_extra=True, strip_extra=True):
         self.cls = cls
