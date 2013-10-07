@@ -252,7 +252,6 @@ class OneToManyJoin(object):
     def iterator(self, instance):
         key_value = instance._id
         return self.rel_cls.query.find({self.prop.name:key_value})
-        return [ self.load(instance) ]
 
     def set(self, instance, value):
         raise TypeError, 'read-only'
