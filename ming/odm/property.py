@@ -156,8 +156,15 @@ class RelationProperty(ORMProperty):
 
     def __init__(self, related, via=None, fetch=True):
         ORMProperty.__init__(self)
+
+        via_property_owner = None
+        if isinstance(via, tuple):
+            # Makes possible to force a side of the relationship
+            # when specifying the via property
+            via, via_property_owner = via
+
+        self.via_property_owner = via_property_owner
         self.via = via
-        self.via_property = None
         self.fetch = fetch
         if isinstance(related, type):
             self.related = related
@@ -169,31 +176,36 @@ class RelationProperty(ORMProperty):
         from .mapper import mapper
         return mapper(self._related_classname).mapped_class
 
+    def _detect_foreign_keys(self, mapper, related, otherside):
+
+        props = [ p for p in mapper.all_properties()
+                  if isinstance(p, ForeignIdProperty)
+                  and issubclass(related, p.related) ]
+
+        if self.via:
+            props = [ p for p in props if p.name == self.via ]
+            if self.via_property_owner is otherside:
+                props = []
+
+        return props
+
     @LazyProperty
     def join(self):
         from .mapper import mapper
         cls = self.mapper.mapped_class
         rel = self.related
-        own_mapper = self.mapper
-        own_props = [ p for p in own_mapper.all_properties()
-                      if isinstance(p, ForeignIdProperty)
-                      and issubclass(rel, p.related) ]
-        if self.via:
-            own_props = [ p for p in own_props if p.name == self.via ]
-        rel_mapper = mapper(self.related)
-        rel_props = [ p for p in rel_mapper.all_properties()
-                      if isinstance(p, ForeignIdProperty)
-                      and issubclass(cls, p.related) ]
-        if self.via:
-            rel_props = [ p for p in rel_props if p.name == self.via ]
+
+        own_props = self._detect_foreign_keys(self.mapper, rel, False)
+        rel_props = self._detect_foreign_keys(mapper(self.related), cls, True)
+
         if len(own_props) == 1:
             if own_props[0].uselist:
-                return ManyToManyListJoin(cls, rel, own_props[0])
+                return ManyToManyListJoin(cls, rel, own_props[0], True)
             else:
                 return ManyToOneJoin(cls, rel, own_props[0])
         if len(rel_props) == 1:
             if rel_props[0].uselist:
-                return ManyToManyListJoin(rel, cls, rel_props[0])
+                return ManyToManyListJoin(cls, rel, rel_props[0], False)
             else:
                 return OneToManyJoin(cls, rel, rel_props[0])
         if own_props or rel_props:
@@ -271,8 +283,9 @@ class OneToManyTracker(object):
 
 class ManyToManyListJoin(object):
 
-    def __init__(self, own_cls, rel_cls, prop):
+    def __init__(self, own_cls, rel_cls, prop, detains_list):
         self.own_cls, self.rel_cls, self.prop = own_cls, rel_cls, prop
+        self.detains_list = detains_list
 
     def load(self, instance):
         return instrument(
@@ -280,17 +293,15 @@ class ManyToManyListJoin(object):
             ManyToManyListTracker(state(instance)))
 
     def iterator(self, instance):
-        if isinstance(instance, self.own_cls):
+        if self.detains_list:
             # instance is the class owning the list
             related_ids = self.prop.__get__(instance, self.prop.name)
             field_name = self.rel_cls._id.field.name
             return self.rel_cls.query.find({field_name: {'$in': related_ids}})
-        elif isinstance(instance, self.rel_cls):
+        else:
             # instance is the class without the list
             instance_id = instance._id
-            return self.own_cls.query.find({self.prop.name: instance_id})
-        else:
-            raise NoJoin, 'Object is not an endpoint of the relationship'
+            return self.rel_cls.query.find({self.prop.name: instance_id})
 
     def set(self, instance, value):
         raise TypeError, 'read-only'

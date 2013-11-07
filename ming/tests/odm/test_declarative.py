@@ -181,6 +181,49 @@ class TestManyToManyListReverseRelation(TestCase):
         self.assertEqual(len(child.parents), 2)
 
 
+class TestManyToManyListCyclic(TestCase):
+
+    def setUp(self):
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+
+        class TestCollection(MappedClass):
+            class __mongometa__:
+                name='test_collection'
+                session = self.session
+            _id = FieldProperty(int)
+
+            children = RelationProperty('TestCollection')
+            _children = ForeignIdProperty('TestCollection', uselist=True)
+            parents = RelationProperty('TestCollection', via=('_children', False))
+
+        Mapper.compile_all()
+        self.TestCollection = TestCollection
+
+    def tearDown(self):
+        self.session.clear()
+        self.datastore.conn.drop_all()
+
+    def test_compiled_field(self):
+        self.assertEqual(self.TestCollection._children.field.type, [self.TestCollection._id.field.type])
+
+    def test_cyclic(self):
+        children = [ self.TestCollection(_id=i) for i in range(10, 15) ]
+        parent = self.TestCollection(_id=1)
+        parent._children = [c._id for c in children]
+        other_parent = self.TestCollection(_id=2)
+        other_parent._children = [c._id for c in children[:2]]
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.TestCollection.query.get(_id=1)
+        self.assertEqual(len(parent.children), 5)
+        self.session.clear()
+
+        child = self.TestCollection.query.get(_id=10)
+        self.assertEqual(len(child.parents), 2)
+
+
 class TestBasicMapperExtension(TestCase):
     def setUp(self):
         self.datastore = create_datastore('mim:///test_db')
