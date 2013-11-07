@@ -34,7 +34,7 @@ identity map
 relations between objects
     Although MongoDB is non-relational, it is still useful to represent
     relationships between documents in the database.  The ODM layer in Ming
-    provides the ability to model one-to-many relationships between documents as
+    provides the ability to model relationships between documents as
     straightforward properties on Python objects.
 
 The ODM Session
@@ -170,6 +170,98 @@ And voilà, you have related objects.  Note that at present the relations betwee
 objects are read-only, so if you want to make or break a relationship, you must
 do it by setting the `ForeignIdProperty`.
 
+Advanced Relationships
+--------------------------
+
+The `ForeignIdProperty` and `RelationProperty` permit to configure various kind
+of relationships and tune them by specifying where to store the foreign ids or
+by forcing a specific foreign id.
+
+List based Relationships (Many-to-Many)
+=========================================
+
+Ming supports many-to-many relationships by using MongoDB arrays.
+Instead of storing the foreign id as an ObjectId it can be storead as an
+array of ObjectId.
+
+This can be achieved by using the ``uselist=True`` option of `ForeignIdProperty`:
+
+.. code-block:: python
+
+        class Parent(MappedClass):
+            class __mongometa__:
+                name='parent'
+                session = self.session
+
+            _id = FieldProperty(schema.ObjectId)
+            children = RelationProperty('Child')
+            _children = ForeignIdProperty('Child', uselist=True)
+
+        class Child(MappedClass):
+            class __mongometa__:
+                name='child'
+                session = self.session
+
+            _id = FieldProperty(schema.ObjectId)
+            parents = RelationProperty('Parent')
+
+Forcing a ForeignIdProperty
+================================
+
+By default the `RelationProperty` will automatically detect the relationship
+side and foreign id property. In case the automatic detection fails it is possible
+to manually specify it through the ``via="propertyname"`` option of the `RelationProperty`:
+
+.. code-block:: python
+
+    class WebSite(MappedClass):
+        class __mongometa__:
+            name='web_site'
+            session = self.session
+
+        _id = FieldProperty(schema.ObjectId)
+
+        _index = ForeignIdProperty('WebPage')
+        index = RelationProperty('WebPage', via='_index')
+
+        pages = RelationProperty('WebPage', via='_website')
+
+    class WebPage(MappedClass):
+        class __mongometa__:
+            name='web_page'
+            session = self.session
+
+        _id = FieldProperty(schema.ObjectId)
+
+        _website = ForeignIdProperty('WebSite')
+        website = RelationProperty('WebSite', via='_website')
+
+Forcing a Relationship side
+================================
+
+While it is possible to force a specific `ForeignIdProperty` there are cases when
+it is also necessary to force the relationship side. This might be the case if
+both sides of the relationship own a property with the specified name, a common
+case if a circular relationship where both sides are the same class.
+
+Specifying the side is possible by passing a ``tuple`` to the ``via`` property with
+the second value being ``True`` or ``False`` depending on the fact that the specified
+`ForeignIdProperty` should be considered owned by this side of the relationship or not:
+
+.. code-block:: python
+
+        class WebPage(MappedClass):
+            class __mongometa__:
+                name='web_page'
+                session = self.session
+
+            _id = FieldProperty(int)
+
+            children = RelationProperty('WebPage')
+            _children = ForeignIdProperty('WebPage', uselist=True)
+            parents = RelationProperty('WebPage', via=('_children', False))
+
+
 ODM Event Interfaces
 --------------------
 
@@ -236,7 +328,7 @@ and ODMCursor objects:
 
 The same SessionExtension instance can be used with any number of sessions.
 It is possible to register extensions on an already created ODMSession using
-the `register_extension(extension)` method of the session itself. 
+the `register_extension(extension)` method of the session itself.
 Even calling register_extension it is possible to register the extensions only
 before using the session for the first time.
 
