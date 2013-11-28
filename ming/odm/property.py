@@ -243,13 +243,20 @@ class ManyToOneJoin(object):
 
     def load(self, instance):
         key_value = self.prop.__get__(instance, self.own_cls)
+        if key_value is None:
+            # Avoid one unnecessary lookup on DB by
+            # considering ForeignIdPropery None value as
+            # not related to any other entity.
+            return None
         return self.rel_cls.query.get(_id=key_value)
 
     def iterator(self, instance):
         return [ self.load(instance) ]
 
     def set(self, instance, value):
-        self.prop.__set__(instance, value._id)
+        if value is not None:
+            value = value._id
+        self.prop.__set__(instance, value)
 
 class OneToManyJoin(object):
 
@@ -266,7 +273,19 @@ class OneToManyJoin(object):
         return self.rel_cls.query.find({self.prop.name:key_value})
 
     def set(self, instance, value):
-        raise TypeError, 'read-only'
+        value = [v if isinstance(v, self.rel_cls._id.field.type) else v._id for v in value]
+
+        # Retrieve all the referenced objects and update them.
+        instance_id = instance._id
+        foreign_id_owners = self.rel_cls.query.find({self.prop.name: instance_id})
+        for foreign_id_owner in foreign_id_owners:
+            # Remove all existing refereces in relationship
+            setattr(foreign_id_owner, self.prop.name, None)
+
+        for foreign_id_owner_id in value:
+            # Update relationship to requested value
+            list_owner = self.rel_cls.query.get(_id=foreign_id_owner_id)
+            setattr(list_owner, self.prop.name, instance._id)
 
 class OneToManyTracker(object):
     __slots__ = ('state',)
@@ -304,7 +323,30 @@ class ManyToManyListJoin(object):
             return self.rel_cls.query.find({self.prop.name: instance_id})
 
     def set(self, instance, value):
-        raise TypeError, 'read-only'
+        value = [v if isinstance(v, self.rel_cls._id.field.type) else v._id for v in value]
+
+        if self.detains_list:
+            # instance is the class owning the list
+            setattr(instance, self.prop.name, value)
+        else:
+            # instance doesn't own the list, need to retrieve all the
+            # referenced objects and update them.
+            instance_id = instance._id
+            foreign_id_list_owners = self.rel_cls.query.find({self.prop.name: instance_id})
+            for list_owner in foreign_id_list_owners:
+                # Remove all existing refereces in relationship
+                current_value = getattr(list_owner, self.prop.name)
+                updated_value = list(current_value)
+                updated_value.remove(instance_id)
+                setattr(list_owner, self.prop.name, updated_value)
+
+            for list_owner_id in value:
+                # Update relationship to requested value
+                list_owner = self.rel_cls.query.get(_id=list_owner_id)
+                current_value = getattr(list_owner, self.prop.name)
+                updated_value = current_value + [instance_id]
+                setattr(list_owner, self.prop.name, updated_value)
+
 
 class ManyToManyListTracker(OneToManyTracker):
     pass

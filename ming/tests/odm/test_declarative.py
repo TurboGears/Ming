@@ -57,19 +57,81 @@ class TestRelation(TestCase):
         parent = self.Parent.query.get(_id=1)
         self.assertEqual(len(parent.children), 5)
 
-    def test_readonly(self):
+    def test_instrumented_readonly(self):
         parent = self.Parent(_id=1)
         children = [ self.Child(_id=i, parent_id=1) for i in range(5) ]
         self.session.flush()
         self.session.clear()
         parent = self.Parent.query.get(_id=1)
-        def clearchildren():
-            parent.children = []
-        def setchild():
-            parent.children[0] = children[0]
-        self.assertRaises(TypeError, clearchildren)
         self.assertRaises(TypeError, parent.children.append, children[0])
-        self.assertRaises(TypeError, setchild)
+
+    def test_writable(self):
+        parent = self.Parent(_id=1)
+        children = [ self.Child(_id=i, parent_id=1) for i in range(5) ]
+        other_parent = self.Parent(_id=2)
+        self.session.flush()
+        self.session.clear()
+
+        child = self.Child.query.get(_id=4)
+        child.parent = other_parent
+        self.session.flush()
+        self.session.clear()
+
+        parent1 = self.Parent.query.get(_id=1)
+        self.assertEqual(len(parent1.children), 4)
+
+        parent2 = self.Parent.query.get(_id=2)
+        self.assertEqual(len(parent2.children), 1)
+
+    def test_writable_backref(self):
+        parent = self.Parent(_id=1)
+        children = [ self.Child(_id=i, parent_id=1) for i in range(5) ]
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        parent.children = parent.children[:4]
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        self.assertEqual(len(parent.children), 4)
+
+    def test_nullable_relationship(self):
+        parent = self.Parent(_id=1)
+        children = [ self.Child(_id=i, parent_id=1) for i in range(5) ]
+        self.session.flush()
+        self.session.clear()
+
+        child = self.Child.query.get(_id=0)
+        child.parent = None
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        self.assertEqual(len(parent.children), 4)
+
+        child = self.Child.query.get(_id=0)
+        self.assertEqual(child.parent, None)
+        self.assertEqual(child.parent_id, None)
+
+    def test_nullable_foreignid(self):
+        parent = self.Parent(_id=1)
+        children = [ self.Child(_id=i, parent_id=1) for i in range(5) ]
+        self.session.flush()
+        self.session.clear()
+
+        child = self.Child.query.get(_id=0)
+        child.parent_id = None
+        self.session.flush()
+        self.session.clear()
+
+        child = self.Child.query.get(_id=0)
+        self.assertEqual(child.parent_id, None)
+        self.assertEqual(child.parent, None)
+
+        parent = self.Parent.query.get(_id=1)
+        self.assertEqual(len(parent.children), 4)
 
 
 class TestManyToManyListRelation(TestCase):
@@ -117,7 +179,7 @@ class TestManyToManyListRelation(TestCase):
         child = self.Child.query.get(_id=0)
         self.assertEqual(len(child.parents), 2)
 
-    def test_readonly(self):
+    def test_instrumented_readonly(self):
         children = [ self.Child(_id=i) for i in range(5) ]
         parent = self.Parent(_id=1)
         parent._children = [c._id for c in children]
@@ -125,14 +187,63 @@ class TestManyToManyListRelation(TestCase):
         self.session.clear()
 
         parent = self.Parent.query.get(_id=1)
-        def clearchildren():
-            parent.children = []
-        def setchild():
-            parent.children[0] = children[0]
-        self.assertRaises(TypeError, clearchildren)
         self.assertRaises(TypeError, parent.children.append, children[0])
-        self.assertRaises(TypeError, setchild)
 
+    def test_writable(self):
+        children = [ self.Child(_id=i) for i in range(5) ]
+        parent = self.Parent(_id=1)
+        parent._children = [c._id for c in children]
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        parent.children = parent.children + [self.Child(_id=5)]
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        self.assertEqual(len(parent.children), 6)
+        self.session.clear()
+
+        child = self.Child.query.get(_id=5)
+        self.assertEqual(len(child.parents), 1)
+
+        parent = self.Parent.query.get(_id=1)
+        parent.children = []
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        self.assertEqual(len(parent.children), 0)
+        self.session.clear()
+
+    def test_writable_backref(self):
+        children = [ self.Child(_id=i) for i in range(5) ]
+        parent = self.Parent(_id=1)
+        parent._children = [c._id for c in children]
+        other_parent = self.Parent(_id=2)
+        other_parent._children = [c._id for c in children[:2]]
+        self.session.flush()
+        self.session.clear()
+
+        child = self.Child.query.get(_id=4)
+        self.assertEqual(len(child.parents), 1)
+        child.parents = child.parents + [other_parent]
+        self.session.flush()
+        self.session.clear()
+
+        child = self.Child.query.get(_id=4)
+        self.assertEqual(len(child.parents), 2)
+        self.session.clear()
+
+        child = self.Child.query.get(_id=4)
+        child.parents = [parent]
+        self.session.flush()
+        self.session.clear()
+
+        child = self.Child.query.get(_id=4)
+        self.assertEqual(len(child.parents), 1)
+        self.session.clear()
 
 class TestManyToManyListReverseRelation(TestCase):
 

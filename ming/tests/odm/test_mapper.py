@@ -303,19 +303,13 @@ class TestRelation(TestCase):
         parent = self.Parent.query.get(_id=1)
         self.assertEqual(len(parent.children), 5)
 
-    def test_readonly(self):
+    def test_instrumented_readonly(self):
         parent = self.Parent(_id=1)
         children = [ self.Child(_id=i, parent_id=1) for i in range(5) ]
         self.session.flush()
         self.session.clear()
         parent = self.Parent.query.get(_id=1)
-        def clearchildren():
-            parent.children = []
-        def setchild():
-            parent.children[0] = children[0]
-        self.assertRaises(TypeError, clearchildren)
         self.assertRaises(TypeError, parent.children.append, children[0])
-        self.assertRaises(TypeError, setchild)
 
 class TestPolymorphic(TestCase):
 
