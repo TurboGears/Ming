@@ -146,7 +146,8 @@ class TestIndexes(TestCase):
                 ]
                 custom_indexes = [
                     dict(fields=('test7',), unique=True, sparse=True),
-                    dict(fields=('test8',), unique=False, sparse=True)
+                    dict(fields=('test8',), unique=False, sparse=True),
+                    dict(fields=('test9',), expireAfterSeconds=5, name='TESTINDEX9')
                 ]
                 schema = dict(
                     _id = S.ObjectId,
@@ -177,6 +178,24 @@ class TestIndexes(TestCase):
               dict(unique=False, sparse=True, background=True) ) ]
         for i in indexes:
             self.assert_(i in args, args)
+
+    def test_ensure_indexes_custom_options(self):
+        self.MyDoc.m
+        collection = self.MockSession.db[self.MyDoc.m.collection_name]
+        ensure_index = collection.ensure_index
+        args = ensure_index.call_args_list
+
+        custom_named_index = None
+        for index in self.MyDoc.m.indexes:
+            if index.name == 'TESTINDEX9':
+                custom_named_index = index
+                break
+        self.assert_(custom_named_index is not None, self.MyDoc.m.indexes)
+
+        custom_index = ( ([ ('test9', pymongo.ASCENDING) ],),
+                         dict(unique=False, sparse=False, background=True,
+                              expireAfterSeconds=5, name='TESTINDEX9') )
+        self.assert_(custom_index in args, args)
 
     def test_ensure_indexes_slave(self):
         # on a slave, an error will be thrown, but it should be swallowed
@@ -242,6 +261,7 @@ class TestIndexes(TestCase):
               Index('test1', unique=True),
               Index('test7', unique=True, sparse=True),
               Index('test8', unique=False, sparse=True),
+              Index('test9', expireAfterSeconds=5, name='TESTINDEX9'),
               Index('test3'),
               Index('test4', unique=True),
               Index('test5'),

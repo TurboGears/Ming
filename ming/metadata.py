@@ -46,21 +46,33 @@ class Field(object):
 class Index(object):
 
     def __init__(self, *fields, **kwargs):
-        self.fields = fields
-        self.direction = kwargs.pop('direction', pymongo.ASCENDING)
-        self.unique = kwargs.pop('unique', False)
-        self.sparse = kwargs.pop('sparse', False)
-        self.index_spec = fixup_index(fields, self.direction)
-        self.name = 'idx_' + '_'.join('%s_%s' % t for t in self.index_spec)
-        if kwargs: raise TypeError, 'unknown kwargs: %r' % kwargs
+        direction = kwargs.pop('direction', pymongo.ASCENDING)
+        unique = kwargs.pop('unique', False)
+        sparse = kwargs.pop('sparse', False)
+
+        # Background indexing is currently enforced by Ming
+        kwargs.pop('background', None)
+
+        self.fields = kwargs.pop('fields', fields)
+        self.index_spec = fixup_index(self.fields, direction)
+        self.name = kwargs.get('name', 'idx_' + '_'.join('%s_%s' % t for t in self.index_spec))
+
+        self.index_options = kwargs.copy()
+        self.index_options['unique'] = unique
+        self.index_options['sparse'] = sparse
 
     def __repr__(self):
         specs = [ '%s:%s' % t  for t in self.index_spec ]
-        return '<Index (%s) unique=%s sparse=%s>' % (
-            ','.join(specs), self.unique, self.sparse)
+        return '<Index (%s) options=%s>' % (','.join(specs), self.index_options)
+
+    def __getattr__(self, option_name):
+        try:
+            return self.index_options[option_name]
+        except KeyError:
+            raise AttributeError('Index %s has no option %s' % (self.index_spec, option_name))
 
     def __eq__(self, o):
-        return self.index_spec == o.index_spec and self.unique == o.unique and self.sparse == o.sparse
+        return self.index_spec == o.index_spec and self.index_options == o.index_options
 
 def collection(*args, **kwargs):
     fields, indexes, collection_name, bases, session = _process_collection_args(
@@ -319,12 +331,8 @@ class _ManagerDescriptor(object):
         try:
             with self._lock:
                 for idx in self.manager.indexes:
-                    collection.ensure_index(
-                        idx.index_spec,
-                        unique=idx.unique,
-                        sparse=idx.sparse,
-                        background=True,
-                        )
+                    collection.ensure_index(idx.index_spec, background=True,
+                                            **idx.index_options)
         except (MongoGone, ConnectionFailure) as e:
             if e.args[0] == 'not master':
                 log.info('Could not run ensure_indexes because the connection is not to a master.  This is expected when connecting to a slave')

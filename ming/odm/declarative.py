@@ -70,8 +70,7 @@ class _MappedClassMeta(type):
         for idx in getattr(mm, 'unique_indexes', []):
             indexes.append(Index(idx, unique=True))
         for idx in getattr(mm, 'custom_indexes', []):
-            indexes.append(Index(idx.get('fields'),
-                unique=idx.get('unique',False), sparse=idx.get('sparse', False)))
+            indexes.append(Index(**idx))
         collection_kwargs = dict(
             polymorphic_on=mm_dict.get('polymorphic_on', None),
             polymorphic_identity=getattr(mm, 'polymorphic_identity', None))
