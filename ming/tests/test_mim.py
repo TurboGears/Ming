@@ -552,6 +552,30 @@ class TestCollection(TestCase):
     def test_find_and_modify_returns_none_on_no_entries(self):
         self.assertEqual(None, self.bind.db.foo.find_and_modify({'i': 1}, {'$set': {'i': 2}}))
 
+    def test_find_and_modify_returns_none_on_upsert_and_no_new(self):
+        self.assertEqual(None, self.bind.db.foo.find_and_modify({'i': 1},
+                                                                {'$set': {'i': 2}},
+                                                                upsert=True, new=False))
+
+    def test_find_and_modify_returns_old_value_on_no_new(self):
+        self.bind.db.foo.insert({'_id': 1, 'i': 1})
+        self.assertEqual({'_id': 1, 'i': 1}, self.bind.db.foo.find_and_modify({'i': 1},
+                                                                              {'$set': {'i': 2}},
+                                                                              new=False))
+
+    def test_find_and_modify_returns_new_value_on_new(self):
+        self.bind.db.foo.insert({'_id': 1, 'i': 1})
+        self.assertEqual({'_id': 1, 'i': 2}, self.bind.db.foo.find_and_modify({'i': 1},
+                                                                              {'$set': {'i': 2}},
+                                                                              new=True))
+
+    def test_find_and_modify_returns_new_value_on_new_upsert(self):
+        self.assertEqual({'_id': 1, 'i': 2}, self.bind.db.foo.find_and_modify({'i': 1},
+                                                                              {'$set': {'_id': 1,
+                                                                                        'i': 2}},
+                                                                              new=True,
+                                                                              upsert=True))
+
     def test_find_and_modify_with_remove(self):
         self.bind.db.col.insert({'_id': 1})
         self.assertEqual({'_id': 1}, self.bind.db.col.find_and_modify({'_id': 1}, remove=True))

@@ -328,18 +328,24 @@ class Collection(collection.Collection):
         if before is None:
             upserted = True
             if upsert:
-                self.update(query, update, upsert)
+                result = self.update(query, update, upsert)
+                query = {'_id': result['upserted']}
             else:
                 return None
+
         before = self.find_one(query, fields, sort=kwargs.get('sort'))
         if remove:
             self.remove({'_id': before['_id']})
         elif not upserted:
             self.update({'_id': before['_id']}, update)
-        if kwargs.get('new', False) or upserted:
-            return self.find_one(dict(_id=before['_id']), fields)
 
-        return before
+        return_new = kwargs.get('new', False)
+        if return_new:
+            return self.find_one(dict(_id=before['_id']), fields)
+        elif upserted:
+            return None
+        else:
+            return before
 
     def insert(self, doc_or_docs, manipulate=True, safe=False, **kwargs):
         if not isinstance(doc_or_docs, list):
