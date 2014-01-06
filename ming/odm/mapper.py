@@ -135,7 +135,7 @@ class Mapper(object):
             p.compile(self)
     
     def update_partial(self, session, *args, **kwargs):
-        session.impl.update_partial(self.collection, *args, **kwargs)
+        return session.impl.update_partial(self.collection, *args, **kwargs)
 
     def _from_doc(self, doc, options):
         obj = self.mapped_class.__new__(self.mapped_class)
