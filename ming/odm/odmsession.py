@@ -37,7 +37,7 @@ class ODMSession(object):
     def mapper(self, cls, collection, **kwargs):
         return mapper(
             cls, collection=collection, session=self, **kwargs)
-    
+
     def save(self, obj):
         self.uow.save(obj)
         self.imap.save(obj)
@@ -60,7 +60,7 @@ class ODMSession(object):
             elif st.status == st.dirty:
                 self.update_now(obj, st)
             elif st.status == st.deleted:
-                self.update_now(obj, st)
+                self.delete_now(obj, st)
 
     @with_hooks('insert')
     def insert_now(self, obj, st, **kwargs):
@@ -73,7 +73,7 @@ class ODMSession(object):
     @with_hooks('delete')
     def delete_now(self, obj, st, **kwargs):
         mapper(obj).delete(obj, st, self, **kwargs)
-        
+
     def clear(self):
         # Orphan all objects
         for obj in self.uow:
@@ -211,7 +211,7 @@ class ThreadLocalODMSession(ThreadLocalProxy):
     def mapper(self, cls, collection, **kwargs):
         return mapper(
             cls, collection=collection, session=self, **kwargs)
-    
+
     @classmethod
     def flush_all(cls):
         for sess in cls._session_registry.values():
@@ -238,7 +238,7 @@ class ContextualODMSession(ContextualProxy):
     def mapper(self, cls, collection, **kwargs):
         return mapper(
             cls, collection=collection, session=self, **kwargs)
-    
+
     def close(self):
         self._get().close()
         super(ContextualODMSession, self).close()
