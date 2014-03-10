@@ -237,8 +237,8 @@ class MapperExtension(object):
     def after_delete(self, instance, state, sess):
         """Receive an object instance and its current state after that
         instance is deleted."""
-    def before_remove(self, sess): pass
-    def after_remove(self, sess): pass
+    def before_remove(self, sess, *args, **kwargs): pass
+    def after_remove(self, sess, *args, **kwargs): pass
 
 class _ORMDecoration(object):
 
