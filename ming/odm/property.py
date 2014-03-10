@@ -243,11 +243,6 @@ class ManyToOneJoin(object):
 
     def load(self, instance):
         key_value = self.prop.__get__(instance, self.own_cls)
-        if key_value is None:
-            # Avoid one unnecessary lookup on DB by
-            # considering ForeignIdPropery None value as
-            # not related to any other entity.
-            return None
         return self.rel_cls.query.get(_id=key_value)
 
     def iterator(self, instance):
@@ -265,9 +260,9 @@ class OneToManyJoin(object):
 
     def load(self, instance):
         return instrument(
-            list(self.iterator(instance)), 
+            list(self.iterator(instance)),
             OneToManyTracker(state(instance)))
-        
+
     def iterator(self, instance):
         key_value = instance._id
         return self.rel_cls.query.find({self.prop.name:key_value})
