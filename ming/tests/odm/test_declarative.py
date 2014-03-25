@@ -335,6 +335,41 @@ class TestManyToManyListCyclic(TestCase):
         self.assertEqual(len(child.parents), 2)
 
 
+class ObjectIdRelationship(TestCase):
+    def setUp(self):
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+        class Parent(MappedClass):
+            class __mongometa__:
+                name='parent'
+                session = self.session
+            _id = FieldProperty(S.ObjectId)
+            children = ForeignIdProperty('Child', uselist=True)
+        class Child(MappedClass):
+            class __mongometa__:
+                name='child'
+                session = self.session
+            _id = FieldProperty(S.ObjectId)
+            parent_id = ForeignIdProperty(Parent)
+        Mapper.compile_all()
+        self.Parent = Parent
+        self.Child = Child
+
+    def tearDown(self):
+        self.session.clear()
+        self.datastore.conn.drop_all()
+
+    def test_empty_relationship(self):
+        child = self.Child()
+        self.session.flush()
+        self.assertIsNone(child.parent_id)
+
+    def test_empty_list_relationship(self):
+        parent = self.Parent()
+        self.session.flush()
+        self.assertEqual(parent.children, [])
+
+
 class TestBasicMapperExtension(TestCase):
     def setUp(self):
         self.datastore = create_datastore('mim:///test_db')
