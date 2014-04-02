@@ -21,7 +21,10 @@ def annotate_doc_failure(func):
         try:
             return func(self, doc, *args, **kwargs)
         except (pymongo.errors.OperationFailure, bson.errors.BSONError) as e:
-            e.args = e.args + (('doc:  ' + str(doc)),)
+            doc_preview = str(doc)
+            if len(doc_preview) > 5000:
+                doc_preview = doc_preview[:5000] + '...'
+            e.args = e.args + (('doc:  ' + doc_preview),)
             raise
     return update_wrapper(wrapper, func)
 
