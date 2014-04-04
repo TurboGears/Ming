@@ -11,6 +11,7 @@ from ming.odm.declarative import MappedClass
 from ming.odm import state, mapper
 from ming.odm import MapperExtension, SessionExtension
 from ming.odm.odmsession import ODMCursor
+import bson
 
 class TestIndex(TestCase):
 
@@ -345,12 +346,21 @@ class ObjectIdRelationship(TestCase):
                 session = self.session
             _id = FieldProperty(S.ObjectId)
             children = ForeignIdProperty('Child', uselist=True)
+            field_with_default_id = ForeignIdProperty(
+                'Child',
+                uselist=True,
+                if_missing=lambda:[bson.ObjectId('deadbeefdeadbeefdeadbeef')])
+            field_with_default = RelationProperty('Child', 'field_with_default_id')
         class Child(MappedClass):
             class __mongometa__:
                 name='child'
                 session = self.session
             _id = FieldProperty(S.ObjectId)
             parent_id = ForeignIdProperty(Parent)
+            field_with_default_id = ForeignIdProperty(
+                Parent,
+                if_missing=lambda:bson.ObjectId('deadbeefdeadbeefdeadbeef'))
+            field_with_default = RelationProperty('Parent', 'field_with_default_id')
         Mapper.compile_all()
         self.Parent = Parent
         self.Child = Child
@@ -368,6 +378,18 @@ class ObjectIdRelationship(TestCase):
         parent = self.Parent()
         self.session.flush()
         self.assertEqual(parent.children, [])
+
+    def test_default_relationship(self):
+        parent = self.Parent(_id=bson.ObjectId('deadbeefdeadbeefdeadbeef'))
+        child = self.Child()
+        self.session.flush()
+        self.assertEqual(child.field_with_default, parent)
+
+    def test_default_list_relationship(self):
+        child = self.Child(_id=bson.ObjectId('deadbeefdeadbeefdeadbeef'))
+        parent = self.Parent()
+        self.session.flush()
+        self.assertEqual(parent.field_with_default, [child])
 
 
 class TestBasicMapperExtension(TestCase):

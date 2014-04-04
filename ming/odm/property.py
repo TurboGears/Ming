@@ -139,13 +139,11 @@ class ForeignIdProperty(FieldProperty):
     def field(self):
         if not self._compiled: raise AttributeError, 'field'
         if self.uselist:
-            if_missing = self.kwargs.pop('if_missing', [])
-            return Field(self.name, [self.related._id.field.type],
-                         if_missing=if_missing, **self.kwargs)
+            self.kwargs.setdefault('if_missing', [])
+            return Field(self.name, [self.related._id.field.type], **self.kwargs)
         else:
-            if_missing = self.kwargs.pop('if_missing', None)
-            return Field(self.name, self.related._id.field.type,
-                         if_missing=if_missing, **self.kwargs)
+            self.kwargs.setdefault('if_missing', None)
+            return Field(self.name, self.related._id.field.type, **self.kwargs)
 
     def compile(self, mapper):
         if self._compiled: return
