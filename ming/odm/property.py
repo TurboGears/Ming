@@ -117,11 +117,15 @@ class FieldPropertyWithMissingNone(FieldProperty):
 
 class ForeignIdProperty(FieldProperty):
 
-    def __init__(self, related, uselist=False, *args, **kwargs):
+    def __init__(self, related, uselist=False, allow_none=False, *args, **kwargs):
         ORMProperty.__init__(self)
         self.args = args
         self.kwargs = kwargs
         self.uselist = uselist
+        self.allow_none = allow_none
+        if self.allow_none and self.uselist:
+            raise AttributeError("allow_none with uselist is not supported")
+
         if isinstance(related, type):
             self._compiled = True
             self.related = related
@@ -245,6 +249,11 @@ class ManyToOneJoin(object):
 
     def load(self, instance):
         key_value = self.prop.__get__(instance, self.own_cls)
+        if key_value is None and self.prop.allow_none is False:
+            # Avoid one unnecessary lookup on DB by
+            # considering ForeignIdPropery None value as
+            # not related to any other entity.
+            return None
         return self.rel_cls.query.get(_id=key_value)
 
     def iterator(self, instance):

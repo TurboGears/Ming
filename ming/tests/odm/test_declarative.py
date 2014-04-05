@@ -336,6 +336,74 @@ class TestManyToManyListCyclic(TestCase):
         self.assertEqual(len(child.parents), 2)
 
 
+class TestRelationWithNone(TestCase):
+
+    def setUp(self):
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+        class GrandParent(MappedClass):
+            class __mongometa__:
+                name='grand_parent'
+                session=self.session
+            _id = FieldProperty(int)
+        class Parent(MappedClass):
+            class __mongometa__:
+                name='parent'
+                session = self.session
+            _id = FieldProperty(int)
+            grandparent_id = ForeignIdProperty('GrandParent')
+            grandparent = RelationProperty('GrandParent')
+            children = RelationProperty('Child')
+        class Child(MappedClass):
+            class __mongometa__:
+                name='child'
+                session = self.session
+            _id = FieldProperty(int)
+            parent_id = ForeignIdProperty('Parent', allow_none=True)
+            parent = RelationProperty('Parent')
+        Mapper.compile_all()
+        self.GrandParent = GrandParent
+        self.Parent = Parent
+        self.Child = Child
+
+    def tearDown(self):
+        self.session.clear()
+        self.datastore.conn.drop_all()
+
+    def test_none_allowed(self):
+        parent = self.Parent(_id=1)
+        child = self.Child(_id=1, parent_id=parent._id)
+        none_parent = self.Parent(_id=None)
+        none_child = self.Child(_id=2, parent_id=None)
+        self.session.flush()
+        self.session.clear()
+
+        child = self.Child.query.get(_id=1)
+        parent = child.parent
+        self.assertEqual(parent._id, 1)
+
+        none_child = self.Child.query.get(_id=2)
+        none_parent = none_child.parent
+        self.assertNotEqual(none_parent, None)
+        self.assertEqual(none_parent._id, None)
+
+    def test_none_not_allowed(self):
+        grandparent = self.GrandParent(_id=1)
+        parent = self.Parent(_id=1, grandparent_id=grandparent._id)
+        none_grandparent = self.GrandParent(_id=None)
+        none_parent = self.Parent(_id=2, grandparent_id=None)
+        self.session.flush()
+        self.session.clear()
+
+        parent = self.Parent.query.get(_id=1)
+        grandparent = parent.grandparent
+        self.assertEqual(grandparent._id, 1)
+
+        none_parent = self.Parent.query.get(_id=2)
+        none_grandparent = none_parent.grandparent
+        self.assertEqual(none_grandparent, None)        
+
+
 class ObjectIdRelationship(TestCase):
     def setUp(self):
         self.datastore = create_datastore('mim:///test_db')
