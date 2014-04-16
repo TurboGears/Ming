@@ -1,6 +1,35 @@
 Ming News / Release Notes
 =====================================
 
+0.4.7 (Apr 16, 2014)
+------------------------------------------------
+* Add allow_none option to ForeignIdProperty
+
+0.4.6 (Apr 4, 2014)
+------------------------------------------------
+* Fixed issue with if_missing for ForeignIdProperty
+
+0.4.5 (Apr 4, 2014)
+------------------------------------------------
+* avoid extremely long error text
+* Fixed random generated ObjectId on empty ForeignIdProperty
+
+0.4.4 (Mar 10, 2014)
+------------------------------------------------
+* Revert ForeignIdProperty None optimization
+* Fix delete event hook signatures
+* Fix typo when flushing an individual object flagged for deletion
+
+0.4.3 (Jan 7, 2014)
+------------------------------------------------
+* Return result of update_partial()
+* ManyToMany support relying on a list of ObjectIds
+* Make RelationProperty writable
+* Support for all pymongo options in custom_indexes declaration
+* Permit relationships that point to same model
+* Fix wrong behavior for MIM find_and_modify new option and add test case
+* ForeignIdProperty None optimization
+
 0.4.2 (Sep 26, 2013)
 ------------------------------------------------
 * bool(cursor) now raises an Exception.  Pre-0.4 it evaluated based on the value
@@ -26,7 +55,7 @@ Ming News / Release Notes
 0.4 (June 28, 2013)
 ------------------------------------------------
 
-* removed 'flyway' package from ming.  It is now available from https://github.com/amol-/ming-flyway 
+* removed 'flyway' package from ming.  It is now available from https://github.com/amol-/ming-flyway
   This removes the dependency on PasteScript and will make Python 3 migration easier.
 * WebOb dependency is optional.
 * removed `cursor.__len__`  You must change `len(query)` to `query.count()` now.  This prevents
@@ -52,7 +81,7 @@ Some of the larger changes:
 Whoops, skipped a version there. Anyway, the bigger changes:
 
 * Speed improvements in validation, particularly `validate_ranges` which allows
-  selective validation of arrays 
+  selective validation of arrays
 * Allow requiring scalar values to be non-None
 * Add support for geospatial indexing
 * Updates to engine/datastore creation syntax (use the new `create_engine` or
