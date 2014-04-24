@@ -75,6 +75,10 @@ class Connection(object):
     def __repr__(self):
         return 'mim.Connection()'
 
+    def _ensure_connected(self):
+        # For pymongo 2.7 compatibility
+        return True
+
 class Database(database.Database):
 
     def __init__(self, connection, name):
