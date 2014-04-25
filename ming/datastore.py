@@ -1,7 +1,8 @@
 from __future__ import with_statement
 import time
 import logging
-import urlparse
+import six
+from six.moves import urllib
 from threading import Lock
 
 try:
@@ -9,7 +10,6 @@ try:
 except ImportError:
     gevent = None
 
-urlparse.uses_query.append('mongodb')
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
@@ -60,7 +60,7 @@ def create_datastore(uri, **kwargs):
             "Unrecognized kwarg(s) when supplying bind: %s" %
             (kwargs.keys(),))
 
-    parts = urlparse.urlsplit(uri)
+    parts = urllib.parse.urlsplit(uri)
 
     # Create the engine (if necessary)
     if parts.scheme:
@@ -105,7 +105,7 @@ class Engine(object):
         return '<Engine %r>' % self._conn
 
     def __getattr__(self, name):
-        if name == 'conn': raise AttributeError, name
+        if name == 'conn': raise AttributeError(name)
         return getattr(self.conn, name)
 
     def __getitem__(self, name):
@@ -117,7 +117,7 @@ class Engine(object):
         return self._conn
 
     def connect(self):
-        for x in xrange(self._connect_retry+1):
+        for x in six.moves.xrange(self._connect_retry+1):
             try:
                 with self._lock:
                     if self._conn is None:
@@ -144,7 +144,7 @@ class DataStore(object):
         return '<DataStore %r>' % self._db
 
     def __getattr__(self, name):
-        if name == 'db': raise AttributeError, name
+        if name == 'db': raise AttributeError(name)
         return getattr(self.db, name)
 
     @property

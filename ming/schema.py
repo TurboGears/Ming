@@ -7,6 +7,7 @@ from datetime import datetime
 import bson
 import pymongo
 import pytz
+import six
 
 from .utils import LazyProperty
 from .base import Object as BaseObject, Missing, NoDefault
@@ -81,7 +82,7 @@ class SchemaItem(object):
 
     def validate(self, d, **kw):
         'convert/validate an object or raise an Invalid exception'
-        raise NotImplementedError, 'validate'
+        raise NotImplementedError('validate')
 
     @classmethod
     def make(cls, field, *args, **kwargs):
@@ -107,7 +108,7 @@ class SchemaItem(object):
             elif len(field) == 1:
                 field = Array(field[0], *args, **kwargs)
             else:
-                raise ValueError, 'Array must have 0-1 elements'
+                raise ValueError('Array must have 0-1 elements')
         elif isinstance(field, dict):
             field = Object(field, *args, **kwargs)
         elif field is None:
@@ -151,11 +152,11 @@ class Migrate(SchemaItem):
         def migrate_scalars(value):
             return [
                 BaseObject({ key_name: k, value_name: v})
-                for k,v in value.iteritems() ]
+                for k,v in six.iteritems(value) ]
         def migrate_objects(value):
             return [
                 BaseObject(dict(v, **{key_name:k}))
-                for k,v in value.iteritems() ]
+                for k,v in six.iteritems(value) ]
         if value_name is None:
             return migrate_objects
         else:
@@ -190,7 +191,7 @@ class FancySchemaItem(SchemaItem):
             self.if_missing = if_missing
         if self.required:
             self.validate = self._validate_required
-        elif isinstance(self.if_missing, (NoneType, basestring, int, float, long)):
+        elif isinstance(self.if_missing, (NoneType,) + six.string_types + six.integer_types):
             self.validate = self._validate_fast_missing
         else:
             self.validate = self._validate_optional
@@ -252,9 +253,9 @@ class Object(FancySchemaItem):
         if fields is None: fields = {}
         FancySchemaItem.__init__(self, required, if_missing)
         self.fields = dict((name, SchemaItem.make(field))
-                           for name, field in fields.iteritems())
+                           for name, field in six.iteritems(fields))
         if len(self.fields) == 1:
-            name, field = self.fields.items()[0]
+            name, field = list(self.fields.items())[0]
             if not isinstance(name, str):
                 self._validate = lambda d, **kw: (
                     self._validate_homogenous(name, field, d, **kw))
@@ -265,15 +266,15 @@ class Object(FancySchemaItem):
 
     def __repr__(self):
         l = [ super(Object, self).__repr__() ]
-        for k,f in self.fields.iteritems():
+        for k,f in six.iteritems(self.fields):
             l.append('  %s: %s' % (k, repr(f).replace('\n', '\n    ')))
         return '\n'.join(l)
 
     def if_missing(self):
         return BaseObject(
             (k, v.validate(Missing))
-            for k,v in self.fields.iteritems()
-            if isinstance(k, basestring))
+            for k,v in six.iteritems(self.fields)
+            if isinstance(k, six.string_types))
 
     def _validate_homogenous(self, name, field, d, **kw):
         if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
@@ -281,17 +282,17 @@ class Object(FancySchemaItem):
         name_validator = SchemaItem.make(name)
         to_set = []
         errors = []
-        for k,v in d.iteritems():
+        for k,v in six.iteritems(d):
             try:
                 k = name_validator.validate(k, **kw)
                 v = field.validate(v, **kw)
                 if v is not l_Missing:
                     to_set.append((k,v))
-            except Invalid, inv:
+            except Invalid as inv:
                 errors.append((name, inv))
         if errors:
             error_dict = dict(errors)
-            msg = '\n'.join('%s:%s' % t for t in error_dict.iteritems())
+            msg = '\n'.join('%s:%s' % t for t in six.iteritems(error_dict))
             raise Invalid(msg, d, None, error_dict=error_dict)
         return BaseObject(to_set)
 
@@ -315,13 +316,13 @@ class Object(FancySchemaItem):
                 value = field.validate(d.get(name, l_Missing), **kw)
                 if value is not l_Missing:
                     to_set.append((name, value))
-            except Invalid, inv:
+            except Invalid as inv:
                 errors.append((name, inv))
 
     def _validate(self, d, allow_extra=False, strip_extra=False):
         if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
         if allow_extra and not strip_extra:
-            to_set = d.items()
+            to_set = list(d.items())
         else:
             to_set = []
         errors = []
@@ -333,8 +334,8 @@ class Object(FancySchemaItem):
         result = BaseObject(to_set)
         if not allow_extra:
             try:
-                extra_keys = set(d.iterkeys()) - set(self.fields.iterkeys())
-            except AttributeError, ae:
+                extra_keys = set(six.iterkeys(d)) - set(six.iterkeys(self.fields))
+            except AttributeError as ae:
                 raise Invalid(str(ae), d, None)
             if extra_keys:
                 raise Invalid('Extra keys: %r' % extra_keys, d, None)
@@ -370,7 +371,7 @@ class Document(Object):
     def validate(self, value, **kw):
         try:
             return super(Document, self).validate(value, **kw)
-        except Invalid, inv:
+        except Invalid as inv:
             if self.managed_class:
                 inv.msg = '%s:\n    %s' % (
                     self.managed_class,
@@ -442,7 +443,7 @@ class Array(FancySchemaItem):
         for i, value in enumerate(d):
             try:
                 validate(value, **kw)
-            except Invalid, inv:
+            except Invalid as inv:
                 error_list[i] = inv
         msg = '\n'.join(('[%s]:%s' % (i,v))
                         for i,v in enumerate(error_list)
@@ -500,15 +501,15 @@ class Value(FancySchemaItem):
         return value
 
 class String(ParticularScalar):
-    type=basestring
+    type=six.string_types
 class Int(ParticularScalar):
-    type=(int,long)
+    type=six.integer_types
     def _validate(self, value, **kw):
         if isinstance(value, float) and round(value) == value:
             value = int(value)
         return super(Int, self)._validate(value, **kw)
 class Float(ParticularScalar):
-    type=(float,int,long)
+    type=(float,) + six.integer_types
 class DateTimeTZ(ParticularScalar):
     type=datetime
 class DateTime(DateTimeTZ):
@@ -538,13 +539,13 @@ class ObjectId(Scalar):
             value = Scalar._validate(self, value, **kw)
             if isinstance(value, bson.ObjectId):
                 return value
-            elif isinstance(value, basestring):
+            elif isinstance(value, six.string_types):
                 return bson.ObjectId(str(value))
             else:
                 raise Invalid('%s is not a bson.ObjectId' % value, value, None)
         except Invalid:
             raise
-        except Exception, ex:
+        except Exception as ex:
             raise Invalid(str(ex), value, None)
 
 # Shorthand for various SchemaItems

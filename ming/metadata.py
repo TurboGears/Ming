@@ -4,6 +4,7 @@ from copy import copy
 from threading import Lock
 
 import pymongo
+import six
 from pymongo.errors import ConnectionFailure
 
 from . import schema as S
@@ -24,7 +25,7 @@ class Field(object):
             self.name = args[0]
             self.type = args[1]
         else:
-            raise TypeError, 'Field() takes 1 or 2 argments, not %s' % len(args)
+            raise TypeError('Field() takes 1 or 2 argments, not %s' % len(args))
         self.index = kwargs.pop('index', False)
         self.unique = kwargs.pop('unique', False)
         self.sparse = kwargs.pop('sparse', False)
@@ -91,10 +92,10 @@ def collection(*args, **kwargs):
 
 def _process_collection_args(args, kwargs):
     if len(args) < 1:
-        raise TypeError, 'collection() takes at least one argument'
-    if isinstance(args[0], (basestring, type(None))):
+        raise TypeError('collection() takes at least one argument')
+    if isinstance(args[0], six.string_types + (type(None),)):
         if len(args) < 2:
-            raise TypeError, 'collection(name, session) takes at least two arguments'
+            raise TypeError('collection(name, session) takes at least two arguments')
         collection_name = args[0]
         session = args[1]
         bases = (_Document,)
@@ -110,7 +111,7 @@ def _process_collection_args(args, kwargs):
         collection_name = bases[-1].m.collection_name
         session = bases[-1].m.session
     else:
-        raise TypeError, (
+        raise TypeError(
             'collection(name, session, ...) and collection(base_class) are the'
             ' only valid signatures')
     collection_name =  kwargs.pop(
@@ -138,7 +139,7 @@ def _process_collection_args(args, kwargs):
         elif isinstance(a, Index):
             indexes.append(a)
         else:
-            raise TypeError, "don't know what to do with %r" % (a,)
+            raise TypeError("don't know what to do with %r" % (a,))
 
     return field_index.values(), indexes, collection_name, bases, session
 
@@ -148,7 +149,7 @@ class _CurriedProxyClass(type):
         methods = dct['_proxy_methods']
         proxy_of = dct['_proxy_on']
         proxy_args = dct['_proxy_args']
-                    
+
         def _proxy(name):
             def inner(self, *args, **kwargs):
                 target = getattr(self, proxy_of)
@@ -163,8 +164,8 @@ class _CurriedProxyClass(type):
         cls = type.__new__(meta, name, bases, dct)
         return cls
 
+@six.add_metaclass(_CurriedProxyClass)
 class _InstanceManager(object):
-    __metaclass__ = _CurriedProxyClass
     _proxy_methods = (
         'save', 'insert', 'upsert', 'delete', 'set', 'increase_field')
     _proxy_on='session'
@@ -189,8 +190,8 @@ class _InstanceManager(object):
         for method_name in self._proxy_methods:
             setattr(self, method_name, _proxy(method_name))
 
+@six.add_metaclass(_CurriedProxyClass)
 class _ClassManager(object):
-    __metaclass__ = _CurriedProxyClass
     _proxy_on='session'
     _proxy_args=('cls',)
     _proxy_methods = (
@@ -201,7 +202,7 @@ class _ClassManager(object):
     InstanceManagerClass=_InstanceManager
 
     def __init__(
-        self, cls, collection_name, session, fields, indexes, 
+        self, cls, collection_name, session, fields, indexes,
         polymorphic_on=None, polymorphic_identity=None,
         polymorphic_registry=None,
         version_of=None, migrate=None,
@@ -308,7 +309,7 @@ class _ClassManager(object):
                 data, allow_extra=allow_extra, strip_extra=strip_extra)
         else:
             return self.cls(data)
-        
+
 class _ManagerDescriptor(object):
 
     def __init__(self, manager):
@@ -363,14 +364,14 @@ class _FieldDescriptor(object):
         try:
             return inst[self.name]
         except KeyError:
-            raise AttributeError, self.name
+            raise AttributeError(self.name)
 
     def __set__(self, inst, value):
         inst[self.name] = value
 
     def __delete__(self, inst):
         del inst[self.name]
-        
+
 class _Document(Object):
 
     def __init__(self, data=None, skip_from_bson=False):
@@ -385,5 +386,5 @@ class _Document(Object):
         'Kind of a virtual constructor'
         return cls.m.make(data, **kwargs)
 
-            
+
 

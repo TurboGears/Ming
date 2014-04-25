@@ -1,3 +1,4 @@
+import six
 import warnings
 from copy import copy
 
@@ -11,7 +12,7 @@ def mapper(cls, collection=None, session=None, **kwargs):
     if collection is None and session is None:
         if isinstance(cls, type):
             return Mapper.by_class(cls)
-        elif isinstance(cls, basestring):
+        elif isinstance(cls, six.string_types):
             return Mapper.by_classname(cls)
         else:
             return Mapper._mapper_by_class[cls.__class__]
@@ -42,7 +43,7 @@ class Mapper(object):
         self.extensions = [e(self) for e in extensions]
         self.options = Object(kwargs.pop('options', dict(refresh=False, instrument=True)))
         if kwargs:
-            raise TypeError, 'Unknown kwd args: %r' % kwargs
+            raise TypeError('Unknown kwd args: %r' % kwargs)
         self._instrument_class(properties, include_properties, exclude_properties)
 
     def __repr__(self):
@@ -95,7 +96,7 @@ class Mapper(object):
                 if p.name in seen: continue
                 seen.add(p.name)
                 yield p
-                
+
     @classmethod
     def by_collection(cls, collection_class):
         return cls._mapper_by_collection[collection_class]
@@ -109,7 +110,7 @@ class Mapper(object):
         try:
             return cls._mapper_by_classname[name]
         except KeyError:
-            for n, mapped_class in cls._mapper_by_classname.iteritems():
+            for n, mapped_class in six.iteritems(cls._mapper_by_classname):
                 if n.endswith('.' + name): return mapped_class
             raise
 
@@ -133,7 +134,7 @@ class Mapper(object):
         self._compiled = True
         for p in self.properties:
             p.compile(self)
-    
+
     def update_partial(self, session, *args, **kwargs):
         return session.impl.update_partial(self.collection, *args, **kwargs)
 
@@ -171,7 +172,7 @@ class Mapper(object):
             properties = dict((k,properties[k]) for k in include_properties)
         for k in exclude_properties:
             properties.pop(k, None)
-        for k,v in properties.iteritems():
+        for k,v in six.iteritems(properties):
             v.name = k
             v.mapper = self
             setattr(self.mapped_class, k, v)
@@ -182,7 +183,11 @@ class Mapper(object):
         for k in ('__repr__', '__getitem__', '__setitem__', '__contains__',
                   'delete'):
             if getattr(self.mapped_class, k, ()) == getattr(object, k, ()):
-                setattr(self.mapped_class, k, getattr(inst, k).im_func)
+                if six.PY2:
+                    # im_func has been deprecated in Python 3
+                    setattr(self.mapped_class, k, getattr(inst, k).im_func)
+                else:
+                    setattr(self.mapped_class, k, getattr(inst, k))
 
     def _instrumentation(self):
         class _Instrumentation(object):
@@ -192,7 +197,7 @@ class Mapper(object):
                     for prop in mapper(self_).properties
                     if prop.include_in_repr ]
                 return wordwrap(
-                    '<%s %s>' % 
+                    '<%s %s>' %
                     (self_.__class__.__name__, ' '.join(properties)),
                     60,
                     indent_subsequent=2)
@@ -202,7 +207,7 @@ class Mapper(object):
                 try:
                     return getattr(self_, name)
                 except AttributeError:
-                    raise KeyError, name
+                    raise KeyError(name)
             def __setitem__(self_, name, value):
                 setattr(self_, name, value)
             def __contains__(self_, name):
@@ -343,12 +348,12 @@ class _InitDecorator(object):
         if self.schema:
             obj.__ming__.state.validate(self.schema)
         self.mapper.session.save(obj)
-    
+
     def nonsaving_init(self, self_):
         def __init__(*args, **kwargs):
             self.func(self_, *args, **kwargs)
         return __init__
-    
+
     def __get__(self, self_, cls=None):
         if self_ is None: return self
         if self.mapper.mapped_class == cls:
@@ -367,5 +372,5 @@ class _InitDecorator(object):
             mapped_class.__init__ = cls(mapper, old_init)
 
 def _basic_init(self_, **kwargs):
-    for k,v in kwargs.iteritems():
+    for k,v in six.iteritems(kwargs):
         setattr(self_, k, v)

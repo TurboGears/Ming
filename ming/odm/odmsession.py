@@ -98,7 +98,7 @@ class ODMSession(object):
         if self.autoflush:
             self.flush()
         m = mapper(cls)
-        # args = map(deinstrument, args)
+        # args = list(map(deinstrument, args))
         ming_cursor = self.impl.find(m.collection, *args, **kwargs)
         odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh, decorate=decorate, fields=kwargs.get('fields'))
         call_hook(self, 'cursor_created', odm_cursor, 'find', cls, *args, **kwargs)
@@ -312,6 +312,8 @@ class ODMCursor(object):
         finally:
             call_hook(self, 'after_cursor_next', self)
 
+    __next__ = next
+
     def options(self, **kwargs):
         odm_cursor = ODMCursor(self.session, self.cls,self.ming_cursor)
         odm_cursor._options = Object(self._options, **kwargs)
@@ -346,12 +348,12 @@ class ODMCursor(object):
         try:
             result = self.next()
         except StopIteration:
-            raise ValueError, 'Less than one result from .one()'
+            raise ValueError('Less than one result from .one()')
         try:
             self.next()
         except StopIteration:
             return result
-        raise ValueError, 'More than one result from .one()'
+        raise ValueError('More than one result from .one()')
 
     def first(self):
         try:

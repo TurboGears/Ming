@@ -1,8 +1,10 @@
+import six
+
 from formencode import schema, validators
 from formencode.variabledecode import variable_decode
 
-from session import Session
-from datastore import create_datastore
+from ming.session import Session
+from ming.datastore import create_datastore
 
 class AuthenticateSchema(schema.Schema):
     name=validators.UnicodeString(not_empty=True)
@@ -30,7 +32,7 @@ def configure(**kwargs):
 
 def configure_from_nested_dict(config):
     datastores = {}
-    for name, datastore in config.iteritems():
+    for name, datastore in six.iteritems(config):
         args = DatastoreSchema.to_python(datastore, None)
         database = args.pop('database', None)
         if database is None:
@@ -39,7 +41,7 @@ def configure_from_nested_dict(config):
             datastores[name] = create_datastore(database, **args)
     Session._datastores = datastores
     # bind any existing sessions
-    for name, session in Session._registry.iteritems():
+    for name, session in six.iteritems(Session._registry):
         session.bind = datastores.get(name, None)
         session._name = name
-    
+

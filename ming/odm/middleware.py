@@ -23,7 +23,7 @@ class MingMiddleware(object):
                 return result
             else:
                 return self._cleanup_iterator(result)
-        except self.flush_on_errors, exc:
+        except self.flush_on_errors as exc:
             self._cleanup_request()
             raise
         except:
@@ -42,7 +42,7 @@ class MingMiddleware(object):
         for x in result:
             yield x
         self._cleanup_request()
-    
+
 
 def make_ming_autoflush_middleware(global_conf, **app_conf):
     def _filter(app):

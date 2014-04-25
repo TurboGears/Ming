@@ -3,6 +3,7 @@ from collections import defaultdict
 
 import mock
 import pymongo
+import six
 from pymongo.errors import AutoReconnect
 
 from ming.base import Cursor
@@ -58,7 +59,7 @@ class TestRenameField(TestCase):
         assert doc == { 'a': 50 }
         assert doc.a == 10
         assert doc._a == 50
-        
+
 class TestDocument(TestCase):
 
     def setUp(self):
@@ -166,7 +167,7 @@ class TestIndexes(TestCase):
         ensure_index = collection.ensure_index
         args = ensure_index.call_args_list
         for a in args:
-            print a
+            print(a)
         indexes = [
             ( ([ ('test1', pymongo.ASCENDING), ('test2', pymongo.ASCENDING) ],),
               dict(unique=False, sparse=False, background=True) ),
@@ -323,8 +324,8 @@ class TestCursor(TestCase):
         base_iter = iter([ {}, {}, {} ])
         mongo_cursor = mock.Mock()
         mongo_cursor.count = mock.Mock(return_value=3)
-        mongo_cursor.__iter__ = lambda self:base_iter
-        mongo_cursor.next = base_iter.next
+        mongo_cursor.__iter__ = mock.Mock(return_value=base_iter)
+        mongo_cursor.next = lambda: six.next(base_iter)
         mongo_cursor.limit = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.hint = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.skip = mock.Mock(return_value=mongo_cursor)

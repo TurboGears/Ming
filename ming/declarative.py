@@ -1,6 +1,9 @@
 from .metadata import Field, Index
 from .metadata import _Document, _FieldDescriptor, _ManagerDescriptor, _ClassManager
 
+import six
+
+
 class _DocumentMeta(type):
     def __new__(meta, classname, bases, dct):
         mm = _build_mongometa(bases, dct)
@@ -15,7 +18,7 @@ class _DocumentMeta(type):
             indexes += b.m.indexes
         # Set the names of the fields
         clsdct = {}
-        for k,v in dct.iteritems():
+        for k,v in six.iteritems(dct):
             if isinstance(v, Field):
                 if v.name is None: v.name = k
                 fields.append(v)
@@ -36,9 +39,9 @@ class _DocumentMeta(type):
         migrate = getattr(mm, 'migrate', None)
         before_save = getattr(mm, 'before_save', None)
         if migrate:
-            migrate = getattr(migrate, 'im_func', migrate)
+            migrate = getattr(migrate, '__func__', migrate)
         if before_save:
-            before_save = getattr(before_save, 'im_func', before_save)
+            before_save = getattr(before_save, '__func__', before_save)
         cls = type.__new__(meta, classname, bases, clsdct)
         m = _ClassManager(
             cls, collection_name, session, fields, indexes,
@@ -63,9 +66,9 @@ def _build_mongometa(bases, dct):
         mm_dict.update(dct['__mongometa__'].__dict__)
     return type('__mongometa__', tuple(mm_bases), mm_dict)
 
-    
+
+@six.add_metaclass(_DocumentMeta)
 class Document(_Document):
-    __metaclass__ = _DocumentMeta
 
     class __mongometa__:
         name=None

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 __version__ = 'undefined'
 
-exec open('ming/version.py')
+exec(open('ming/version.py').read())
 
 setup(name='Ming',
       version=__version__,
@@ -30,7 +30,8 @@ setup(name='Ming',
       install_requires=[
         "FormEncode >= 1.2.1",
         "pymongo>=2.4",
-        "pytz"
+        "pytz",
+        "six>=1.6.1"
       ],
       tests_require = [
         "nose",

@@ -7,6 +7,7 @@ from collections import defaultdict
 
 import mock
 import pymongo
+import six
 
 from ming import Session, Field, Index, Cursor, collection
 from ming import schema as S
@@ -187,8 +188,8 @@ class TestCursor(TestCase):
         base_iter = iter([ {}, {}, {} ])
         mongo_cursor = mock.Mock()
         mongo_cursor.count = mock.Mock(return_value=3)
-        mongo_cursor.__iter__ = lambda self:base_iter
-        mongo_cursor.next = base_iter.next
+        mongo_cursor.__iter__ = mock.Mock(return_value=base_iter)
+        mongo_cursor.next = lambda: six.next(base_iter)
         mongo_cursor.limit = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.hint = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.skip = mock.Mock(return_value=mongo_cursor)

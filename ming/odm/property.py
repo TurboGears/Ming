@@ -3,6 +3,7 @@ from ming.utils import LazyProperty
 from ming import schema as S
 from .base import session, state
 from .icollection import instrument, deinstrument
+import six
 
 class ORMError(Exception): pass
 class AmbiguousJoin(ORMError): pass
@@ -15,11 +16,11 @@ class ORMProperty(object):
         self.name = None
 
     def __get__(self, instance, cls=None):
-        raise NotImplementedError, '__get__'
+        raise NotImplementedError('__get__')
 
     def __set__(self, instance, value):
-        raise TypeError, '%r is a read-only property on %r' % (
-            self.name, self.mapper)
+        raise TypeError('%r is a read-only property on %r' % (
+            self.name, self.mapper))
 
     def compile(self, mapper):
         pass
@@ -35,12 +36,12 @@ class FieldProperty(ORMProperty):
         if isinstance(field_type, Field):
             self.field = field_type
             if args or kwargs:
-                raise TypeError, 'Unexpected args: %r, %r' % (args, kwargs)
+                raise TypeError('Unexpected args: %r, %r' % (args, kwargs))
         else:
             self.field = Field(field_type, *args, **kwargs)
-        if not isinstance(self.field.name, (basestring, type(None))):
-            raise TypeError, 'Field name must be string or None, not %r' % (
-                self.field.name)
+        if not isinstance(self.field.name, six.string_types + (type(None),)):
+            raise TypeError('Field name must be string or None, not %r' % (
+                self.field.name))
         self.name = self.field.name
         if self.name == '_id':
             self.__get__ = self._get_id
@@ -62,11 +63,11 @@ class FieldProperty(ORMProperty):
         if not st.options.instrument:
             return st.document[self.name]
         try:
-            return st.instrumented(self.name) 
+            return st.instrumented(self.name)
         except KeyError:
             value = self.field.schema.validate(S.Missing)
             if value is S.Missing:
-                raise AttributeError, self.name
+                raise AttributeError(self.name)
             else:
                 st.document[self.name] = value
             return value
@@ -135,13 +136,13 @@ class ForeignIdProperty(FieldProperty):
 
     @LazyProperty
     def related(self):
-        if not self._compiled: raise AttributeError, 'related'
+        if not self._compiled: raise AttributeError('related')
         from .mapper import mapper
         return mapper(self._related_classname).mapped_class
 
     @LazyProperty
     def field(self):
-        if not self._compiled: raise AttributeError, 'field'
+        if not self._compiled: raise AttributeError('field')
         if self.uselist:
             self.kwargs.setdefault('if_missing', [])
             return Field(self.name, [self.related._id.field.type], **self.kwargs)
@@ -157,7 +158,7 @@ class ForeignIdProperty(FieldProperty):
         mgr.field_index[fld.name] = fld
         mgr.schema = mgr._get_schema()
 
-class RelationProperty(ORMProperty): 
+class RelationProperty(ORMProperty):
     include_in_repr = False
 
     def __init__(self, related, via=None, fetch=True):
@@ -215,12 +216,12 @@ class RelationProperty(ORMProperty):
             else:
                 return OneToManyJoin(cls, rel, rel_props[0])
         if own_props or rel_props:
-            raise AmbiguousJoin, (
+            raise AmbiguousJoin(
                 'Ambiguous join, satisfying keys are %r' %
                 [ p.name for p in own_props + rel_props ])
         else:
-            raise NoJoin, 'No join keys found between %s and %s' % (
-                cls, rel)
+            raise NoJoin('No join keys found between %s and %s' % (
+                cls, rel))
 
     def repr(self, doc):
         try:
@@ -300,10 +301,11 @@ class OneToManyTracker(object):
         self.state = state
 
     def soil(self, value):
-        raise TypeError, 'read-only'
+        raise TypeError('read-only')
     added_item = soil
     added_items = soil
     removed_item = soil
+    removed_items = soil
     cleared = soil
 
 class ManyToManyListJoin(object):

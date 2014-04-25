@@ -6,6 +6,7 @@ import bson.errors
 
 import pymongo
 import pymongo.errors
+import six
 
 from .base import Cursor, Object
 from .utils import fixup_index
@@ -50,7 +51,7 @@ class Session(object):
         try:
             return self.db[cls.m.collection_name]
         except TypeError:
-            raise exc.MongoGone, 'MongoDB is not connected'
+            raise exc.MongoGone('MongoDB is not connected')
 
     @property
     def db(self):
@@ -193,7 +194,7 @@ class Session(object):
         """
         fields_values = Object.from_bson(fields_values)
         fields_values.make_safe()
-        for k,v in fields_values.iteritems():
+        for k,v in six.iteritems(fields_values):
             self._set(doc, k.split('.'), v)
         impl = self._impl(doc)
         impl.update({'_id':doc._id}, {'$set':fields_values}, safe=True)
@@ -205,10 +206,10 @@ class Session(object):
         Sets a field to value, only if value is greater than the current value
         Does not change it locally
         """
-        key = kwargs.keys()[0]
+        key = list(kwargs.keys())[0]
         value = kwargs[key]
         if value is None:
-            raise ValueError, "%s=%s" % (key, value)
+            raise ValueError("%s=%s" % (key, value))
 
         if key not in doc:
             self._impl(doc).update(

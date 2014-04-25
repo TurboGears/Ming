@@ -41,7 +41,7 @@ class TestFS(TestCase):
         self.assertEqual(fp.content_type, 'text/plain')
         fp = self.TestFS.m.get_last_version(filename='test.txt')
         self.assertEqual(
-            fp.read(), 'The quick brown fox jumped over the lazy dog')
+           fp.read().decode(), 'The quick brown fox jumped over the lazy dog')
         self.assertEqual(self.TestFS.m.find().count(), 1)
         fobj = self.TestFS.m.get()
         self.assertEqual(fobj.filename, 'test.txt')
@@ -64,29 +64,30 @@ class TestFS(TestCase):
         assert self.TestFS.m.exists(filename='test.txt')
         fp = self.TestFS.m.get_last_version(filename='test.txt')
         self.assertEqual(
-            fp.read(), 'The quick brown fox')
+            fp.read().decode(), 'The quick brown fox')
 
     def test_get_file(self):
         self.TestFS.m.put('test.txt', 'The quick brown fox')
         fp = self.TestFS.m.get_last_version(filename='test.txt')
         fpid = fp._id
-        self.assertEqual(self.TestFS.m.get_file(fpid).filename, 'test.txt')
+        self.assertEqual(
+            self.TestFS.m.get_file(fpid).filename, 'test.txt')
 
     def test_get_version(self):
         self.TestFS.m.put('test.txt', 'The quick brown fox')
         time.sleep(0.01)
         self.TestFS.m.put('test.txt', 'jumped over the lazy dog')
         self.assertEqual(
-            self.TestFS.m.get_last_version('test.txt').read(),
+            self.TestFS.m.get_last_version('test.txt').read().decode(),
             'jumped over the lazy dog')
         self.assertEqual(
-            self.TestFS.m.get_version('test.txt', 0).read(),
+            self.TestFS.m.get_version('test.txt', 0).read().decode(),
             'The quick brown fox')
         self.assertEqual(
-            self.TestFS.m.get_version('test.txt', 1).read(),
+            self.TestFS.m.get_version('test.txt', 1).read().decode(),
             'jumped over the lazy dog')
         self.assertEqual(
-            self.TestFS.m.get_version('test.txt', -1).read(),
+            self.TestFS.m.get_version('test.txt', -1).read().decode(),
             'jumped over the lazy dog')
-        
-        
+
+

@@ -2,12 +2,14 @@ from ming.metadata import collection, Index
 from .mapper import mapper
 from .property import ORMProperty
 
+import six
+
 class _MappedClassMeta(type):
 
     def __init__(cls, name, bases, dct):
         cls._registry['%s.%s' % (cls.__module__, cls.__name__)] = mapper(cls)
         cls._compiled = False
-        
+
     def __new__(meta, name, bases, dct):
         # Get the mapped base class(es)
         mapped_bases = [
@@ -36,7 +38,7 @@ class _MappedClassMeta(type):
         include_properties = getattr(mm, 'include_properties', [])
         exclude_properties = getattr(mm, 'exclude_properties', [])
         extensions = getattr(mm, 'extensions', [])
-        for k,v in dct.iteritems():
+        for k,v in six.iteritems(dct):
             if isinstance(v, ORMProperty):
                 v.name = k
                 properties[k] = v
@@ -49,13 +51,13 @@ class _MappedClassMeta(type):
                exclude_properties=exclude_properties,
                extensions=extensions)
         return cls
-        
+
     @classmethod
     def _build_collection_class(meta, doc_bases, dct, mm, mm_dict):
         fields = []
         indexes = []
         # Set the names of the fields
-        for k,v in dct.iteritems():
+        for k,v in six.iteritems(dct):
             try:
                 field = getattr(v, 'field', None)
             except:
@@ -75,7 +77,7 @@ class _MappedClassMeta(type):
             polymorphic_on=mm_dict.get('polymorphic_on', None),
             polymorphic_identity=getattr(mm, 'polymorphic_identity', None))
         if hasattr(mm, 'before_save'):
-            collection_kwargs['before_save'] = mm.before_save.im_func
+            collection_kwargs['before_save'] = mm.before_save.__func__
         if not doc_bases:
             collection_cls = collection(
                 mm.name, mm.session and mm.session.impl,
@@ -90,8 +92,8 @@ class _MappedClassMeta(type):
                 doc_bases, *(fields + indexes), **collection_kwargs)
         return collection_cls
 
+@six.add_metaclass(_MappedClassMeta)
 class MappedClass(object):
-    __metaclass__ = _MappedClassMeta
     _registry = {}
     class __mongometa__:
         name=None

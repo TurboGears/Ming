@@ -98,5 +98,5 @@ class TestICollection(TestCase):
         self.assertRaises(ValueError, self.ilist.remove, 22)
         self.assertEqual(self.ilist.pop(0), 1)
         self.tracker.removed_item.assert_called_with(1)
-        
-        
+
+

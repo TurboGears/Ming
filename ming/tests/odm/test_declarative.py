@@ -401,7 +401,7 @@ class TestRelationWithNone(TestCase):
 
         none_parent = self.Parent.query.get(_id=2)
         none_grandparent = none_parent.grandparent
-        self.assertEqual(none_grandparent, None)        
+        self.assertEqual(none_grandparent, None)
 
 
 class ObjectIdRelationship(TestCase):
@@ -499,7 +499,7 @@ class TestBasicMapperExtension(TestCase):
         self.session.flush()
 
 class TestBasicMapping(TestCase):
-    
+
     def setUp(self):
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
@@ -604,7 +604,7 @@ class TestBasicMapping(TestCase):
         self.session.flush()
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 1)
-        
+
     def test_imap(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.session.flush()
@@ -616,8 +616,8 @@ class TestBasicMapping(TestCase):
         self.session.expunge(doc)
         self.session.expunge(doc)
         self.session.expunge(doc)
-        
-        
+
+
 class TestPolymorphic(TestCase):
 
     def setUp(self):
@@ -649,9 +649,11 @@ class TestPolymorphic(TestCase):
         self.odm_session.flush()
         self.odm_session.clear()
         q = self.Base.query.find()
-        r = sorted(q.all())
-        assert r[0].__class__ is self.Base
-        assert r[1].__class__ is self.Derived
+        r = [x.__class__ for x in q]
+        self.assertEqual(2, len(r))
+        self.assertTrue(self.Base in r)
+        self.assertTrue(self.Derived in r)
+
 
 class TestODMCursor(TestCase):
 

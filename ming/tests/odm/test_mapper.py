@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from unittest import TestCase
 
 from mock import Mock, patch
@@ -10,6 +11,7 @@ from ming.odm import ODMSession, mapper, state, Mapper, session
 from ming.odm import ForeignIdProperty, RelationProperty
 from ming.odm.icollection import InstrumentedList, InstrumentedObj
 
+
 class TestOrphanObjects(TestCase):
 
     def setUp(self):
@@ -18,13 +20,14 @@ class TestOrphanObjects(TestCase):
         self.session = ODMSession(session)
         basic = collection('basic', session)
         class Basic(object):
-            pass                    
+            pass
         self.session.mapper(Basic, basic)
         self.basic = basic
         self.Basic = Basic
 
     def tearDown(self):
         self.session.clear()
+        self.datastore.conn.clear_all()
         self.datastore.conn.drop_all()
 
     def test_orphan_object(self):
@@ -32,7 +35,7 @@ class TestOrphanObjects(TestCase):
         assert session(obj) is self.session
         self.session.clear()
         assert session(obj) is None
-        
+
 
 class TestWithNoFields(TestCase):
 
@@ -42,7 +45,7 @@ class TestWithNoFields(TestCase):
         self.session = ODMSession(session)
         basic = collection('basic', session)
         class Basic(object):
-            pass                    
+            pass
         self.session.mapper(Basic, basic)
         self.basic = basic
         self.Basic = Basic
@@ -56,7 +59,7 @@ class TestWithNoFields(TestCase):
         doc = self.Basic.query.get(a=1)
 
 class TestBasicMapping(TestCase):
-    
+
     def setUp(self):
         self.datastore = create_datastore('mim:///test_db')
         session = Session(bind=self.datastore)
@@ -69,7 +72,7 @@ class TestBasicMapping(TestCase):
             Field('c', dict(
                     d=int, e=int)))
         class Basic(object):
-            pass                    
+            pass
         self.session.mapper(Basic, basic)
         self.basic = basic
         self.Basic = Basic
@@ -111,7 +114,7 @@ class TestBasicMapping(TestCase):
             Field('c', dict(
                     d=int, e=int)))
         class Basic1(object):
-            pass                    
+            pass
         self.session.mapper(Basic1, basic1, options=dict(instrument=False))
         # Put a doc in the DB
         Basic1(a=1, b=[2,3], c=dict(d=4, e=5))
@@ -128,11 +131,13 @@ class TestBasicMapping(TestCase):
         self.assertEqual(type(obj.c), Object)
 
     def test_repr(self):
-        doc = self.Basic(a=1, b=[2,3], c=dict(d=4,e=5))
+        doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         sdoc = repr(doc)
         assert 'a=1' in sdoc, sdoc
         assert 'b=I[2, 3]' in sdoc, sdoc
-        assert "c=I{'e': 5, 'd': 4}" in sdoc, sdoc
+        # order is not guaranteed with dictionaries
+        assert "c=I{'d': 4, 'e': 5}" in sdoc or \
+            "c=I{'e': 5, 'd': 4}" in sdoc, sdoc
 
     def test_create(self):
         doc = self.Basic()
@@ -164,9 +169,7 @@ class TestBasicMapping(TestCase):
         assert repr(m) == '<Mapper Basic:basic>'
         self.datastore.db.basic.insert(dict(
                 a=1, b=[2,3], c=dict(d=4, e=5), f='unknown'))
-        print list(self.datastore.db.basic.find())
         obj = self.Basic.query.find().options(instrument=False).first()
-        print obj
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 1)
         self.session.remove(self.Basic, {})
@@ -230,7 +233,7 @@ class TestBasicMapping(TestCase):
         self.session.flush()
         q = self.Basic.query.find()
         self.assertEqual(q.count(), 1)
-        
+
     def test_imap(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.session.flush()
@@ -267,8 +270,8 @@ class TestBasicMapping(TestCase):
     def test_group(self, pymongo_group):
         self.Basic.query.group()
         assert pymongo_group.called
-        
-        
+
+
 class TestRelation(TestCase):
     def setUp(self):
         self.datastore = create_datastore('mim:///test_db')
@@ -325,7 +328,7 @@ class TestPolymorphic(TestCase):
             polymorphic_on='type',
             polymorphic_identity='base')
         derived = collection(
-            base, 
+            base,
             Field('type', str, if_missing='derived'),
             Field('b', int),
             polymorphic_identity='derived')
@@ -342,7 +345,9 @@ class TestPolymorphic(TestCase):
         self.session.flush()
         self.session.clear()
         q = self.Base.query.find()
-        r = sorted(q.all())
-        assert r[0].__class__ is self.Base
-        assert r[1].__class__ is self.Derived
+        r = [x.__class__ for x in q]
+        self.assertEqual(2, len(r))
+        self.assertTrue(self.Base in r)
+        self.assertTrue(self.Derived in r)
+
 

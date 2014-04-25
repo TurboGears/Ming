@@ -50,17 +50,17 @@ class TestRelation(TestCase):
     def _wsgi_create_object(self, environ, start_response):
         self.Parent()
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        return ['Test']
+        return [b'Test']
 
     def _wsgi_remove_object(self, environ, start_response):
         p = self.Parent.query.get()
         p.delete()
         start_response('200 OK', [('Content-Type', 'text/plain')])
-        return ['Test']
-    
+        return [b'Test']
+
     def _wsgi_remove_object_exc(self, environ, start_response):
         p = self.Parent.query.get()
         p.delete()
         err = exc.HTTPServerError('Test Error')
         assert False
-    
+

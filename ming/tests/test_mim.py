@@ -311,8 +311,8 @@ class TestMRCommands(TestCommands):
         expected = [{'value': {'min': docs[0]['timestamp'],
                                'max': docs[-1]['timestamp']},
                      '_id': 'timestamp'}]
-        print 'RESULTS:', result['results']
-        print 'EXPECTED:', expected
+        print('RESULTS:', result['results'])
+        print('EXPECTED:', expected)
         self.assertEqual(result['results'], expected)
 
     def test_mr_inline_collection(self):

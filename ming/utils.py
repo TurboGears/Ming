@@ -1,5 +1,6 @@
 import cgi
-import urllib
+import six
+from six.moves import urllib
 from threading import local
 
 import pymongo
@@ -119,7 +120,7 @@ def indent(s, level=2):
 def fixup_index(index, direction=pymongo.ASCENDING):
 
     def _fixup(i):
-        if isinstance(i, basestring):
+        if isinstance(i, six.string_types):
             yield (i, direction)
         elif (isinstance(i, tuple)
               and len(i) == 2

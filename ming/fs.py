@@ -24,7 +24,7 @@ def filesystem(*args, **kwargs):
     field_index.setdefault('md5', Field('md5', str))
     field_index.setdefault('uploadDate', Field('uploadDate', datetime))
     dct = dict((k, _FieldDescriptor(f)) for k,f in field_index.items())
-        
+
     cls = type('Filesystem<%s>' % collection_name, bases, dct)
     fields = field_index.values()
     m = _FSClassManager(
@@ -48,7 +48,7 @@ class _FSClassManager(_ClassManager):
     _proxy_args = _ClassManager._proxy_args
 
     def __init__(
-        self, cls, root_collection_name, session, fields, indexes, 
+        self, cls, root_collection_name, session, fields, indexes,
         polymorphic_on=None, polymorphic_identity=None,
         polymorphic_registry=None,
         version_of=None, migrate=None,
@@ -69,17 +69,19 @@ class _FSClassManager(_ClassManager):
             return t[0]
         else:
             return 'application/octet-stream'
-            
+
     def new_file(self, filename, **kwargs):
         kwargs.setdefault('contentType', self._guess_type(filename))
+        kwargs.setdefault('encoding', 'ascii')
         obj = self.fs.new_file(filename=filename, **kwargs)
         return _ClosingProxy(obj)
-        
+
     def exists(self, *args, **kwargs):
         return self.fs.exists(*args, **kwargs)
 
     def put(self, filename, data, **kwargs):
         kwargs.setdefault('contentType', self._guess_type(filename))
+        kwargs.setdefault('encoding', 'ascii')
         return self.fs.put(data, filename=filename, **kwargs)
 
     def get_file(self, file_id):
@@ -104,4 +106,4 @@ class _ClosingProxy(object):
 
     def __getattr__(self, name):
         return getattr(self.thing, name)
-    
+

@@ -2,6 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from unittest import TestCase, main
 import copy
+import six
 
 from bson import ObjectId
 
@@ -40,16 +41,23 @@ class TestObject(TestCase):
     def test_safe(self):
         now = datetime.now()
         oid = ObjectId()
+
+        c = [ 'foo', 1, 1.0, now,
+              Decimal('0.3'), None, oid ]
+
+        if six.PY2:
+            c = [ 'foo', 1, long(1), 1.0, now,
+                  Decimal('0.3'), None, oid ]
+
         safe_obj = Object(
             a=[1,2,3],
             b=dict(a=12),
-            c=[ 'foo', 1, 1L, 1.0, now,
-                Decimal('0.3'), None, oid ])
+            c=c)
         safe_obj.make_safe()
-        self.assertEqual(safe_obj, dict(
+        expected = Object(
                 a=[1,2,3], b=dict(a=12),
-                c=[ 'foo', 1, 1L, 1.0, now,
-                    0.3, None, oid ]))
+                c=c)
+        self.assertTrue(expected, safe_obj)
 
         unsafe_obj = Object(
             my_tuple=(1,2,3))

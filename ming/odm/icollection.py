@@ -1,3 +1,5 @@
+import six
+
 def instrument(obj, tracker):
     if isinstance(obj, (dict, list)):
         if hasattr(obj, '_ming_instrumentation'):
@@ -25,7 +27,7 @@ class InstrumentedObj(dict):
         self._tracker = tracker
         dict.update(
             self,
-            ((k,instrument(v, self._tracker)) for k,v in impl.iteritems()))
+            ((k,instrument(v, self._tracker)) for k,v in six.iteritems(impl)))
 
     def _deinstrument(self):
         return self._impl
@@ -54,7 +56,7 @@ class InstrumentedObj(dict):
         try:
             return self[k]
         except KeyError:
-            raise AttributeError, k
+            raise AttributeError(k)
 
     def __eq__(self, y):
         return self._impl == deinstrument(y)
@@ -106,7 +108,7 @@ class InstrumentedObj(dict):
             else:
                 for k,v in E:
                     self[k] = v
-        for k,v in kwargs.iteritems():
+        for k,v in six.iteritems(kwargs):
             self[k] = v
 
     def replace(self, v):
@@ -134,23 +136,43 @@ class InstrumentedList(list):
     def __eq__(self, y):
         return self._impl == deinstrument(y)
 
-    def __setitem__(self, i, v):
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            return self._impl[key.start:key.stop:key.step]
+        else:
+            return self._impl[key]
+
+    def __setitem__(self, key, v):
         v = deinstrument(v)
         iv = instrument(v, self._tracker)
-        super(InstrumentedList, self).__setitem__(i, iv)
-        self._tracker.removed_item(self._impl[i])
-        self._impl[i] = v
-        self._tracker.added_item(self._impl[i])
+        super(InstrumentedList, self).__setitem__(key, iv)
 
-    def __delitem__(self, i):
-        super(InstrumentedList, self).__delitem__(i)
-        self._tracker.removed_item(self._impl[i])
-        del self._impl[i]
+        if isinstance(key, slice):
+            self._tracker.removed_items(self._impl[key.start:key.stop])
+            self._impl[key.start:key.stop:key.step] = v
+            self._tracker.added_items(v)
+        else:
+            i = key
+            self._tracker.removed_item(self._impl[i])
+            self._impl[i] = v
+            self._tracker.added_item(self._impl[i])
+
+    def __delitem__(self, key):
+        super(InstrumentedList, self).__delitem__(key)
+
+        if isinstance(key, slice):
+            self._tracker.removed_items(self._impl[key.start:key.stop:key.step])
+            del self._impl[key.start:key.stop:key.step]
+        else:
+            i = key
+            self._tracker.removed_item(self._impl[i])
+            del self._impl[i]
 
     def __setslice__(self, i, j, v):
-        v = map(deinstrument, v)
+        """Deprecated in Python 2.6"""
+        v = list(map(deinstrument, v))
         iv = (instrument(item, self._tracker) for item in v)
-        super(InstrumentedList, self).__setslice__(i, j, iv)
+        super(InstrumentedList, self).__getitem__(slice(i, j))
         self._tracker.removed_items(self._impl[i:j])
         self._impl[i:j] = v
         self._tracker.added_items(v)
@@ -197,7 +219,7 @@ class InstrumentedList(list):
         self._tracker.added_item(v)
 
     def extend(self, iterable):
-        new_items = map(deinstrument, iterable)
+        new_items = list(map(deinstrument, iterable))
         self._impl.extend(new_items)
         super(InstrumentedList, self).extend(
             instrument(item, self._tracker)

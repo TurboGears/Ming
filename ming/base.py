@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 
 import bson
+import six
 
 from ming.exc import MingException
 
@@ -30,7 +31,7 @@ class Object(dict):
         try:
             return self[name]
         except KeyError:
-            raise AttributeError, name
+            raise AttributeError(name)
 
     def __setattr__(self, name, value):
         if name in self.__class__.__dict__:
@@ -42,7 +43,7 @@ class Object(dict):
     def from_bson(cls, bson):
         if isinstance(bson, dict):
             return cls((k, cls.from_bson(v))
-                       for k,v in bson.iteritems())
+                       for k,v in six.iteritems(bson))
         elif isinstance(bson, list):
             return [ cls.from_bson(v) for v in bson ]
         else:
@@ -78,6 +79,8 @@ class Cursor(object):
             allow_extra=self._allow_extra,
             strip_extra=self._strip_extra)
 
+    __next__ = next
+
     def count(self):
         return self.cursor.count()
 
@@ -101,12 +104,12 @@ class Cursor(object):
         try:
             result = self.next()
         except StopIteration:
-            raise ValueError, 'Less than one result from .one()'
+            raise ValueError('Less than one result from .one()')
         try:
             self.next()
         except StopIteration:
             return result
-        raise ValueError, 'More than one result from .one()'
+        raise ValueError('More than one result from .one()')
 
     def first(self):
         try:
@@ -125,9 +128,9 @@ def _safe_bson(obj):
     if isinstance(obj, list):
         return [ _safe_bson(o) for o in obj ]
     elif isinstance(obj, dict):
-        return Object((k, _safe_bson(v)) for k,v in obj.iteritems())
-    elif isinstance(obj, (
-            basestring, int, long, float, datetime, NoneType,
+        return Object((k, _safe_bson(v)) for k,v in six.iteritems(obj))
+    elif isinstance(obj, six.string_types + six.integer_types + (
+            float, datetime, NoneType,
             bson.ObjectId)):
         return obj
     elif isinstance(obj, decimal.Decimal):

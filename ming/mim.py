@@ -3,6 +3,7 @@ non-persistent and hopefully much, much faster
 '''
 import re
 import sys
+import functools
 import time
 import itertools
 import collections
@@ -16,9 +17,11 @@ try:
 except ImportError:
     Runtime = None
 
+from ming import compat
 from ming.utils import LazyProperty
 
 import bson
+import six
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo import database, collection, ASCENDING
 
@@ -103,7 +106,7 @@ class Database(database.Database):
 
     def command(self, command,
                 value=1, check=True, allowable_errors=None, **kwargs):
-        if isinstance(command, basestring):
+        if isinstance(command, six.string_types):
             command = {command:value}
             command.update(**kwargs)
         if 'filemd5' in command:
@@ -121,7 +124,7 @@ class Database(database.Database):
                     before = dict(command['query'])
                     coll.insert(before)
                 else:
-                    raise OperationFailure, 'No matching object found'
+                    raise OperationFailure('No matching object found')
             coll.update(command['query'], command['update'])
             if command.get('new', False) or upsert:
                 return dict(value=coll.find_one(dict(_id=before['_id'])))
@@ -136,12 +139,12 @@ class Database(database.Database):
         elif 'getlasterror' in command:
             return dict(connectionId=None, err=None, n=0, ok=1.0)
         else:
-            raise NotImplementedError, repr(command)
+            raise NotImplementedError(repr(command))
 
     def _handle_mapreduce(self, collection,
                           query=None, map=None, reduce=None, out=None, finalize=None):
         if self._jsruntime is None:
-            raise ImportError, 'Cannot import spidermonkey, required for MIM mapreduce'
+            raise ImportError('Cannot import spidermonkey, required for MIM mapreduce')
         j = self._jsruntime.new_context()
         tmp_j = self._jsruntime.new_context()
         temp_coll = collections.defaultdict(list)
@@ -151,7 +154,7 @@ class Database(database.Database):
                 k = bson.BSON.encode(k)
             temp_coll[k].append(v)
         def emit_reduced(k, v):
-            print k,v
+            print(k,v)
         # Add some special MongoDB functions
         j.execute('var NumberInt = Number;')
         j.add_global('emit', emit)
@@ -180,21 +183,21 @@ class Database(database.Database):
                 else:
                     assert False, 'Cannot convert %s to Python' % (js_source)
             elif isinstance(obj, collections.Mapping):
-                return dict((k, topy(v)) for k,v in obj.iteritems())
-            elif isinstance(obj, basestring):
+                return dict((k, topy(v)) for k,v in six.iteritems(obj))
+            elif isinstance(obj, six.string_types):
                 return obj
             elif isinstance(obj, collections.Sequence):
                 return [topy(x) for x in obj]
             return obj
         def tojs(obj):
-            if isinstance(obj, basestring):
+            if isinstance(obj, six.string_types):
                 return obj
             elif isinstance(obj, datetime):
                 ts = 1000. * time.mktime(obj.timetuple())
                 ts += (obj.microsecond / 1000.)
                 return j.execute('new Date(%f)' % (ts))
             elif isinstance(obj, collections.Mapping):
-                return dict((k,tojs(v)) for k,v in obj.iteritems())
+                return dict((k,tojs(v)) for k,v in six.iteritems(obj))
             elif isinstance(obj, collections.Sequence):
                 result = j.execute('new Array()')
                 for v in obj:
@@ -207,19 +210,19 @@ class Database(database.Database):
         # Run the reduce phase
         reduced = topy(dict(
             (k, j.execute('reduce')(k, tojs(values)))
-            for k, values in temp_coll.iteritems()))
+            for k, values in six.iteritems(temp_coll)))
         # Run the finalize phase
         if finalize:
             reduced = topy(dict(
                 (k, j.execute('finalize')(k, tojs(value)))
-                for k, value in reduced.iteritems()))
+                for k, value in six.iteritems(reduced)))
         # Handle the output phase
         result = dict()
         assert len(out) == 1
         if out.keys() == ['reduce']:
             result['result'] = out.values()[0]
             out_coll = self[out.values()[0]]
-            for k, v in reduced.iteritems():
+            for k, v in six.iteritems(reduced):
                 doc = out_coll.find_one(dict(_id=k))
                 if doc is None:
                     out_coll.insert(dict(_id=k, value=v))
@@ -229,20 +232,20 @@ class Database(database.Database):
         elif out.keys() == ['merge']:
             result['result'] = out.values()[0]
             out_coll = self[out.values()[0]]
-            for k, v in reduced.iteritems():
+            for k, v in six.iteritems(reduced):
                 out_coll.save(dict(_id=k, value=v))
         elif out.keys() == ['replace']:
             result['result'] = out.values()[0]
             self._collections.pop(out.values()[0], None)
             out_coll = self[out.values()[0]]
-            for k, v in reduced.iteritems():
+            for k, v in six.iteritems(reduced):
                 out_coll.save(dict(_id=k, value=v))
         elif out.keys() == ['inline']:
             result['results'] = [
                 dict(_id=k, value=v)
-                for k,v in reduced.iteritems() ]
+                for k,v in six.iteritems(reduced) ]
         else:
-            raise TypeError, 'Unsupported out type: %s' % out.keys()
+            raise TypeError('Unsupported out type: %s' % out.keys())
         return result
 
 
@@ -286,6 +289,7 @@ class Collection(collection.Collection):
         for ui in self._unique_indexes.values():
             ui.clear()
 
+
     @property
     def name(self):
         return self._name
@@ -303,7 +307,7 @@ class Collection(collection.Collection):
     def _find(self, spec, sort=None, **kwargs):
         bson_safe(spec)
         def _gen():
-            for doc in self._data.itervalues():
+            for doc in six.itervalues(self._data):
                 mspec = match(spec, doc)
                 if mspec is not None: yield doc, mspec
         return _gen()
@@ -410,7 +414,7 @@ class Collection(collection.Collection):
     def remove(self, spec=None, **kwargs):
         if spec is None: spec = {}
         new_data = {}
-        for id, doc in self._data.iteritems():
+        for id, doc in six.iteritems(self._data):
             if match(spec, doc):
                 self._deindex(doc)
             else:
@@ -431,7 +435,7 @@ class Collection(collection.Collection):
         self._indexes[index_name].update(kwargs)
         if not unique: return
         self._unique_indexes[keys] = index = {}
-        for id, doc in self._data.iteritems():
+        for id, doc in six.iteritems(self._data):
             key_values = self._extract_index_key(doc, keys)
             index[key_values] =id
         return index_name
@@ -439,7 +443,7 @@ class Collection(collection.Collection):
     def index_information(self):
         return dict(
             (index_name, fields)
-            for index_name, fields in self._indexes.iteritems())
+            for index_name, fields in six.iteritems(self._indexes))
 
     def drop_index(self, iname):
         index = self._indexes.pop(iname, None)
@@ -463,21 +467,21 @@ class Collection(collection.Collection):
 
     def _index(self, doc):
         if '_id' not in doc: return
-        for keys, index in self._unique_indexes.iteritems():
+        for keys, index in six.iteritems(self._unique_indexes):
             key_values = self._extract_index_key(doc, keys)
             old_id = index.get(key_values, ())
             if old_id == doc['_id']: continue
             if old_id in self._data:
-                raise DuplicateKeyError, '%r: %s' % (self, keys)
+                raise DuplicateKeyError('%r: %s' % (self, keys))
             index[key_values] = doc['_id']
 
     def _deindex(self, doc):
-        for keys, index in self._unique_indexes.iteritems():
+        for keys, index in six.iteritems(self._unique_indexes):
             key_values = self._extract_index_key(doc, keys)
             index.pop(key_values, None)
 
     def map_reduce(self, map, reduce, out, full_response=False, **kwargs):
-        if isinstance(out, basestring):
+        if isinstance(out, six.string_types):
             out = { 'replace':out }
         cmd_args = {'mapreduce': self.name,
                     'map': map,
@@ -519,9 +523,10 @@ class Cursor(object):
         self._safe_to_chain = False
         result = (doc for doc,match in self._iterator_gen())
         if self._sort is not None:
-            result = sorted(result, cmp=cursor_comparator(self._sort))
+            result = sorted(result, key=functools.cmp_to_key(
+                    cursor_comparator(self._sort)))
         if self._skip is not None:
-            result = itertools.islice(result, self._skip, sys.maxint)
+            result = itertools.islice(result, self._skip, sys.maxsize)
         if self._limit is not None:
             result = itertools.islice(result, abs(self._limit))
         return iter(result)
@@ -568,11 +573,13 @@ class Cursor(object):
         return self
 
     def next(self):
-        value = self.iterator.next()
+        value = six.next(self.iterator)
         value = bcopy(value)
         if self._fields:
             value = _project(value, self._fields)
         return wrap_as_class(value, self._as_class)
+
+    __next__ = next
 
     def sort(self, key_or_list, direction=ASCENDING):
         if not self._safe_to_chain:
@@ -613,7 +620,7 @@ class Cursor(object):
             values = [[k for k in i["key"]] for i in self._collection._indexes.values()]
             if test_idx and test_idx not in values:
                 raise OperationFailure('database error: bad hint. Valid values: %s' % values)
-        elif isinstance(index, basestring):
+        elif isinstance(index, six.string_types):
             if index not in self._collection._indexes.keys():
                 raise OperationFailure('database error: bad hint. Valid values: %s'
                         % self._collection._indexes.keys())
@@ -633,13 +640,27 @@ def cursor_comparator(keys):
         return 0
     return comparator
 
+
 class BsonArith(object):
     _types = None
     _index = None
 
     @classmethod
     def cmp(cls, x, y):
-        return cmp(cls.to_bson(x), cls.to_bson(y))
+        x_bson = cls.to_bson(x)
+        y_bson = cls.to_bson(y)
+
+        if len(x_bson) != len(y_bson):
+            return compat.base_cmp(len(x_bson),
+                                   len(y_bson))
+
+        for index, a_val in enumerate(x_bson):
+            b_val = y_bson[index]
+            if hasattr(a_val, 'get') and hasattr(b_val, 'get'):
+                return compat.dict_cmp(a_val, b_val)
+            if a_val != b_val:
+                return compat.base_cmp(a_val, b_val)
+        return 0
 
     @classmethod
     def to_bson(cls, val):
@@ -657,7 +678,7 @@ class BsonArith(object):
             if isinstance(value, tuple(types)):
                 cls._index[type(value)] = tp
                 return tp
-        raise KeyError, type(value)
+        raise KeyError(type(value))
 
     @classmethod
     def _build_index(cls):
@@ -671,8 +692,8 @@ class BsonArith(object):
     def _build_types(cls):
         cls._types = [
             (lambda x:x, [ type(None) ]),
-            (lambda x:x, [ int, long, float ]),
-            (lambda x:x, [ str, unicode ]),
+            (lambda x:x, [ int ] + list(six.integer_types)),
+            (lambda x:x, list(set([str, six.text_type]))),
             (lambda x:dict(x), [ dict, MatchDoc ]),
             (lambda x:list(x), [ list, MatchList ]),
             (lambda x:x, [ tuple ]),
@@ -691,7 +712,7 @@ def match(spec, doc):
         return None
     mspec = MatchDoc(doc)
     try:
-        for k,v in spec.iteritems():
+        for k,v in six.iteritems(spec):
             subdoc, subdoc_key = mspec.traverse(*k.split('.'))
             for op, value in _parse_query(v):
                 if not subdoc.match(subdoc_key, op, value): return None
@@ -740,7 +761,7 @@ class Match(object):
                 m = match(value, ele)
                 if m: return True
             return False
-        raise NotImplementedError, op
+        raise NotImplementedError(op)
     def getvalue(self, path):
         parts = path.split('.')
         subdoc, key = self.traverse(*parts)
@@ -752,17 +773,17 @@ class Match(object):
             return default
     def update(self, updates):
         newdoc = {}
-        for k, v in updates.iteritems():
+        for k, v in six.iteritems(updates):
             if k.startswith('$'): break
             newdoc[k] = bcopy(v)
         if newdoc:
             self._orig.clear()
             self._orig.update(bcopy(newdoc))
             return
-        for op, update_parts in updates.iteritems():
+        for op, update_parts in six.iteritems(updates):
             func = getattr(self, '_op_' + op[1:], None)
             if func is None:
-                raise NotImplementedError, op
+                raise NotImplementedError(op)
             for k,arg in update_parts.items():
                 subdoc, key = self.traverse(k)
                 func(subdoc, key, arg)
@@ -831,7 +852,7 @@ class MatchDoc(Match):
     def __init__(self, doc):
         self._orig = doc
         self._doc = {}
-        for k,v in doc.iteritems():
+        for k,v in six.iteritems(doc):
             if isinstance(v, list):
                 self._doc[k] = MatchList(v)
             elif isinstance(v, dict):
@@ -849,7 +870,9 @@ class MatchDoc(Match):
             return MatchDoc({}), None
         return self[first].traverse(*rest)
     def iteritems(self):
-        return self._doc.iteritems()
+        return six.iteritems(self._doc)
+    def items(self):
+        return self.iteritems()
     def __eq__(self, o):
         return isinstance(o, MatchDoc) and self._doc == o._doc
     def __hash__(self):
@@ -923,7 +946,7 @@ class MatchList(Match):
             else:
                 return self._doc[int(key)]
         except IndexError:
-            raise KeyError, key
+            raise KeyError(key)
     def __setitem__(self, key, value):
         if key == '$':
             key = self._pos
@@ -1002,10 +1025,10 @@ def compare(op, a, b):
         return set(a).issuperset(b)
     if op == '$elemMatch':
         return match(b, a)
-    raise NotImplementedError, op
+    raise NotImplementedError(op)
 
 def validate(doc):
-    for k,v in doc.iteritems():
+    for k,v in six.iteritems(doc):
         assert '$' not in k
         assert '.' not in k
         if hasattr(v, 'iteritems'):
@@ -1018,7 +1041,7 @@ def bcopy(obj):
     if isinstance(obj, dict):
         return bson.BSON.encode(obj).decode()
     elif isinstance(obj, list):
-        return map(bcopy, obj)
+        return list(map(bcopy, obj))
     else:
         return obj
 
