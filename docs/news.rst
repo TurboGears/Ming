@@ -1,6 +1,11 @@
 Ming News / Release Notes
 =====================================
 
+
+------------------------------------------------
+* Compatible with pymongo==2.7
+* Compatible with Python 3.3 and 3.4
+
 0.4.7 (Apr 16, 2014)
 ------------------------------------------------
 * Add allow_none option to ForeignIdProperty
