@@ -126,10 +126,10 @@ class ODMSession(object):
         m.update_partial(self, spec, fields, **kwargs)
 
     def update_if_not_modified(self, obj, fields, upsert=False):
-        self.update(obj.__class__, state(obj).original_document, fields, upsert)
+        spec = state(obj).original_document
+        self.update(obj.__class__, spec, fields, upsert=upsert)
         err = self.impl.db.command(dict(getlasterror=1))
-        if err['n'] and err['updatedExisting']: return True
-        return False
+        return bool(err['n'] and err['updatedExisting'])
 
     def __repr__(self):
         l = ['<session>']
