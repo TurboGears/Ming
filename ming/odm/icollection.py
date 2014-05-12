@@ -136,12 +136,6 @@ class InstrumentedList(list):
     def __eq__(self, y):
         return self._impl == deinstrument(y)
 
-    def __getitem__(self, key):
-        if isinstance(key, slice):
-            return self._impl[key.start:key.stop:key.step]
-        else:
-            return self._impl[key]
-
     def __setitem__(self, key, v):
         v = deinstrument(v)
         iv = instrument(v, self._tracker)
