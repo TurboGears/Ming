@@ -366,7 +366,7 @@ class _InitDecorator(object):
         old_init = mapped_class.__init__
         if isinstance(old_init, cls):
             mapped_class.__init__ = cls(mapper, old_init.func)
-        elif old_init is object.__init__:
+        elif old_init == object.__init__:
             mapped_class.__init__ = cls(mapper, _basic_init)
         else:
             mapped_class.__init__ = cls(mapper, old_init)

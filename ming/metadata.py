@@ -19,6 +19,10 @@ class Field(object):
 
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
+            if isinstance(args[0], str):
+                raise ValueError('When called with only one argument Field() '
+                                 'parameter should be the field type')
+
             self.name = None
             self.type = args[0]
         elif len(args) == 2:
@@ -126,6 +130,9 @@ def _process_collection_args(args, kwargs):
         indexes += b.m.indexes
     for a in args:
         if isinstance(a, Field):
+            if a.name is None:
+                raise ValueError("Field %s is missing a valid name" % (a,))
+
             field_index[a.name] = a
             if a.unique:
                 if a.sparse:

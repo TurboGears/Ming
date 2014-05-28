@@ -615,7 +615,8 @@ class TestCollection(TestCase):
     def test_insert_manipulate_true(self):
         doc = {'x': 1}
         sample_id = bson.ObjectId()
-        with patch('bson.ObjectId', return_value=sample_id):
+        # Cannot patch the class itself, otherwise isinstance() checks will fail on PyPy
+        with patch('bson.ObjectId.__init__', autospec=True, return_value=None, side_effect=lambda *args: args[0]._ObjectId__validate(sample_id)):
             self.bind.db.coll.insert(doc, manipulate=True)
         self.assertEqual(doc, {'x': 1, '_id': sample_id})
 

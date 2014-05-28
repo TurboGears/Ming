@@ -91,7 +91,7 @@ class TestIndexes(TestCase):
             'test_some_indexes', self.MockSession,
             Field('_id', S.ObjectId),
             Field('test1', str, index=True, unique=True),
-            Field('test2'),
+            Field('test2', str),
             Field('test3', str),
             Index('test2'),
             Index('test1', 'test2', direction=pymongo.DESCENDING))
