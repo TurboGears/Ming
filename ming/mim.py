@@ -701,7 +701,8 @@ class BsonArith(object):
             (lambda x:x, [ bson.ObjectId ]),
             (lambda x:x, [ bool ]),
             (lambda x:x, [ datetime ]),
-            (lambda x:x, [ type(bson.RE_TYPE) ] )
+            (lambda x:x, [ type(bson.RE_TYPE) ] ),
+            (lambda x:x, [ float ]),
             ]
 
 def match(spec, doc):

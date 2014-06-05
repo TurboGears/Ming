@@ -639,6 +639,12 @@ class TestBsonCompare(TestCase):
         assert mim.BsonArith.cmp(False, bson.ObjectId()) == 1
         assert mim.BsonArith.cmp(True, datetime.fromordinal(1)) == -1
 
+    def test_float_bson_type(self):
+        assert mim.BsonArith.cmp(1, 1) == 0
+        assert mim.BsonArith.cmp(1.1, 1.1) == 0
+        assert mim.BsonArith.cmp(1.1, -1.3) == 1
+        assert mim.BsonArith.cmp(1.1, 1.1111) == -1
+
 class TestMatch(TestCase):
 
     def test_simple_match(self):
