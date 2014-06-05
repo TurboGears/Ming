@@ -127,6 +127,18 @@ class TestDatastore(TestCase):
         args, kwargs = Connection.call_args
         assert 'database' not in kwargs
 
+    @patch('ming.datastore.MongoClient', spec=True)
+    def test_configure_optional_params(self, Connection):
+        ming.configure(**{
+                'ming.main.uri':'mongodb://localhost:27017/test_db',
+                'ming.main.replicaSet': 'foobar',
+                'ming.main.w': 2,
+                'ming.main.ssl': True,
+                })
+        session = Session.by_name('main')
+        assert session.bind.conn is not None
+        assert session.bind.db is not None
+
     def test_no_kwargs_with_bind(self):
         self.assertRaises(
             ming.exc.MingConfigError,

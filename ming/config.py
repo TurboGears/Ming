@@ -11,6 +11,8 @@ class AuthenticateSchema(schema.Schema):
     password=validators.UnicodeString(not_empty=True)
 
 class DatastoreSchema(schema.Schema):
+    allow_extra_fields=True
+
     uri=validators.UnicodeString(if_missing=None, if_empty=None)
     database=validators.UnicodeString(if_missing=None, if_empty=None)
     authenticate=AuthenticateSchema(if_missing=None, if_empty=None)
