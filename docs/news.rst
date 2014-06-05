@@ -1,10 +1,14 @@
 Ming News / Release Notes
 =====================================
 
-
+0.5.0 (Jun 5, 2014)
 ------------------------------------------------
-* Compatible with pymongo==2.7
+* Compatible with pymongo 2.7
 * Compatible with Python 3.3 and 3.4
+* Compatible with PyPy
+* Fix update_if_not_modified
+* MIM: support float comparisons
+* ming.configure now allows any extra params to pass through to MongoClient
 
 0.4.7 (Apr 16, 2014)
 ------------------------------------------------
