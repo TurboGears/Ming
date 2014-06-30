@@ -72,8 +72,7 @@ class TestSchemaItem(TestCase):
         si = S.SchemaItem.make(datetime)
         self.assertEqual(
             datetime(2012,2,8,20,42,14,123000),
-            si.validate(datetime(2012,2,8,12,42,14,123456,
-                                 tzinfo=pytz.timezone('US/Pacific'))))
+            si.validate(pytz.timezone('US/Pacific').localize(datetime(2012,2,8,12,42,14,123456))))
 
     def test_migrate(self):
         si = S.Migrate(int, str, str)
@@ -100,8 +99,8 @@ class TestSchemaItem(TestCase):
             {'a': str},
             {'a': [str], 'b': int},
             fixer)
-        with self.assertRaisesRegexp(S.Invalid, 'int'):
-            si.validate(dict(a=['a'], b='b'))
+        self.assertRaisesRegexp(S.Invalid, 'int',
+                                lambda: si.validate(dict(a=['a'], b='b')))
 
     def test_none(self):
         si = S.SchemaItem.make(None)

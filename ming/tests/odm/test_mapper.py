@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from unittest import TestCase
 
 from mock import Mock, patch

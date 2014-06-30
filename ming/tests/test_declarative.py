@@ -221,8 +221,8 @@ class TestIndexes(TestCase):
         collection = self.MockSession.db[self.MyDoc.__mongometa__.name]
         ensure_index = collection.ensure_index
         ensure_index.side_effect = AutoReconnect('blah blah')
-        with self.assertRaises(AutoReconnect):
-            self.MyDoc.m
+
+        self.assertRaises(AutoReconnect, lambda: self.MyDoc.m)
         assert ensure_index.called
 
     def test_index_inheritance_child_none(self):

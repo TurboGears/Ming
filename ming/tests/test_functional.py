@@ -30,7 +30,7 @@ class TestDocument(TestCase):
         self.TestDoc = collection(
             'test_doc', self.MockSession,
             Field('a', int, if_missing=None, index=True),
-            Field('b', S.Object, if_missing=dict(a=S.Int(if_missing=None))))
+            Field('b', S.Object, if_missing=dict(a=None)))
         self.TestDocNoSchema = collection(
             'test_doc', self.MockSession)
 
@@ -44,6 +44,11 @@ class TestDocument(TestCase):
         self.assertEqual(doc, dict(b=dict(a=5)))
         self.assertRaises(AttributeError, getattr, doc, 'c')
         self.assertRaises(AttributeError, getattr, doc, 'a')
+
+    def test_field_missing(self):
+        doc = self.TestDoc.make(dict(a=1))
+        self.assertIsNotNone(doc.b)
+        self.assertEqual(doc.b['a'], None)
 
     def test_no_schema(self):
         doc = self.TestDocNoSchema.make(dict(a=5, b=6))
