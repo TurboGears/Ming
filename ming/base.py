@@ -72,7 +72,7 @@ class Cursor(object):
         return self
 
     def next(self):
-        doc = self.cursor.next()
+        doc = next(self.cursor)
         if doc is None: return None
         return self.cls.make(
             doc,
