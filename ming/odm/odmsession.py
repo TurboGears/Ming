@@ -283,7 +283,7 @@ class ODMCursor(object):
         return self.ming_cursor.count()
 
     def _next_impl(self):
-        doc = self.ming_cursor.next()
+        doc = next(self.ming_cursor)
         obj = self.session.imap.get(self.cls, doc['_id'])
         if obj is None:
             obj = self.mapper.create(doc, self._options)
