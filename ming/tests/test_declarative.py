@@ -314,6 +314,15 @@ class TestCursor(TestCase):
     def setUp(self):
         self.MockSession = mock.Mock()
         self.MockSession.db = mock.MagicMock()
+        class IteratorMock(mock.Mock):
+            def __init__(self, base_iter):
+                super(IteratorMock, self).__init__()
+                self._base_iter = base_iter
+            def __iter__(self):
+                return self
+            def next(self):
+                return next(self._base_iter)
+            __next__ = next
         class TestDoc(Document):
             class __mongometa__:
                 name='test_doc'
@@ -321,11 +330,8 @@ class TestCursor(TestCase):
             a=Field(int)
             b=Field(S.Object(dict(a=int)))
         self.TestDoc = TestDoc
-        base_iter = iter([ {}, {}, {} ])
-        mongo_cursor = mock.Mock()
+        mongo_cursor = IteratorMock(iter([ {}, {}, {} ]))
         mongo_cursor.count = mock.Mock(return_value=3)
-        mongo_cursor.__iter__ = mock.Mock(return_value=base_iter)
-        mongo_cursor.next = lambda: six.next(base_iter)
         mongo_cursor.limit = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.hint = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.skip = mock.Mock(return_value=mongo_cursor)
