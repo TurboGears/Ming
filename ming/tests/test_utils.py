@@ -1,4 +1,4 @@
-from unittest import TestCase, main
+from unittest import TestCase, main, SkipTest
 
 import pymongo
 
@@ -56,6 +56,16 @@ class TestUtils(TestCase):
             [('foo', pymongo.DESCENDING), ('bar', pymongo.ASCENDING)])
         completed = [ ('a', 1), ('b', -1) ]
         self.assertEqual(completed, utils.fixup_index([completed]))
+
+    def test_fixup_text_index(self):
+        if not hasattr(pymongo, 'TEXT'):
+            raise SkipTest('text index not supported in this pymongo version')
+        self.assertEqual(
+            [('foo', pymongo.TEXT)],
+            utils.fixup_index([('foo', pymongo.TEXT)]))
+        self.assertEqual(
+            [('foo', pymongo.TEXT), ('bar', pymongo.ASCENDING)],
+            utils.fixup_index([('foo', pymongo.TEXT), 'bar']))
 
 if __name__ == '__main__':
     main()
