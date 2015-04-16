@@ -1,6 +1,11 @@
 Ming News / Release Notes
 =====================================
 
+0.5.2 (Apr 16, 2015)
+------------------------------------------------
+* Support for text indexes
+* Specify our requirement on pymongo < 3.0 (until supported)
+
 0.5.1 (Apr 6, 2015)
 ------------------------------------------------
 * Cursor compatibility for Python 3
