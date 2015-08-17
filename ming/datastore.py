@@ -29,12 +29,7 @@ def create_engine(*args, **kwargs):
             args = args[1:]
         else:
             use_class = MongoClient
-    if sleep is None:
-        if kwargs.get('use_greenlets', False):
-            sleep = gevent.sleep
-        else:
-            sleep = time.sleep
-    return Engine(use_class, args, kwargs, connect_retry, sleep, auto_ensure_indexes)
+    return Engine(use_class, args, kwargs, connect_retry, auto_ensure_indexes)
 
 def create_datastore(uri, **kwargs):
     '''Wrapper for creating DataStores, setting the connection class
@@ -90,12 +85,12 @@ class Engine(object):
     providing for lazily creating the actual connection.'''
 
     def __init__(self, Connection,
-                 conn_args, conn_kwargs, connect_retry, sleep, auto_ensure_indexes):
+                 conn_args, conn_kwargs, connect_retry, auto_ensure_indexes, _sleep=time.sleep):
         self._Connection = Connection
         self._conn_args = conn_args
         self._conn_kwargs = conn_kwargs
         self._connect_retry = connect_retry
-        self._sleep = sleep
+        self._sleep = _sleep
         self._auto_ensure_indexes = auto_ensure_indexes
         self._log = logging.getLogger(__name__)
         self._conn = None
