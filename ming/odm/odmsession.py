@@ -83,8 +83,11 @@ class ODMSession(object):
 
     def close(self):
         self.clear()
-        if self.impl.bind:
-            self.impl.bind.conn.end_request()
+
+        # This should now be needed anymore,
+        # see http://emptysqua.re/blog/good-idea-at-the-time-pymongo-start-request/
+        # if self.impl.bind:
+        #    self.impl.bind.conn.end_request()
 
     def get(self, cls, idvalue):
         result = self.imap.get(cls, idvalue)

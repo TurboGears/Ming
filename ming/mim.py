@@ -7,6 +7,7 @@ import time
 import itertools
 import collections
 import logging
+import warnings
 from datetime import datetime
 from hashlib import md5
 
@@ -108,11 +109,14 @@ class Connection(object):
         # For pymongo 2.7 compatibility
         return True
 
+    def _is_writable(self):
+        return True
+
 class Database(database.Database):
 
-    def __init__(self, connection, name):
+    def __init__(self, client, name, **__):
         self._name = name
-        self._connection = connection
+        self._client = client
         self._collections = {}
         if Runtime is not None:
             self._jsruntime = Runtime()
@@ -125,7 +129,11 @@ class Database(database.Database):
 
     @property
     def connection(self):
-        return self._connection
+        return self._client
+
+    @property
+    def client(self):
+        return self._client
 
     def _make_collection(self):
         return Collection(self)
@@ -315,7 +323,6 @@ class Collection(collection.Collection):
         for ui in self._unique_indexes.values():
             ui.clear()
 
-
     @property
     def name(self):
         return self._name
@@ -354,24 +361,24 @@ class Collection(collection.Collection):
             return result
         return None
 
-    def find_and_modify(self, query=None, update=None, fields=None,
-                        upsert=False, remove=False, **kwargs):
+    def __find_and_modify(self, query=None, update=None, fields=None,
+                          upsert=False, remove=False, **kwargs):
         if query is None: query = {}
         before = self.find_one(query, sort=kwargs.get('sort'))
         upserted = False
         if before is None:
             upserted = True
             if upsert:
-                result = self.update(query, update, upsert)
+                result = self.__update(query, update, upsert)
                 query = {'_id': result['upserted']}
             else:
                 return None
 
         before = self.find_one(query, fields, sort=kwargs.get('sort'))
         if remove:
-            self.remove({'_id': before['_id']})
+            self.__remove({'_id': before['_id']})
         elif not upserted:
-            self.update({'_id': before['_id']}, update)
+            self.__update({'_id': before['_id']}, update)
 
         return_new = kwargs.get('new', False)
         if return_new:
@@ -381,7 +388,33 @@ class Collection(collection.Collection):
         else:
             return before
 
-    def insert(self, doc_or_docs, manipulate=True, safe=False, **kwargs):
+    def find_and_modify(self, query=None, update=None, fields=None,
+                        upsert=False, remove=False, **kwargs):
+        warnings.warn('find_and_modify is now deprecated, please use find_one_and_delete, '
+                      'find_one_and_replace, find_one_and_update)', DeprecationWarning)
+        return self.__find_and_modify(query, update, fields, upsert, remove, **kwargs)
+
+    def find_one_and_delete(self, filter, projection=None, sort=None, **__):
+        return self.__find_and_modify(filter, fields=projection, sort=sort)
+
+    def find_one_and_replace(self, filter, replacement, projection=None, sort=None,
+                             return_document=False, **__):
+        # ReturnDocument.BEFORE -> False
+        # ReturnDocument.AFTER -> True
+        return self.__find_and_modify(filter, update=replacement, fields=projection,
+                                      sort=sort, new=return_document)
+
+    def find_one_and_update(self, filter, update, projection=None, sort=None,
+                            return_document=False, **__):
+        # ReturnDocument.BEFORE -> False
+        # ReturnDocument.AFTER -> True
+        return self.__find_and_modify(filter, update=update, fields=projection,
+                                      sort=sort, new=return_document)
+
+    def count(self, filter=None, **kwargs):
+        return self.find(filter, **kwargs).count()
+
+    def __insert(self, doc_or_docs, manipulate=True, **kwargs):
         if not isinstance(doc_or_docs, list):
             doc_or_docs = [ doc_or_docs ]
         for doc in doc_or_docs:
@@ -392,21 +425,36 @@ class Collection(collection.Collection):
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
             if _id in self._data:
-                if safe: raise DuplicateKeyError('duplicate ID on insert')
+                if kwargs.get('w', 1):
+                    raise DuplicateKeyError('duplicate ID on insert')
                 continue
             self._index(doc)
             self._data[_id] = bcopy(doc)
         return _id
 
-    def save(self, doc, safe=False):
+    def insert(self, doc_or_docs, manipulate=True, **kwargs):
+        warnings.warn('insert is now deprecated, please use insert_one or insert_multi', DeprecationWarning)
+        return self.__insert(doc_or_docs, manipulate, **kwargs)
+
+    def insert_one(self, document):
+        return self.__insert(document)
+
+    def insert_multi(self, documents, ordered=True):
+        return self.__insert(documents)
+
+    def save(self, doc, **kwargs):
+        warnings.warn('save is now deprecated, please use insert_one or replace_one', DeprecationWarning)
         _id = doc.get('_id', ())
         if _id == ():
-            return self.insert(doc, safe=safe)
+            return self._insert(doc)
         else:
-            self.update({'_id':_id}, doc, upsert=True, safe=safe)
+            self.__update({'_id':_id}, doc, upsert=True)
             return _id
 
-    def update(self, spec, updates, upsert=False, safe=False, multi=False):
+    def replace_one(self, filter, replacement, upsert=False):
+        return self._update(filter, replacement, upsert)
+
+    def __update(self, spec, updates, upsert=False, multi=False):
         bson_safe(spec)
         bson_safe(updates)
         result = dict(
@@ -437,15 +485,38 @@ class Collection(collection.Collection):
         else:
             return result
 
-    def remove(self, spec=None, **kwargs):
+    def update(self, spec, updates, upsert=False, multi=False):
+        warnings.warn('update is now deprecated, please use update_many or update_one', DeprecationWarning)
+        return self.__update(spec, updates, upsert, multi)
+
+    def update_many(self, filter, update, upsert=False):
+        return self.__update(filter, update, upsert, multi=True)
+
+    def update_one(self, filter, update, upsert=False):
+        return self.__update(filter, update, upsert, multi=False)
+
+    def __remove(self, spec=None, **kwargs):
+        multi = kwargs.get('multi', True)
         if spec is None: spec = {}
+        first_found = False
         new_data = {}
         for id, doc in six.iteritems(self._data):
-            if match(spec, doc):
+            if match(spec, doc) and multi or first_found is False:
                 self._deindex(doc)
+                first_found = True
             else:
                 new_data[id] = doc
         self._data = new_data
+
+    def remove(self, spec=None, **kwargs):
+        warnings.warn('remove is now deprecated, please use delete_many or delete_one', DeprecationWarning)
+        self.__remove(spec, **kwargs)
+
+    def delete_one(self, filter):
+        self.__remove(filter, multi=False)
+
+    def delete_many(self, filter):
+        self.__remove(filter, multi=True)
 
     def ensure_index(self, key_or_list, unique=False, cache_for=300,
                      name=None, **kwargs):
@@ -465,6 +536,9 @@ class Collection(collection.Collection):
             key_values = self._extract_index_key(doc, keys)
             index[key_values] =id
         return index_name
+
+    # ensure_index is now deprecated.
+    create_index = ensure_index
 
     def index_information(self):
         return dict(
@@ -729,7 +803,7 @@ class BsonArith(object):
             (lambda x:x, [ datetime ]),
             (lambda x:x, [ type(bson.RE_TYPE) ] ),
             (lambda x:x, [ float ]),
-            ]
+        ]
 
 def match(spec, doc):
     spec = bcopy(spec)
@@ -742,10 +816,10 @@ def match(spec, doc):
         for k,v in six.iteritems(spec):
             subdoc, subdoc_key = mspec.traverse(*k.split('.'))
             for op, value in _parse_query(v):
-                if not subdoc.match(subdoc_key, op, value): return None
+                if not subdoc.match(subdoc_key, op, value):
+                    return None
     except KeyError:
         raise
-        return None
     return mspec
 
 class Match(object):
@@ -758,6 +832,8 @@ class Match(object):
         if op == '$eq':
             if isinstance(value, bson.RE_TYPE):
                 return bool(value.match(val))
+            if isinstance(value, bson.Regex):
+                return bool(value.try_compile().match(val))
             return BsonArith.cmp(val, value) == 0
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0

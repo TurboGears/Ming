@@ -2,7 +2,7 @@ import cgi
 import six
 from six.moves import urllib
 from threading import local
-
+import warnings
 import pymongo
 
 class EmptyClass(object): pass
@@ -140,3 +140,8 @@ def fixup_index(index, direction=pymongo.ASCENDING):
 
     return list(_fixup(index))
 
+def fix_write_concern(kwargs):
+    if 'safe' in kwargs:
+        warnings.warn('safe option is now deprecated', DeprecationWarning)
+        kwargs['w'] = int(kwargs.pop('safe'))
+    return kwargs

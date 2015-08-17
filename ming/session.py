@@ -9,7 +9,7 @@ import pymongo.errors
 import six
 
 from .base import Cursor, Object
-from .utils import fixup_index
+from .utils import fixup_index, fix_write_concern
 from . import exc
 
 log = logging.getLogger(__name__)
@@ -83,10 +83,9 @@ class Session(object):
                       strip_extra=strip_extra)
 
     def remove(self, cls, *args, **kwargs):
-        if 'safe' not in kwargs:
-            kwargs['safe'] = True
+        fix_write_concern(kwargs)
         for kwarg in kwargs:
-            if kwarg not in ('spec_or_id', 'safe'):
+            if kwarg not in ('spec_or_id', 'w'):
                 raise ValueError("Unexpected kwarg %s.  Did you mean to pass a dict?  If only sent kwargs, pymongo's remove()"
                                  " would've emptied the whole collection.  Which we're pretty sure you don't want." % kwarg)
         self._impl(cls).remove(*args, **kwargs)
@@ -121,7 +120,7 @@ class Session(object):
         return self._impl(cls).distinct(*args, **kwargs)
 
     def update_partial(self, cls, spec, fields, upsert=False, **kw):
-        return self._impl(cls).update(spec, fields, upsert, safe=True, **kw)
+        return self._impl(cls).update(spec, fields, upsert, **kw)
 
     def find_and_modify(self, cls, query=None, sort=None, new=False, **kw):
         if query is None: query = {}
@@ -142,7 +141,7 @@ class Session(object):
                 data = doc.m.schema.validate(doc)
             doc.update(data)
         else:
-            data =dict(doc)
+            data = dict(doc)
         return data
 
     @annotate_doc_failure
@@ -151,16 +150,16 @@ class Session(object):
         if args:
             values = dict((arg, data[arg]) for arg in args)
             result = self._impl(doc).update(
-                dict(_id=doc._id), {'$set':values}, safe=kwargs.get('safe', True))
+                dict(_id=doc._id), {'$set': values}, **fix_write_concern(kwargs))
         else:
-            result = self._impl(doc).save(data, safe=kwargs.get('safe', True))
+            result = self._impl(doc).save(data, **fix_write_concern(kwargs))
         if result and '_id' not in doc:
             doc._id = result
 
     @annotate_doc_failure
     def insert(self, doc, **kwargs):
         data = self._prep_save(doc, kwargs.pop('validate', True))
-        bson = self._impl(doc).insert(data, safe=kwargs.get('safe', True))
+        bson = self._impl(doc).insert(data, **fix_write_concern(kwargs))
         if bson and '_id' not in doc:
             doc._id = bson
 
@@ -171,12 +170,11 @@ class Session(object):
             spec_fields = [spec_fields]
         self._impl(doc).update(dict((k,doc[k]) for k in spec_fields),
                                doc,
-                               upsert=True,
-                               safe=True)
+                               upsert=True)
 
     @annotate_doc_failure
     def delete(self, doc):
-        self._impl(doc).remove({'_id':doc._id}, safe=True)
+        self._impl(doc).remove({'_id':doc._id})
 
     def _set(self, doc, key_parts, value):
         if len(key_parts) == 0:
@@ -197,7 +195,7 @@ class Session(object):
         for k,v in six.iteritems(fields_values):
             self._set(doc, k.split('.'), v)
         impl = self._impl(doc)
-        impl.update({'_id':doc._id}, {'$set':fields_values}, safe=True)
+        impl.update({'_id':doc._id}, {'$set':fields_values})
 
     @annotate_doc_failure
     def increase_field(self, doc, **kwargs):
@@ -214,8 +212,7 @@ class Session(object):
         if key not in doc:
             self._impl(doc).update(
                 {'_id': doc._id, key: None},
-                {'$set': {key: value}},
-                safe = True,
+                {'$set': {key: value}}
             )
         self._impl(doc).update(
             {'_id': doc._id, key: {'$lt': value}},
@@ -223,7 +220,6 @@ class Session(object):
             #{'$where': "this._id == '%s' && (!(%s in this) || this.%s < '%s')"
             #    % (doc._id, key, key, value)},
             {'$set': {key: value}},
-            safe = True,
         )
 
     def index_information(self, cls):
