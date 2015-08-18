@@ -2,9 +2,6 @@
 Ming ODM Layer Tutorial
 =======================
 
-.. [[[cog from cog_utils import interact]]]
-.. [[[end]]]
-
 Introduction
 ------------
 
@@ -124,8 +121,7 @@ anymore of the previous items that were created. While it is possible
 to flush the session multiple times, it is common practice in
 web applications to clear it only once at the end of the request.
 
-.. [[[cog interact('ming_odm_tutorial', 1) ]]]
-.. [[[end]]]
+.. run-pysnippet:: ming_odm_tutorial snippet1
 
 Querying the ODM
 ----------------
@@ -133,15 +129,13 @@ Querying the ODM
 Once we have a `WikiPage` in the database, we can retrieve it using the `.query`
 attribute, modify it, and flush the modified object out to the database:
 
-.. [[[cog interact('ming_odm_tutorial', 2)]]]
-.. [[[end]]]
+.. run-pysnippet:: ming_odm_tutorial snippet2
 
 You've already seen how to retrieve single objects from the ODM using the
 `query.get()` method on `MappedClass` objects.  You can also perfodm regular Ming
 queries using the `query.find()` method:
 
-.. [[[cog interact('ming_odm_tutorial', 4) ]]]
-.. [[[end]]]
+.. run-pysnippet:: ming_odm_tutorial snippet4
 
 .. _relation:
 
@@ -163,8 +157,8 @@ related class.  In this case, we will use the property `page` to access the page
 about which this comment refers.  To actually use these classes, we need to
 create some comments:
 
-.. [[[cog interact('ming_odm_tutorial', 3) ]]]
-.. [[[end]]]
+.. run-pysnippet:: ming_odm_tutorial snippet3
+
 
 And voilà, you have related objects.  Note that at present the relations between
 objects are read-only, so if you want to make or break a relationship, you must
@@ -419,6 +413,4 @@ You can also access the underlying Ming `Document` and (non-ODM) `Session` by
 using some helper functions, so all the power of basic Ming (and MongoDB) is
 accessible at all times:
 
-.. [[[cog interact('ming_odm_tutorial', 5) ]]]
-.. [[[end]]]
-
+.. run-pysnippet:: ming_odm_tutorial snippet5
