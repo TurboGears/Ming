@@ -72,6 +72,10 @@ class Session(object):
         allow_extra=kwargs.pop('allow_extra', True)
         strip_extra=kwargs.pop('strip_extra', True)
         validate=kwargs.pop('validate', True)
+        projection = kwargs.pop('fields', kwargs.pop('projection', None))
+        if projection is not None:
+            args = args[:1] + (projection,) + args[1:]
+
         collection = self._impl(cls)
         if not validate:
             return (
