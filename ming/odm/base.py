@@ -30,7 +30,7 @@ class with_hooks(object):
             call_hook(obj, after_meth, *args, **kwargs)
             return result
         inner.__name__ = func.__name__
-        inner.__doc__ = 'Hook wraper around\n' + repr(func.__doc__)
+        inner.__doc__ = func.__doc__
         return inner
 
 class ObjectState(object):

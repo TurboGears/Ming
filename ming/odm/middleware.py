@@ -7,7 +7,16 @@ except ImportError:
 from ming.odm import ThreadLocalODMSession, ContextualODMSession
 
 class MingMiddleware(object):
+    """WSGI Middleware that automatically flushes and closes ODM Sessions.
 
+    At the end of each WSGI request for ``app`` the middleware will
+    automatically flush the session unless there was an Exception,
+    then it will close the session to clear it.
+
+    ``flush_on_errors`` can be a list of exception types for which
+    the session should be flushed anyway. This usually includes
+    ``webob.exc.HTTPRedirection`` subclasses if WebOb is available.
+    """
     def __init__(self, app,
                  context_func=None,
                  flush_on_errors=DEFAULT_FLUSH_ERRORS):

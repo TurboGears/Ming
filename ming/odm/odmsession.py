@@ -10,10 +10,17 @@ from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
 
 class ODMSession(object):
+    """Current Ming Session.
 
+    Keeps track of active objects in the IdentityMap and UnitOfWork
+    and of the current connection to the database. All the operation
+    on MongoDB should happen through the ODMSession to avoid inconsistent
+    state between objects updated through the session and outside the session.
+    """
     _registry = {}
 
-    def __init__(self, doc_session=None, bind=None, extensions=None):
+    def __init__(self, doc_session=None, bind=None, extensions=None,
+                 autoflush=False):
         if doc_session is None:
             doc_session = Session(bind)
         if extensions is None: extensions = []
@@ -21,17 +28,32 @@ class ODMSession(object):
         self.uow = UnitOfWork(self)
         self.imap = IdentityMap()
         self.extensions = [ e(self) for e in extensions ]
-        self.autoflush = False
+        self.autoflush = autoflush
 
     def register_extension(self, extension):
         self.extensions.append(extension(self))
 
+    @property
+    def bind(self):
+        return self.impl.bind
+
+    @property
+    def db(self):
+        """Access the low-level pymongo database"""
+        return self.impl.db
+
     @classmethod
     def by_name(cls, name):
+        """Retrieve or create a new Session with the given ``name``.
+
+        This is useful to keep around multiple sessions and identify
+        them by name. The session registry is global so they are
+        available everywhere as far as the ``ming`` module is the same.
+        """
         if name in cls._registry:
             result = cls._registry[name]
         else:
-            result = cls._registry[name] = cls(Session._datastores.get(name))
+            result = cls._registry[name] = cls(bind=Session._datastores.get(name))
         return result
 
     def mapper(self, cls, collection, **kwargs):
@@ -39,17 +61,39 @@ class ODMSession(object):
             cls, collection=collection, session=self, **kwargs)
 
     def save(self, obj):
+        """Add an object to the Session (and its UnitOfWork and IdentityMap).
+
+        Usually objects are automatically added to the session when created.
+        This is done by :meth:`._InitDecorator.saving_init` which is the ``__init__``
+        method of all the :class`.MappedClass` subclasses instrumented by :class:`.Mapper`.
+
+        So calling this method is usually not required unless the object was
+        expunged.
+        """
         self.uow.save(obj)
         self.imap.save(obj)
         state(obj).session = self
 
     def expunge(self, obj):
+        """Remove an object from the Session (and its UnitOfWork and IdentityMap)"""
         self.uow.expunge(obj)
         self.imap.expunge(obj)
         state(obj).session = None
 
+    def refresh(self, obj):
+        """Refreshes the object in the session by querying it back and updating its state"""
+        self.expunge(obj)
+        return self.find(obj.__class__, {'_id': obj._id}, refresh=True).first()
+
     @with_hooks('flush')
     def flush(self, obj=None):
+        """Flush ``obj`` or all the objects in the UnitOfWork.
+
+        When ``obj`` is provided, only ``obj`` is flushed to the
+        database, otherwise all the objects in the UnitOfWork
+        are persisted on the databases according to their current
+        state.
+        """
         if self.impl.db is None: return
         if obj is None:
             self.uow.flush()
@@ -75,6 +119,7 @@ class ODMSession(object):
         mapper(obj).delete(obj, st, self, **kwargs)
 
     def clear(self):
+        """Expunge all the objects from the session."""
         # Orphan all objects
         for obj in self.uow:
             state(obj).session = None
@@ -82,17 +127,48 @@ class ODMSession(object):
         self.imap.clear()
 
     def close(self):
+        """Clear the session and tell MongoDB the connection can be closed."""
         self.clear()
         if self.impl.bind:
             self.impl.bind.conn.end_request()
 
     def get(self, cls, idvalue):
+        """Retrieves ``cls`` by its ``_id`` value passed as ``idvalue``.
+
+        If the object is already available in the IdentityMap
+        this acts as a simple cache a returns the current object
+        without querying the database. Otherwise a *find* query
+        is issued and the object retrieved.
+
+        This the same as calling ``cls.query.get(_id=idvalue)``.
+        """
         result = self.imap.get(cls, idvalue)
         if result is None:
             result = self.find(cls, dict(_id=idvalue)).first()
         return result
 
     def find(self, cls, *args, **kwargs):
+        """Retrieves ``cls`` by performing a mongodb query.
+
+        This is the same as calling ``cls.query.find()`` and
+        always performs a query on the database. According to
+        the ``refresh`` argument the objects are also updated
+        in the UnitOfWork or not. Otherwise the UnitOfWork
+        keeps the old object state which is the default.
+
+        If the session has ``autoflush`` option, the session
+        if flushed before performing the query.
+
+        Arguments are the same as :meth:`pymongo.collection.Collection.find`
+        plus the following additional arguments:
+
+            * ``allow_extra`` Whenever to raise an exception in case of extra
+              fields not specified in the model definition.
+            * ``strip_extra`` Whenever extra fields should be stripped if present.
+            * ``validate`` Disable validation or not.
+
+        It returns an :class:`.ODMCursor` with the results.
+        """
         refresh = kwargs.pop('refresh', False)
         decorate = kwargs.pop('decorate', None)
         if self.autoflush:
@@ -105,6 +181,16 @@ class ODMSession(object):
         return odm_cursor
 
     def find_and_modify(self, cls, *args, **kwargs):
+        """Finds and updates ``cls``.
+
+        Arguments are the same as :meth:`pymongo.collection.Collection.find_and_modify`.
+
+        If the session has ``autoflush`` option, the session
+        if flushed before performing the query.
+
+        It returns an :class:`.ODMCursor` with the results.
+        """
+
         decorate = kwargs.pop('decorate', None)
         if self.autoflush:
             self.flush()
@@ -118,14 +204,37 @@ class ODMSession(object):
 
     @with_hooks('remove')
     def remove(self, cls, *args, **kwargs):
+        """Delete one or more ``cls`` entries from the collection.
+
+        This performs the delete operation outside of the UnitOfWork,
+        so the objects already in the UnitOfWork and IdentityMap are
+        unaffected and might be recreated when the session is flushed.
+
+        Arguments are the same as :meth:`pymongo.collection.Collection.remove`.
+        """
         m = mapper(cls)
         m.remove(self, *args, **kwargs)
 
     def update(self, cls, spec, fields, **kwargs):
+        """Updates one or more ``cls`` entries from the collection.
+
+        This performs the update operation outside of the UnitOfWork,
+        so the objects already in the UnitOfWork and IdentityMap are
+        unaffected and might be restored to previous state when
+        the session is flushed.
+
+        Arguments are the same as :meth:`pymongo.collection.Collection.update`.
+        """
         m = mapper(cls)
         m.update_partial(self, spec, fields, **kwargs)
 
     def update_if_not_modified(self, obj, fields, upsert=False):
+        """Updates one entry unless it was modified since first queried.
+
+        Arguments are the same as :meth:`pymongo.collection.Collection.update`.
+
+        Returns whenever the update was performed or not.
+        """
         spec = state(obj).original_document
         self.update(obj.__class__, spec, fields, upsert=upsert)
         err = self.impl.db.command(dict(getlasterror=1))
@@ -190,6 +299,12 @@ class SessionExtension(object):
     def after_cursor_next(self, cursor): pass
 
 class ThreadLocalODMSession(ThreadLocalProxy):
+    """ThreadLocalODMSession is a thread-safe proxy to :class:`ODMSession`.
+
+    This routes properties and methods to the session in charge of
+    the current thread. For a reference of available *methods* and *properties*
+    refer to the :class:`ODMSession`.
+    """
     _session_registry = ThreadLocalProxy(dict)
 
     def __init__(self, *args, **kwargs):
@@ -213,12 +328,38 @@ class ThreadLocalODMSession(ThreadLocalProxy):
             cls, collection=collection, session=self, **kwargs)
 
     @classmethod
+    def by_name(cls, name):
+        """Retrieve or create a new ThreadLocalODMSession with the given ``name``.
+
+        This is useful to keep around multiple sessions and identify
+        them by name. The session registry is global so they are
+        available everywhere as far as the ``ming`` module is the same.
+        """
+        datastore = Session._datastores.get(name)
+        if datastore is None:
+            return None
+
+        for odmsession in cls._session_registry.values():
+            if odmsession.bind is datastore:
+                return odmsession
+        else:
+            return ThreadLocalODMSession(bind=datastore)
+
+    @classmethod
     def flush_all(cls):
+        """Flush all the ODMSessions registered in current thread
+
+        Usually is not necessary as only one session is registered per-thread.
+        """
         for sess in cls._session_registry.values():
             sess.flush()
 
     @classmethod
     def close_all(cls):
+        """Closes all the ODMSessions registered in current thread.
+
+        Usually is not necessary as only one session is registered per-thread.
+        """
         for sess in cls._session_registry.values():
             sess.close()
 
@@ -256,7 +397,11 @@ class ContextualODMSession(ContextualProxy):
         del cls._session_registry[context]
 
 class ODMCursor(object):
+    """Represents the results of query.
 
+    The cursors can be iterated over to retrieve the
+    results one by one.
+    """
     def __bool__(self):
         raise MingException('Cannot evaluate ODMCursor to a boolean')
     __nonzero__ = __bool__  # python 2
@@ -280,6 +425,7 @@ class ODMCursor(object):
         return self.session.extensions
 
     def count(self):
+        """Get the number of objects retrieved by the query"""
         return self.ming_cursor.count()
 
     def _next_impl(self):
@@ -321,12 +467,14 @@ class ODMCursor(object):
         return odm_cursor
 
     def limit(self, limit):
+        """Limit the number of entries retrieved by the query"""
         odm_cursor = ODMCursor(self.session, self.cls,
                                self.ming_cursor.limit(limit))
         call_hook(self, 'cursor_created', odm_cursor, 'limit', self, limit)
         return odm_cursor
 
     def skip(self, skip):
+        """Skip the first ``skip`` entries retrieved by the query"""
         odm_cursor = ODMCursor(self.session, self.cls,
                                self.ming_cursor.skip(skip))
         call_hook(self, 'cursor_created', odm_cursor, 'skip', self, skip)
@@ -339,12 +487,22 @@ class ODMCursor(object):
         return odm_cursor
 
     def sort(self, *args, **kwargs):
+        """Sort results of the query.
+
+        See :meth:`pymongo.cursor.Cursor.sort` for details on the available
+        arguments.
+        """
         odm_cursor = ODMCursor(self.session, self.cls,
                                self.ming_cursor.sort(*args, **kwargs))
         call_hook(self, 'cursor_created', odm_cursor, 'sort', self, *args, **kwargs)
         return odm_cursor
 
     def one(self):
+        """Gets one result and exaclty one.
+
+        Raises ``ValueError`` exception if less or more than
+        one result is returned by the query.
+        """
         try:
             result = self.next()
         except StopIteration:
@@ -356,10 +514,12 @@ class ODMCursor(object):
         raise ValueError('More than one result from .one()')
 
     def first(self):
+        """Gets the first result of the query"""
         try:
             return self.next()
         except StopIteration:
             return None
 
     def all(self):
+        """Retrieve all the results of the query"""
         return list(self)

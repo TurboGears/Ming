@@ -8,7 +8,9 @@ from ming.utils import wordwrap
 from .base import ObjectState, state, with_hooks
 from .property import FieldProperty
 
+
 def mapper(cls, collection=None, session=None, **kwargs):
+    """Gets or creates the mapper for the given ``cls`` :class:`.MappedClass`"""
     if collection is None and session is None:
         if isinstance(cls, type):
             return Mapper.by_class(cls)
@@ -18,7 +20,16 @@ def mapper(cls, collection=None, session=None, **kwargs):
             return Mapper._mapper_by_class[cls.__class__]
     return Mapper(cls, collection, session, **kwargs)
 
+
 class Mapper(object):
+    """Keeps track of :class:`.MappedClass` subclasses.
+
+     The Mapper is in charge of linking together the Ming Schema Validation layer,
+     the Session and a MappedClass. It also compiles the Schema Validation for
+     Mapped Classes if they don't already have one.
+
+     You usually won't be using the Mapper directly apart from :meth:`.compile_all` method.
+     """
     _mapper_by_collection = {}
     _mapper_by_class = {}
     _mapper_by_classname = {}
@@ -120,6 +131,7 @@ class Mapper(object):
 
     @classmethod
     def compile_all(cls):
+        """Compiles Schema Validation details for all :class:`.MappedClass` subclasses"""
         for m in cls.all_mappers():
             m.compile()
 
@@ -264,6 +276,7 @@ class _QueryDescriptor(object):
         else: return _InstQuery(self.classquery, instance)
 
 class _ClassQuery(object):
+    """Provides ``.query`` attribute for :class:`MappedClass`."""
     _proxy_methods = (
         'find', 'find_and_modify', 'remove', 'update', 'group', 'distinct',
         'aggregate', 'map_reduce', 'inline_map_reduce')
@@ -283,18 +296,33 @@ class _ClassQuery(object):
         for method_name in self._proxy_methods:
             setattr(self, method_name, _proxy(method_name))
 
-    def get(self, **kwargs):
-        if kwargs.keys() == [ '_id' ]:
-            return self.session.get(self.mapped_class, kwargs['_id'])
+    def get(self, _id=None, **kwargs):
+        """Proxies :meth:`.ODMSession.get` and :meth:`.ODMSession.find`
+
+        In case a single argument named ``_id`` is provided the query
+        is performed using :meth:`.ODMSession.get` otherwise is forwarded
+        to :meth:`.ODMSession.find`
+        """
+
+        if _id is not None and not kwargs:
+            return self.session.get(self.mapped_class, _id)
+
+        if _id is not None:
+            kwargs['_id'] = _id
         return self.find(kwargs).first()
 
     def find_by(self, **kwargs):
         return self.find(kwargs)
 
 class _InstQuery(object):
+    """Provides the ``.delete()`` method on :class:`MappedClass` instances.
+
+    It also provides the ``.query`` property on instances, which acts the same
+    as the class query property.
+    """
     _proxy_methods = (
         'update_if_not_modified',
-        )
+    )
 
     def __init__(self, classquery, instance):
         self.classquery = classquery
@@ -318,6 +346,7 @@ class _InstQuery(object):
         self.get = self.classquery.get
 
     def delete(self):
+        """Mark the object for deletion on next flush"""
         st = state(self.instance)
         st.status = st.deleted
 

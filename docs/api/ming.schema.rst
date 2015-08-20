@@ -5,15 +5,6 @@
 .. automodule:: ming.schema
 
 
-Functions
-----------
-
-
-
-
-Classes
---------
-
 .. autoclass:: Anything
    :show-inheritance:
    :members:
