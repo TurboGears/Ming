@@ -91,7 +91,11 @@ class Mapper(object):
         session.impl.remove(self.collection, *args, **kwargs)
 
     def create(self, doc, options):
-        doc = self.collection.make(doc)
+        if type(doc) is not self.collection:
+            # When querying, the ODMCursor already receives data from ming.Cursor
+            # which already constructed and validated the documents as collections.
+            # So we only validate them again if they are not of the expected type.
+            doc = self.collection.make(doc)
         mapper = self.by_collection(type(doc))
         return mapper._from_doc(doc, Object(self.options, **options))
 
@@ -166,7 +170,12 @@ class Mapper(object):
         obj.__ming__ = _ORMDecoration(self, obj, options)
         st = state(obj)
         st.original_document = doc
-        if self.collection.m.schema:
+        if type(doc) is self.collection:
+            # .create calls this after it already created the document with the
+            # right type and so it got already validated. We revalidate it
+            # only if the doc type is not the expected one.
+            st.document = doc
+        elif self.collection.m.schema:
             st.document = self.collection.m.schema.validate(doc)
         else:
             warnings.warn(
