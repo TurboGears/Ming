@@ -47,7 +47,7 @@ class Invalid(Exception):
     """
 
     def __init__(self, msg,
-                 value, state, error_list=None, error_dict=None):
+                 value, state=None, error_list=None, error_dict=None):
         Exception.__init__(self, msg)
         self.msg = msg
         self.value = value
