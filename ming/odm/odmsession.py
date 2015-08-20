@@ -488,7 +488,7 @@ class ODMCursor(object):
         doc = next(self.ming_cursor)
         obj = self.session.imap.get(self.cls, doc['_id'])
         if obj is None:
-            obj = self.mapper.create(doc, self._options)
+            obj = self.mapper.create(doc, self._options, remake=False)
             state(obj).status = ObjectState.clean
             self.session.save(obj)
         elif self._options.refresh:

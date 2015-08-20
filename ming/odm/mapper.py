@@ -90,14 +90,14 @@ class Mapper(object):
     def remove(self, session, *args, **kwargs):
         session.impl.remove(self.collection, *args, **kwargs)
 
-    def create(self, doc, options):
-        if type(doc) is not self.collection:
+    def create(self, doc, options, remake=True):
+        if remake is True or type(doc) is not self.collection:
             # When querying, the ODMCursor already receives data from ming.Cursor
             # which already constructed and validated the documents as collections.
-            # So we only validate them again if they are not of the expected type.
+            # So it will leverage the remake=False option to avoid re-validating
             doc = self.collection.make(doc)
         mapper = self.by_collection(type(doc))
-        return mapper._from_doc(doc, Object(self.options, **options))
+        return mapper._from_doc(doc, Object(self.options, **options), validate=False)
 
     def base_mappers(self):
         for base in self.mapped_class.__bases__:
@@ -165,15 +165,15 @@ class Mapper(object):
     def update_partial(self, session, *args, **kwargs):
         return session.impl.update_partial(self.collection, *args, **kwargs)
 
-    def _from_doc(self, doc, options):
+    def _from_doc(self, doc, options, validate=True):
         obj = self.mapped_class.__new__(self.mapped_class)
         obj.__ming__ = _ORMDecoration(self, obj, options)
         st = state(obj)
         st.original_document = doc
-        if type(doc) is self.collection:
+        if validate is False:
             # .create calls this after it already created the document with the
-            # right type and so it got already validated. We revalidate it
-            # only if the doc type is not the expected one.
+            # right type and so it got already validated. We re-validate it
+            # only if explicitly requested.
             st.document = doc
         elif self.collection.m.schema:
             st.document = self.collection.m.schema.validate(doc)
