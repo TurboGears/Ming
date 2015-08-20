@@ -11,7 +11,7 @@ Ming News / Release Notes
 * ODMSession constructor now exposes the ``autoflush`` argument to automatically flush session before ODM queries,
   previously it was always forced to ``False``. Pay attention that as MongoDB has no transactions autoflush will
   actually write the changes to the database.
-* ODMSession now exposes ``.db`` and ``.bind`` properties which lead to the underlying pymongo database and DataStore
+* ODMSession now exposes ``.db`` and ``.bind`` properties which lead to the underlying pymongo database and DataStore
 * Fixed ODMSession.by_name which previously passed the datastore as session argument.
 * ODMSession now provides ``.refresh`` method that updates a specific object from the database
 * ThreadLocalODMSession now provides ``by_name`` method to configure Thread Safe sessions using ``ming.configure``
