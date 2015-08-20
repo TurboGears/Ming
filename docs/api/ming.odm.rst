@@ -2,24 +2,20 @@
 ======================
 
 
-.. automodule:: ming.odm
+.. automodule:: ming.odm.declarative
    :members:
 
-.. autoclass:: ming.odm.mapper._ClassQuery
+.. automodule:: ming.odm.base
    :members:
 
-.. autoclass:: ming.odm.mapper._InstQuery
+.. automodule:: ming.odm.property
    :members:
 
-.. autoclass:: ODMSession
-   :show-inheritance:
+.. automodule:: ming.odm.odmsession
    :members:
-   :inherited-members:
 
-.. autoclass:: ThreadLocalODMSession
-   :show-inheritance:
+.. automodule:: ming.odm.mapper
    :members:
-   :inherited-members:
 
 .. autoclass:: ming.odm.middleware.MingMiddleware
 

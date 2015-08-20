@@ -1,23 +1,21 @@
 from copy import deepcopy
 
 def state(obj):
-    '''The state of a mapped object'''
+    """Gets the UnitOfWork state of a mapped object"""
     return obj.__ming__.state
 
 def session(v):
-    '''The ORMSession object managing either a class or an instance'''
+    """Returns the ORMSession instance managing either a class or an object"""
     if isinstance(v, type):
         return v.query.mapper.session
     else:
         return state(v).session
 
-def call_hook(obj, hook_name, *args, **kw):
+def _call_hook(obj, hook_name, *args, **kw):
     for e in obj.extensions:
         getattr(e, hook_name)(*args, **kw)
 
-class with_hooks(object):
-    'Decorator to use for Session/Mapper extensions'
-
+class _with_hooks(object):
     def __init__(self, hook_name):
         self.hook_name = hook_name
 
@@ -25,9 +23,9 @@ class with_hooks(object):
         before_meth = 'before_' + self.hook_name
         after_meth = 'after_' + self.hook_name
         def inner(obj, *args, **kwargs):
-            call_hook(obj, before_meth, *args, **kwargs)
+            _call_hook(obj, before_meth, *args, **kwargs)
             result = func(obj, *args, **kwargs)
-            call_hook(obj, after_meth, *args, **kwargs)
+            _call_hook(obj, after_meth, *args, **kwargs)
             return result
         inner.__name__ = func.__name__
         inner.__doc__ = func.__doc__

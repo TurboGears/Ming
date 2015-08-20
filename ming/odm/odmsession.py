@@ -4,7 +4,7 @@ from ming.session import Session
 from ming.utils import ThreadLocalProxy, ContextualProxy, indent
 from ming.base import Object
 from ming.exc import MingException
-from .base import state, ObjectState, session, with_hooks, call_hook
+from .base import state, ObjectState, session, _with_hooks, _call_hook
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
@@ -85,7 +85,7 @@ class ODMSession(object):
         self.expunge(obj)
         return self.find(obj.__class__, {'_id': obj._id}, refresh=True).first()
 
-    @with_hooks('flush')
+    @_with_hooks('flush')
     def flush(self, obj=None):
         """Flush ``obj`` or all the objects in the UnitOfWork.
 
@@ -106,15 +106,15 @@ class ODMSession(object):
             elif st.status == st.deleted:
                 self.delete_now(obj, st)
 
-    @with_hooks('insert')
+    @_with_hooks('insert')
     def insert_now(self, obj, st, **kwargs):
         mapper(obj).insert(obj, st, self, **kwargs)
 
-    @with_hooks('update')
+    @_with_hooks('update')
     def update_now(self, obj, st, **kwargs):
         mapper(obj).update(obj, st, self, **kwargs)
 
-    @with_hooks('delete')
+    @_with_hooks('delete')
     def delete_now(self, obj, st, **kwargs):
         mapper(obj).delete(obj, st, self, **kwargs)
 
@@ -177,7 +177,7 @@ class ODMSession(object):
         # args = list(map(deinstrument, args))
         ming_cursor = self.impl.find(m.collection, *args, **kwargs)
         odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh, decorate=decorate, fields=kwargs.get('fields'))
-        call_hook(self, 'cursor_created', odm_cursor, 'find', cls, *args, **kwargs)
+        _call_hook(self, 'cursor_created', odm_cursor, 'find', cls, *args, **kwargs)
         return odm_cursor
 
     def find_and_modify(self, cls, *args, **kwargs):
@@ -202,7 +202,7 @@ class ODMSession(object):
         state(result).status = ObjectState.clean
         return result
 
-    @with_hooks('remove')
+    @_with_hooks('remove')
     def remove(self, cls, *args, **kwargs):
         """Delete one or more ``cls`` entries from the collection.
 
@@ -250,53 +250,109 @@ class ODMSession(object):
         return self.impl.ensure_index(cls, fields, **kwargs)
 
     def ensure_indexes(self, cls):
+        """Ensures all indexes declared in ``cls``"""
         return self.impl.ensure_indexes(cls)
 
     def drop_indexes(self, cls):
+        """Drop all indexes declared in ``cls``"""
         return self.impl.drop_indexes(cls)
 
-    def update_indexes(self, cls, **kwargs):
-        return self.impl.update_indexes(cls, **kwargs)
-
     def group(self, cls, *args, **kwargs):
+        """Runs a grouping on the model collection.
+
+        Arguments are the same as  :meth:`pymongo.collection.Collection.group`.
+        """
         m = mapper(cls)
         return self.impl.group(m.collection, *args, **kwargs)
 
     def aggregate(self, cls, *args, **kwargs):
+        """Runs an aggregation pipeline on the given collection.
+
+        Arguments are the same as  :meth:`pymongo.collection.Collection.aggregate`.
+        """
         m = mapper(cls)
         return self.impl.aggregate(m.collection, *args, **kwargs)
 
     def distinct(self, cls, *args, **kwargs):
+        """Get a list of distinct values for a key among all documents in this collection.
+
+        Arguments are the same as  :meth:`pymongo.collection.Collection.distinct`.
+        """
         m = mapper(cls)
         return self.impl.distinct(m.collection, *args, **kwargs)
 
     def map_reduce(self, cls, *args, **kwargs):
+        """Runs a MapReduce job and stores results in a collection.
+
+        Arguments are the same as  :meth:`pymongo.collection.Collection.map_reduce`.
+        """
         m = mapper(cls)
         return self.impl.map_reduce(m.collection, *args, **kwargs)
 
     def inline_map_reduce(self, cls, *args, **kwargs):
+        """Runs a MapReduce job and keeps results in-memory.
+
+        Arguments are the same as  :meth:`pymongo.collection.Collection.inline_map_reduce`.
+        """
         m = mapper(cls)
         return self.impl.inline_map_reduce(m.collection, *args, **kwargs)
 
 
 class SessionExtension(object):
+    """Base class that should be inherited to handle Session events."""
 
     def __init__(self, session):
         self.session = session
-    def before_insert(self, obj, st): pass
-    def after_insert(self, obj, st): pass
-    def before_update(self, obj, st): pass
-    def after_update(self, obj, st): pass
-    def before_delete(self, obj, st): pass
-    def after_delete(self, obj, st): pass
-    def before_remove(self, cls, *args, **kwargs): pass
-    def after_remove(self, cls, *args, **kwargs): pass
-    def before_flush(self, obj=None): pass
-    def after_flush(self, obj=None): pass
+    def before_insert(self, obj, st):
+        """Before an object gets inserted in this session"""
+        pass
+    def after_insert(self, obj, st):
+        """After an object gets inserted in this session"""
+        pass
+    def before_update(self, obj, st):
+        """Before an object gets updated in this session"""
+        pass
+    def after_update(self, obj, st):
+        """After an object gets updated in this session"""
+        pass
+    def before_delete(self, obj, st):
+        """Before an object gets deleted in this session"""
+        pass
+    def after_delete(self, obj, st):
+        """After an object gets deleted in this session"""
+        pass
+    def before_remove(self, cls, *args, **kwargs):
+        """Before a remove query is performed session"""
+        pass
+    def after_remove(self, cls, *args, **kwargs):
+        """After a remove query is performed session"""
+        pass
+    def before_flush(self, obj=None):
+        """Before the session is flushed for ``obj``
 
-    def cursor_created(self, cursor, action, *args, **kw): pass
-    def before_cursor_next(self, cursor): pass
-    def after_cursor_next(self, cursor): pass
+        If ``obj`` is ``None`` it means all the objects in
+        the UnitOfWork which can be retrieved by iterating
+        over ``ODMSession.uow``
+        """
+        pass
+    def after_flush(self, obj=None):
+        """After the session is flushed for ``obj``
+
+        If ``obj`` is ``None`` it means all the objects in
+        the UnitOfWork which can be retrieved by iterating
+        over ``ODMSession.uow``
+        """
+        pass
+
+    def cursor_created(self, cursor, action, *args, **kw):
+        """New cursor with the results of a query got created"""
+        pass
+    def before_cursor_next(self, cursor):
+        """Cursor is going to advance to next result"""
+        pass
+    def after_cursor_next(self, cursor):
+        """Cursor has advanced to next result"""
+        pass
 
 class ThreadLocalODMSession(ThreadLocalProxy):
     """ThreadLocalODMSession is a thread-safe proxy to :class:`ODMSession`.
@@ -452,38 +508,38 @@ class ODMCursor(object):
             return obj
 
     def next(self):
-        call_hook(self, 'before_cursor_next', self)
+        _call_hook(self, 'before_cursor_next', self)
         try:
             return self._next_impl()
         finally:
-            call_hook(self, 'after_cursor_next', self)
+            _call_hook(self, 'after_cursor_next', self)
 
     __next__ = next
 
     def options(self, **kwargs):
         odm_cursor = ODMCursor(self.session, self.cls,self.ming_cursor)
         odm_cursor._options = Object(self._options, **kwargs)
-        call_hook(self, 'cursor_created', odm_cursor, 'options', self, **kwargs)
+        _call_hook(self, 'cursor_created', odm_cursor, 'options', self, **kwargs)
         return odm_cursor
 
     def limit(self, limit):
         """Limit the number of entries retrieved by the query"""
         odm_cursor = ODMCursor(self.session, self.cls,
                                self.ming_cursor.limit(limit))
-        call_hook(self, 'cursor_created', odm_cursor, 'limit', self, limit)
+        _call_hook(self, 'cursor_created', odm_cursor, 'limit', self, limit)
         return odm_cursor
 
     def skip(self, skip):
         """Skip the first ``skip`` entries retrieved by the query"""
         odm_cursor = ODMCursor(self.session, self.cls,
                                self.ming_cursor.skip(skip))
-        call_hook(self, 'cursor_created', odm_cursor, 'skip', self, skip)
+        _call_hook(self, 'cursor_created', odm_cursor, 'skip', self, skip)
         return odm_cursor
 
     def hint(self, index_or_name):
         odm_cursor = ODMCursor(self.session, self.cls,
                                self.ming_cursor.hint(index_or_name))
-        call_hook(self, 'cursor_created', odm_cursor, 'hint', self, index_or_name)
+        _call_hook(self, 'cursor_created', odm_cursor, 'hint', self, index_or_name)
         return odm_cursor
 
     def sort(self, *args, **kwargs):
@@ -494,7 +550,7 @@ class ODMCursor(object):
         """
         odm_cursor = ODMCursor(self.session, self.cls,
                                self.ming_cursor.sort(*args, **kwargs))
-        call_hook(self, 'cursor_created', odm_cursor, 'sort', self, *args, **kwargs)
+        _call_hook(self, 'cursor_created', odm_cursor, 'sort', self, *args, **kwargs)
         return odm_cursor
 
     def one(self):

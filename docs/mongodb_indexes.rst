@@ -8,6 +8,17 @@ The ODM layer permits to ensure indexes over the collections by using the
 `__mongometa__` attribute. You can enforce both unique indexing and non-unique
 indexing.
 
+To apply the indexes sepcified in your models you can then iterate over all the mappers and
+call :meth:`.Mapper.ensure_all_indexes` to guarantee that indexes are created for every
+registered mapper:
+
+.. code-block:: python
+
+    ming.odm.Mapper.ensure_all_indexes()
+
+This needs to be performed each time you change the indexes or the database.
+It is common practice to ensure all the indexes at application startup.
+
 Indexing a Field
 ================
 
@@ -130,13 +141,3 @@ can still call product.sku without throwing an AttributeError.
         _id = FieldProperty(s.ObjectId)
         sku = FieldPropertyWithMissingNone(str, if_missing=s.Missing)
 
-To apply the specified indexes you can then iterate over all the mappers and
-call :meth:`.Mapper.ensure_indexes` over the mapped collection.
-
-.. code-block:: python
-
-    for mapper in ming.odm.Mapper.all_mappers():
-        mainsession.ensure_indexes(mapper.collection)
-
-This needs to be performed each time you change the indexes or the database.
-It is common practice to ensure all the indexes at application startup.

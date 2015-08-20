@@ -122,7 +122,7 @@ class Engine(object):
         return '<Engine %r>' % self._conn
 
     def __getattr__(self, name):
-        """Get the ``name`` database through this connection."""
+        """Get the ``name`` database through this connection."""
         if name == 'conn':
             raise AttributeError(name)
         return getattr(self.conn, name)
@@ -179,7 +179,7 @@ class DataStore(object):
         return '<DataStore %r>' % self._db
 
     def __getattr__(self, name):
-        """Get the ``name`` collection on this database."""
+        """Get the ``name`` collection on this database."""
         if name == 'db': raise AttributeError(name)
         return getattr(self.db, name)
 

@@ -4,6 +4,7 @@
 
 .. automodule:: ming.base
 
+.. autodata:: Missing
 
 Functions
 ---------

@@ -2,10 +2,10 @@ import six
 import warnings
 from copy import copy
 
-from ming.base import Object
+from ming.base import Object, NoDefault
 from ming.utils import wordwrap
 
-from .base import ObjectState, state, with_hooks
+from .base import ObjectState, state, _with_hooks
 from .property import FieldProperty
 
 
@@ -28,7 +28,11 @@ class Mapper(object):
      the Session and a MappedClass. It also compiles the Schema Validation for
      Mapped Classes if they don't already have one.
 
-     You usually won't be using the Mapper directly apart from :meth:`.compile_all` method.
+     Mapper also instruments mapped classes by adding the additional ``.query`` property
+     and behaviours.
+
+     You usually won't be using the Mapper directly apart from :meth:`.compile_all`
+     and :meth:`.ensure_all_indexes` methods.
      """
     _mapper_by_collection = {}
     _mapper_by_class = {}
@@ -61,13 +65,13 @@ class Mapper(object):
         return '<Mapper %s:%s>' % (
             self.mapped_class.__name__, self.collection.m.collection_name)
 
-    @with_hooks('insert')
+    @_with_hooks('insert')
     def insert(self, obj, state, session, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
         session.impl.insert(doc, validate=False)
         state.status = state.clean
 
-    @with_hooks('update')
+    @_with_hooks('update')
     def update(self, obj, state, session, **kwargs):
         fields = state.options.get('fields', None)
         if fields is None:
@@ -77,12 +81,12 @@ class Mapper(object):
         session.impl.save(doc, *fields, validate=False)
         state.status = state.clean
 
-    @with_hooks('delete')
+    @_with_hooks('delete')
     def delete(self, obj, state, session, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
         session.impl.delete(doc)
 
-    @with_hooks('remove')
+    @_with_hooks('remove')
     def remove(self, session, *args, **kwargs):
         session.impl.remove(self.collection, *args, **kwargs)
 
@@ -140,6 +144,13 @@ class Mapper(object):
         for m in cls.all_mappers():
             m._compiled = False
         cls._all_mappers = []
+
+    @classmethod
+    def ensure_all_indexes(cls):
+        """Ensures indexes for each registered :class:`.MappedClass` subclass are created"""
+        for m in cls.all_mappers():
+            if m.session:
+                m.session.ensure_indexes(m.collection)
 
     def compile(self):
         if self._compiled: return
@@ -228,9 +239,11 @@ class Mapper(object):
 
 
 class MapperExtension(object):
-    """Base implementation for customizing Mapper behavior."""
+    """Base class that should be inherited to handle Mapper events."""
+
     def __init__(self, mapper):
         self.mapper = mapper
+
     def before_insert(self, instance, state, sess):
         """Receive an object instance and its current state before that
         instance is inserted into its collection."""
@@ -254,8 +267,12 @@ class MapperExtension(object):
     def after_delete(self, instance, state, sess):
         """Receive an object instance and its current state after that
         instance is deleted."""
-    def before_remove(self, sess, *args, **kwargs): pass
-    def after_remove(self, sess, *args, **kwargs): pass
+    def before_remove(self, sess, *args, **kwargs):
+        """Before a remove query is performed for this class"""
+        pass
+    def after_remove(self, sess, *args, **kwargs):
+        """After a remove query is performed for this class"""
+        pass
 
 class _ORMDecoration(object):
 
@@ -296,7 +313,7 @@ class _ClassQuery(object):
         for method_name in self._proxy_methods:
             setattr(self, method_name, _proxy(method_name))
 
-    def get(self, _id=None, **kwargs):
+    def get(self, _id=NoDefault, **kwargs):
         """Proxies :meth:`.ODMSession.get` and :meth:`.ODMSession.find`
 
         In case a single argument named ``_id`` is provided the query
@@ -304,10 +321,10 @@ class _ClassQuery(object):
         to :meth:`.ODMSession.find`
         """
 
-        if _id is not None and not kwargs:
+        if _id is not NoDefault and not kwargs:
             return self.session.get(self.mapped_class, _id)
 
-        if _id is not None:
+        if _id is not NoDefault:
             kwargs['_id'] = _id
         return self.find(kwargs).first()
 
