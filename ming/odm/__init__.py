@@ -15,5 +15,5 @@ ContextualORMSession=ContextualODMSession
 
 __all__ = ('state', 'session', 'mapper', 'Mapper', 'MapperExtension',
            'RelationProperty', 'ForeignIdProperty', 'FieldProperty',
-           'ODMSession', 'ThreadLocalODMSession', 'SessionExtension',
-           'MappedClass')
+           'FieldPropertyWithMissingNone', 'ODMSession', 'ThreadLocalODMSession',
+           'SessionExtension', 'MappedClass')

@@ -94,6 +94,7 @@ Documentation Content
    migrations
    extensions_and_hooks
    polymorphism
+   custom_properties
    baselevel
    reference
    news
