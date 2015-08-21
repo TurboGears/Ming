@@ -4,7 +4,6 @@
 python setup.py sdist register upload
 
 ## Build and publish docs
-pip install cogapp  # dependency
 cd docs
 make html
 scp -r _build/html/* web.sourceforge.net:/home/project-web/merciless/htdocs/

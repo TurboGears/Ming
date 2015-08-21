@@ -74,7 +74,7 @@ Alternatively, if you don't have **pip** installed, `download it from PyPi
 Connecting to MongoDB
 =====================
 
-Ming manages your connection to the MongoBD database using an object known as a
+Ming manages your connection to the MongoDB database using an object known as a
 :class:`.DataStore`.  The DataStore is actually just a thin wrapper around a pymongo_
 connection and Database object.
 (The actual Database object can always be accessed via the :attr:`.DataStore.db`
@@ -101,7 +101,7 @@ identity map, and relations between objects.
 The ODM session itself is not designed to be thread-safe, so Ming provides a
 thread-local version of the session for safe operation in a multithreaded environment.
 
-Usually you will rely on the session for everythin and won't use the datastore directly,
+Usually you will rely on the session for everything and won't use the datastore directly,
 you will just pass it to the Session and rely on the session itself:
 
 .. run-pysnippet:: ming_odm_tutorial connection_session
@@ -306,8 +306,8 @@ Editing Objects
 ---------------
 
 We already know how to create and get back documents, but an ODM won't be of much use
-if it didn't enable editing them. As Ming exposes MongoDB documents as objects to
-update a MongoDB object you can simple change one of its properties and the UnitOfWork
+if it didn't enable editing them. As Ming exposes MongoDB documents as objects, to
+update a MongoDB object you can simply change one of its properties and the UnitOfWork
 will track that the object needs to be updated:
 
 .. run-pysnippet:: ming_odm_tutorial snippet5_1
@@ -452,7 +452,7 @@ possible to replace its value:
 
 .. note::
 
-    You should threat ming relations that contain more than one value as
+    You should treat ming relations that contain more than one value as
     ``tuples``, they are stored as an immutable list.
 
 List based Relationships (Many-to-Many)

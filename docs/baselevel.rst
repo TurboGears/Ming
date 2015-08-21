@@ -28,7 +28,7 @@ provides the basic validation and connection management features over dictionari
 Connecting to the Database
 ==========================
 
-Ming manages your connection to the MongoBD database using an object known as a
+Ming manages your connection to the MongoDB database using an object known as a
 :class:`.DataStore`.  The DataStore is actually just a thin wrapper around a pymongo_
 Database object which is used by :class:`ming.Session` to perform the actual
 queries::
