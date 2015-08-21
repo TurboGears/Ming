@@ -9,11 +9,8 @@ from ming.odm.odmsession import ContextualODMSession
 
 from ming.odm.declarative import MappedClass
 
-ORMSession=ODMSession
-ThreadLocalORMSession=ThreadLocalODMSession
-ContextualORMSession=ContextualODMSession
 
 __all__ = ('state', 'session', 'mapper', 'Mapper', 'MapperExtension',
            'RelationProperty', 'ForeignIdProperty', 'FieldProperty',
            'FieldPropertyWithMissingNone', 'ODMSession', 'ThreadLocalODMSession',
-           'SessionExtension', 'MappedClass')
+           'SessionExtension', 'MappedClass', 'ContextualODMSession')
