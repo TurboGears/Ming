@@ -5,6 +5,7 @@ Ming News / Release Notes
 ------------------------------------------------
 
 * Documentation Rewrite
+* Speed improvements on ODM queries that retrieve objects not already tracked by UOW/IMAP.
 * Mapper now provides .ensure_all_indexes() method to ensure indexes for all registered mappers.
 * MappedClass (ODM Declarative) now supports ``version_of`` and ``migrate`` for migrations.
 * MappedClass.query.get now supports _id as its first positional argument
