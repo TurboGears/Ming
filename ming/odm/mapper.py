@@ -169,12 +169,18 @@ class Mapper(object):
         obj = self.mapped_class.__new__(self.mapped_class)
         obj.__ming__ = _ORMDecoration(self, obj, options)
         st = state(obj)
+
+        # Make sure that st.document is never the same as st.original_document
+        # otherwise mutating one mutates the other.
+        # There is no need to deepcopy as nested mutable objects are already
+        # copied by InstrumentedList and InstrumentedObj to instrument them.
         st.original_document = doc
+
         if validate is False:
             # .create calls this after it already created the document with the
             # right type and so it got already validated. We re-validate it
             # only if explicitly requested.
-            st.document = doc
+            st.document = copy(doc)
         elif self.collection.m.schema:
             st.document = self.collection.m.schema.validate(doc)
         else:
@@ -184,9 +190,8 @@ class Mapper(object):
                 "too useful, since no schema means that there are no fields "
                 "mapped from the database document onto the object.",
                 UserWarning)
-            st.document = doc
+            st.document = copy(doc)
         st.status = st.new
-        # self.session.save(obj)
         return obj
 
     def _instrument_class(self, properties, include_properties, exclude_properties):
