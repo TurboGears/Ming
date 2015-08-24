@@ -13,7 +13,7 @@
 
 import sys, os
 
-if os.environ.get('READTHEDOCS', None) == 'True' or True:
+if os.environ.get('READTHEDOCS', None) == 'True':
     # MonkeyPatch create_datastore to build on readthedocs.
     from ming import datastore
     _create_engine = datastore.create_engine
