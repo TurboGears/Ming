@@ -527,7 +527,7 @@ class Cursor(object):
 
     def __init__(self, collection, _iterator_gen,
                  sort=None, skip=None, limit=None, fields=None, as_class=dict):
-        if isinstance(fields, list):
+        if isinstance(fields, (tuple, list)):
             fields = dict((f, 1) for f in fields)
 
         if fields is not None and '_id' not in fields:
