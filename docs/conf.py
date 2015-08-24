@@ -13,6 +13,12 @@
 
 import sys, os
 
+if os.environ.get('READTHEDOCS', None) == 'True' or True:
+    # MonkeyPatch create_datastore to build on readthedocs.
+    from ming import datastore
+    _create_engine = datastore.create_engine
+    datastore.create_engine  = lambda *args, **kwargs: _create_engine('mim:///')
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
