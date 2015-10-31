@@ -668,7 +668,7 @@ class Bool(ParticularScalar):
 
 class Binary(ParticularScalar):
     """Validates value is a :class:`bson.Binary`"""
-    type=bson.Binary
+    type=(bson.Binary, bytes)
 
 
 class ObjectId(Scalar):
