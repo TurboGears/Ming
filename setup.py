@@ -29,7 +29,7 @@ setup(name='Ming',
       zip_safe=True,
       install_requires=[
         "FormEncode >= 1.2.1",
-        "pymongo>=2.7,<3.1",
+        "pymongo>=3.0,<3.2",
         "pytz",
         "six>=1.6.1"
       ],

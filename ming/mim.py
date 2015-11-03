@@ -50,7 +50,7 @@ from ming.utils import LazyProperty
 import bson
 import six
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
-from pymongo import database, collection, ASCENDING
+from pymongo import database, collection, ASCENDING, MongoClient
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +65,12 @@ class Connection(object):
 
     def __init__(self):
         self._databases = {}
+
+        # Clone defaults from a MongoClient instance.
+        mongoclient = MongoClient()
+        self.read_preference = mongoclient.read_preference
+        self.write_concern = mongoclient.write_concern
+        self.codec_options = mongoclient.codec_options
 
     def drop_all(self):
         self._databases = {}
@@ -112,9 +118,10 @@ class Connection(object):
     def _is_writable(self):
         return True
 
-class Database(database.Database):
 
+class Database(database.Database):
     def __init__(self, client, name, **__):
+        super(Database, self).__init__(client, name)
         self._name = name
         self._client = client
         self._collections = {}
@@ -309,10 +316,11 @@ class Database(database.Database):
         for coll in self._collections.values():
             coll.clear()
 
-class Collection(collection.Collection):
 
+class Collection(collection.Collection):
     def __init__(self, database, name):
-        self._name = self.__name = name
+        super(Collection, self).__init__(database, name)
+        self._name = name
         self._database = database
         self._data = {}
         self._unique_indexes = {}
@@ -518,6 +526,9 @@ class Collection(collection.Collection):
     def delete_many(self, filter):
         self.__remove(filter, multi=True)
 
+    def list_indexes(self):
+        return Cursor(self, lambda: self._indexes.values())
+
     def ensure_index(self, key_or_list, unique=False, cache_for=300,
                      name=None, **kwargs):
         if isinstance(key_or_list, list):
@@ -598,7 +609,6 @@ class Collection(collection.Collection):
 
 
 class Cursor(object):
-
     def __init__(self, collection, _iterator_gen,
                  sort=None, skip=None, limit=None, fields=None, as_class=dict):
         if isinstance(fields, (tuple, list)):
@@ -729,6 +739,7 @@ class Cursor(object):
         else:
             raise TypeError('hint index should be string, list of tuples, or None, but was %s' % type(index))
         return self
+
 
 def cursor_comparator(keys):
     def comparator(a, b):
