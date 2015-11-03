@@ -13,16 +13,28 @@
 
 import sys, os
 
+if os.environ.get('READTHEDOCS', None) == 'True':
+    # MonkeyPatch create_datastore to build on readthedocs.
+    from ming import datastore
+    _create_engine = datastore.create_engine
+    datastore.create_engine  = lambda *args, **kwargs: _create_engine('mim:///')
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.append(os.path.abspath('.'))
+
+# This is required to load the sphinx_runsnippet extension
+sys.path.append(os.path.abspath('.'))
+
+# This is used to be able to import snippets in doc
+sys.path.append(os.path.abspath('./src'))
 
 # -- General configuration -----------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.autosummary']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.autosummary',
+              'sphinx_runsnippet']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -82,7 +94,7 @@ exclude_trees = ['_build']
 #show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = 'friendly'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
@@ -92,7 +104,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  Major themes that come with
 # Sphinx are currently 'default' and 'sphinxdoc'.
-html_theme = 'default'
+html_theme = 'bizstyle'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -196,6 +208,7 @@ latex_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'http://docs.python.org/': None,
+                       'pymongo': ('http://api.mongodb.org/python/current/', None)}
 
 autoclass_content = 'both'

@@ -1,6 +1,24 @@
 Ming News / Release Notes
 =====================================
 
+0.5.3 (Oct 18, 2015)
+------------------------------------------------
+
+* Documentation Rewrite
+* Speed improvements on ODM queries that retrieve objects not already tracked by UOW/IMAP.
+* Mapper now provides .ensure_all_indexes() method to ensure indexes for all registered mappers.
+* MappedClass (ODM Declarative) now supports ``version_of`` and ``migrate`` for migrations.
+* MappedClass.query.get now supports _id as its first positional argument
+* ODMSession constructor now exposes the ``autoflush`` argument to automatically flush session before ODM queries,
+  previously it was always forced to ``False``. Pay attention that as MongoDB has no transactions autoflush will
+  actually write the changes to the database.
+* ODMSession now exposes ``.db`` and ``.bind`` properties which lead to the underlying pymongo database and DataStore
+* Fixed ODMSession.by_name which previously passed the datastore as session argument.
+* ODMSession now provides ``.refresh`` method that updates a specific object from the database
+* ThreadLocalODMSession now provides ``by_name`` method to configure Thread Safe sessions using ``ming.configure``
+* ming.schema.Invalid now has default ``None`` argument for state, it was never used by the way.
+
+
 0.5.2 (Apr 16, 2015)
 ------------------------------------------------
 * Support for text indexes

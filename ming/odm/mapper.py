@@ -2,13 +2,15 @@ import six
 import warnings
 from copy import copy
 
-from ming.base import Object
+from ming.base import Object, NoDefault
 from ming.utils import wordwrap
 
-from .base import ObjectState, state, with_hooks
+from .base import ObjectState, state, _with_hooks
 from .property import FieldProperty
 
+
 def mapper(cls, collection=None, session=None, **kwargs):
+    """Gets or creates the mapper for the given ``cls`` :class:`.MappedClass`"""
     if collection is None and session is None:
         if isinstance(cls, type):
             return Mapper.by_class(cls)
@@ -18,7 +20,20 @@ def mapper(cls, collection=None, session=None, **kwargs):
             return Mapper._mapper_by_class[cls.__class__]
     return Mapper(cls, collection, session, **kwargs)
 
+
 class Mapper(object):
+    """Keeps track of :class:`.MappedClass` subclasses.
+
+     The Mapper is in charge of linking together the Ming Schema Validation layer,
+     the Session and a MappedClass. It also compiles the Schema Validation for
+     Mapped Classes if they don't already have one.
+
+     Mapper also instruments mapped classes by adding the additional ``.query`` property
+     and behaviours.
+
+     You usually won't be using the Mapper directly apart from :meth:`.compile_all`
+     and :meth:`.ensure_all_indexes` methods.
+     """
     _mapper_by_collection = {}
     _mapper_by_class = {}
     _mapper_by_classname = {}
@@ -50,13 +65,13 @@ class Mapper(object):
         return '<Mapper %s:%s>' % (
             self.mapped_class.__name__, self.collection.m.collection_name)
 
-    @with_hooks('insert')
+    @_with_hooks('insert')
     def insert(self, obj, state, session, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
         session.impl.insert(doc, validate=False)
         state.status = state.clean
 
-    @with_hooks('update')
+    @_with_hooks('update')
     def update(self, obj, state, session, **kwargs):
         fields = state.options.get('fields', None)
         if fields is None:
@@ -66,19 +81,23 @@ class Mapper(object):
         session.impl.save(doc, *fields, validate=False)
         state.status = state.clean
 
-    @with_hooks('delete')
+    @_with_hooks('delete')
     def delete(self, obj, state, session, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
         session.impl.delete(doc)
 
-    @with_hooks('remove')
+    @_with_hooks('remove')
     def remove(self, session, *args, **kwargs):
         session.impl.remove(self.collection, *args, **kwargs)
 
-    def create(self, doc, options):
-        doc = self.collection.make(doc)
+    def create(self, doc, options, remake=True):
+        if remake is True or type(doc) is not self.collection:
+            # When querying, the ODMCursor already receives data from ming.Cursor
+            # which already constructed and validated the documents as collections.
+            # So it will leverage the remake=False option to avoid re-validating
+            doc = self.collection.make(doc)
         mapper = self.by_collection(type(doc))
-        return mapper._from_doc(doc, Object(self.options, **options))
+        return mapper._from_doc(doc, Object(self.options, **options), validate=False)
 
     def base_mappers(self):
         for base in self.mapped_class.__bases__:
@@ -120,6 +139,7 @@ class Mapper(object):
 
     @classmethod
     def compile_all(cls):
+        """Compiles Schema Validation details for all :class:`.MappedClass` subclasses"""
         for m in cls.all_mappers():
             m.compile()
 
@@ -128,6 +148,13 @@ class Mapper(object):
         for m in cls.all_mappers():
             m._compiled = False
         cls._all_mappers = []
+
+    @classmethod
+    def ensure_all_indexes(cls):
+        """Ensures indexes for each registered :class:`.MappedClass` subclass are created"""
+        for m in cls.all_mappers():
+            if m.session:
+                m.session.ensure_indexes(m.collection)
 
     def compile(self):
         if self._compiled: return
@@ -138,12 +165,23 @@ class Mapper(object):
     def update_partial(self, session, *args, **kwargs):
         return session.impl.update_partial(self.collection, *args, **kwargs)
 
-    def _from_doc(self, doc, options):
+    def _from_doc(self, doc, options, validate=True):
         obj = self.mapped_class.__new__(self.mapped_class)
         obj.__ming__ = _ORMDecoration(self, obj, options)
         st = state(obj)
+
+        # Make sure that st.document is never the same as st.original_document
+        # otherwise mutating one mutates the other.
+        # There is no need to deepcopy as nested mutable objects are already
+        # copied by InstrumentedList and InstrumentedObj to instrument them.
         st.original_document = doc
-        if self.collection.m.schema:
+
+        if validate is False:
+            # .create calls this after it already created the document with the
+            # right type and so it got already validated. We re-validate it
+            # only if explicitly requested.
+            st.document = copy(doc)
+        elif self.collection.m.schema:
             st.document = self.collection.m.schema.validate(doc)
         else:
             warnings.warn(
@@ -152,9 +190,8 @@ class Mapper(object):
                 "too useful, since no schema means that there are no fields "
                 "mapped from the database document onto the object.",
                 UserWarning)
-            st.document = doc
+            st.document = copy(doc)
         st.status = st.new
-        # self.session.save(obj)
         return obj
 
     def _instrument_class(self, properties, include_properties, exclude_properties):
@@ -216,9 +253,11 @@ class Mapper(object):
 
 
 class MapperExtension(object):
-    """Base implementation for customizing Mapper behavior."""
+    """Base class that should be inherited to handle Mapper events."""
+
     def __init__(self, mapper):
         self.mapper = mapper
+
     def before_insert(self, instance, state, sess):
         """Receive an object instance and its current state before that
         instance is inserted into its collection."""
@@ -242,8 +281,12 @@ class MapperExtension(object):
     def after_delete(self, instance, state, sess):
         """Receive an object instance and its current state after that
         instance is deleted."""
-    def before_remove(self, sess, *args, **kwargs): pass
-    def after_remove(self, sess, *args, **kwargs): pass
+    def before_remove(self, sess, *args, **kwargs):
+        """Before a remove query is performed for this class"""
+        pass
+    def after_remove(self, sess, *args, **kwargs):
+        """After a remove query is performed for this class"""
+        pass
 
 class _ORMDecoration(object):
 
@@ -264,6 +307,7 @@ class _QueryDescriptor(object):
         else: return _InstQuery(self.classquery, instance)
 
 class _ClassQuery(object):
+    """Provides ``.query`` attribute for :class:`MappedClass`."""
     _proxy_methods = (
         'find', 'find_and_modify', 'remove', 'update', 'group', 'distinct',
         'aggregate', 'map_reduce', 'inline_map_reduce')
@@ -283,18 +327,33 @@ class _ClassQuery(object):
         for method_name in self._proxy_methods:
             setattr(self, method_name, _proxy(method_name))
 
-    def get(self, **kwargs):
-        if kwargs.keys() == [ '_id' ]:
-            return self.session.get(self.mapped_class, kwargs['_id'])
+    def get(self, _id=NoDefault, **kwargs):
+        """Proxies :meth:`.ODMSession.get` and :meth:`.ODMSession.find`
+
+        In case a single argument named ``_id`` is provided the query
+        is performed using :meth:`.ODMSession.get` otherwise is forwarded
+        to :meth:`.ODMSession.find`
+        """
+
+        if _id is not NoDefault and not kwargs:
+            return self.session.get(self.mapped_class, _id)
+
+        if _id is not NoDefault:
+            kwargs['_id'] = _id
         return self.find(kwargs).first()
 
     def find_by(self, **kwargs):
         return self.find(kwargs)
 
 class _InstQuery(object):
+    """Provides the ``.delete()`` method on :class:`MappedClass` instances.
+
+    It also provides the ``.query`` property on instances, which acts the same
+    as the class query property.
+    """
     _proxy_methods = (
         'update_if_not_modified',
-        )
+    )
 
     def __init__(self, classquery, instance):
         self.classquery = classquery
@@ -318,6 +377,7 @@ class _InstQuery(object):
         self.get = self.classquery.get
 
     def delete(self):
+        """Mark the object for deletion on next flush"""
         st = state(self.instance)
         st.status = st.deleted
 

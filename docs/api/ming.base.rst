@@ -4,15 +4,16 @@
 
 .. automodule:: ming.base
 
+.. autodata:: Missing
 
 Functions
-----------
+---------
 
 .. autofunction:: _safe_bson
 
 
 Classes
---------
+-------
 
 .. autoclass:: Cursor
    :show-inheritance:

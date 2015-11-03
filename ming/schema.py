@@ -20,7 +20,6 @@ NoneType = type(None)
 # lifted from formencode.validators
 # but separate, so TurboGears special handling of formencode.validators.Invalid won't kick in incorrectly
 class Invalid(Exception):
-
     """
     This is raised in response to invalid input.  It has several
     public attributes:
@@ -47,7 +46,7 @@ class Invalid(Exception):
     """
 
     def __init__(self, msg,
-                 value, state, error_list=None, error_dict=None):
+                 value, state=None, error_list=None, error_dict=None):
         Exception.__init__(self, msg)
         self.msg = msg
         self.value = value
@@ -75,33 +74,49 @@ class Invalid(Exception):
 
 
 class SchemaItem(object):
-    '''Part of a MongoDB schema.  The validate() method is called when a record
-    is loaded from the DB or saved to it.  It should return a "validated" object,
-    raising an Invalid exception if the object is invalid.  If it returns
-    Missing, the field will be stripped from its parent object.'''
+    """Basic Schema enforcement validation.
+
+    The :meth:`.validate()` method is called when a record is loaded from the DB or saved to it.
+
+    It should return a "validated" object, raising a :class:`.Invalid` exception if
+    the object is invalid.  If it returns :class:`.Missing`, the field will be
+    stripped from its parent object.
+
+    This is just the base class for schema validation.
+    When implementing your own schema validation for a Ming Field you probably want
+    to subclass :class:`FancySchemaItem`.
+    """
 
     def validate(self, d, **kw):
-        'convert/validate an object or raise an Invalid exception'
+        """Validate an object or raise an Invalid exception.
+
+        Default implementation just raises :class:`NotImplementedError`
+        """
         raise NotImplementedError('validate')
 
     @classmethod
     def make(cls, field, *args, **kwargs):
-        '''Build a SchemaItem from a "shorthand" schema.  The `field` param:
+        """Factory method for schemas based on a python type.
 
-        * int - int or long
-        * str - string or unicode
-        * float - float, int, or long
-        * bool - boolean value
-        * datetime - datetime.datetime object
-        * None - Anything
-        * [] - Array of Anything objects
-        * [type] - array of objects of type "type"
-        * { fld: type... } - dict-like object with field "fld" of type "type"
-        * { type: type... } - dict-like object with fields of type "type"
-        * anything else (e.g. literal values), must match exactly
+        This accepts a python type as its argument and creates
+        the appropriate :class:`SchemaItem` that validates it.
+
+        Accepted arguments are:
+
+            * int - int or long
+            * str - string or unicode
+            * float - float, int, or long
+            * bool - boolean value
+            * datetime - datetime.datetime object
+            * None - Anything
+            * [] - Array of Anything objects
+            * [type] - array of objects of type "type"
+            * { fld: type... } - dict-like object with field "fld" of type "type"
+            * { type: type... } - dict-like object with fields of type "type"
+            * anything else (e.g. literal values), must match exactly
 
         ``*args`` and ``**kwargs`` are passed on to the specific class of ``SchemaItem`` created.
-        '''
+        """
         if isinstance(field, list):
             if len(field) == 0:
                 field = Array(Anything(), *args, **kwargs)
@@ -121,9 +136,22 @@ class SchemaItem(object):
             field = Value(field, *args, **kwargs)
         return field
 
+
 class Migrate(SchemaItem):
-    '''Use when migrating from one field type to another
-    '''
+    """Use when migrating from one Schema to another.
+
+    The :meth:`.validate` method first tries to apply
+    the ``new`` :class:`SchemaItem` and if it fails
+    tries the ``old`` :class:`SchemaItem`. If the ``new``
+    fails but the old succeeds the ``migration_function``
+    will be called to upgrade the value from the old
+    schema to the new one.
+
+    This is also used by Ming to perform migrations on
+    whole documents through the ``version_of`` attribute.
+
+
+    """
     def __init__(self, old, new, migration_function):
         self.old, self.new, self.migration_function = (
             SchemaItem.make(old),
@@ -131,6 +159,13 @@ class Migrate(SchemaItem):
             migration_function)
 
     def validate(self, value, **kw):
+        """First tries validation against ``new`` and if it fails applies ``migrate_function``.
+
+        The ``migrate_function`` is applied only if ``old`` validation succeeds,
+        this is to ensure that we are not actually facing a corrupted value.
+
+        If ``old`` validation fails, the method just raises the validation error.
+        """
         try:
             return self.new.validate(value, **kw)
         except Invalid as new_error:
@@ -144,47 +179,53 @@ class Migrate(SchemaItem):
 
     @classmethod
     def obj_to_list(cls, key_name, value_name=None):
-        '''Migration function to go from object ``{ key: value }`` to
-        list ``[ { key_name: key, value_name: value} ]``.  If value_name is ``None``,
-        then value must be an object and the result will be a list
-        ``[ { key_name: key, **value } ]``.
-        '''
+        """Factory Method that creates migration functions to convert a dictionary to list of objects.
+
+        Migration function will go from object ``{ key: value }`` to
+        list ``[ { key_name: key, value_name: value} ]``.
+
+        If ``value_name`` is ``None``, then value must be an object which
+        will be expanded in the resulting object itself: ``[ { key_name: key, **value } ]``.
+        """
         def migrate_scalars(value):
             return [
                 BaseObject({ key_name: k, value_name: v})
                 for k,v in six.iteritems(value) ]
+
         def migrate_objects(value):
             return [
                 BaseObject(dict(v, **{key_name:k}))
                 for k,v in six.iteritems(value) ]
+
         if value_name is None:
             return migrate_objects
         else:
             return migrate_scalars
 
+
 class Deprecated(SchemaItem):
-    '''Used for deprecated fields -- they will be stripped from the object.
-    '''
+    """Used for deprecated fields -- they will be stripped from the object."""
     def validate(self, value, **kw):
         if value is not Missing:
             # log.debug('Stripping deprecated field value %r', value)
             pass
         return Missing
 
-class FancySchemaItem(SchemaItem):
-    '''Simple SchemaItem wrapper providing required and if_missing fields.
 
-    If the value is present, then the result of the _validate method is returned.
-    '''
+class FancySchemaItem(SchemaItem):
+    """:class:`.SchemaItem` that provides support for required fields and default values.
+
+    If the value is present, then the result of :meth:`._validate` method is returned.
+    """
     required=False
     if_missing=Missing
 
     def __init__(self, required=NoDefault, if_missing=NoDefault):
-        '''
+        """
         :param bool required: if ``True`` and this field is missing, an ``Invalid`` exception will be raised
         :param if_missing: provides a default value for this field if the field is missing
         :type if_missing: value or callable
-        '''
+        """
         if required is not NoDefault:
             self.required = required
         if if_missing is not NoDefault:
@@ -233,21 +274,41 @@ class FancySchemaItem(SchemaItem):
             return value
         return self._validate(value, **kw)
 
-    def _validate(self, value, **kw): return value
+    def _validate(self, value, **kw):
+        """Performs actual validation.
+
+        **Subclasses are expected to override this method to provide
+        the actual validation.**
+
+        The default implementation leaves the value as is.
+        """
+        return value
+
 
 class Anything(FancySchemaItem):
-    'Anything goes - always passes validation unchanged except dict=>Object'
+    """Accepts any value without validation.
+
+    Passes validation unchanged except for
+    converting :class:`dict` => :class:`Object`
+
+    This is often used to avoid the cost of validation on fields
+    that might contain huge entries that do not need to be validated.
+    """
 
     def validate(self, value, **kw):
         if isinstance(value, dict) and not isinstance(value, BaseObject):
             return BaseObject(value)
         return value
 
+
 class Object(FancySchemaItem):
-    '''Used for dict-like validation.  Also ensures that the incoming object does
-    not have any extra keys AND performs polymorphic validation (which means that
-    ParentClass._validate(...) sometimes will return an instance of ChildClass).
-    '''
+    """Used for dict-like validation.
+
+    It validates all the values inside the dictionary and converts it
+    to a :class:`ming.base.Object`.
+
+    Also ensures that the incoming object does not have any extra keys.
+    """
 
     def __init__(self, fields=None, required=False, if_missing=NoDefault):
         if fields is None: fields = {}
@@ -345,10 +406,27 @@ class Object(FancySchemaItem):
         if other is None: return
         self.fields.update(other.fields)
 
+
 class Document(Object):
-    '''Used for dict-like validation, adding polymorphic validation (which means that
-    ParentClass._validate(...) sometimes will return an instance of ChildClass).
-    '''
+    """Specializes :class:`Object` adding polymorphic validation.
+
+    **This is usually not used directly, but it's the Schema against
+    which each document in Ming is validated to.**
+
+    Polymorphic Validation means that Document._validate(...)
+    sometimes will return an instance of ChildClass based on
+    ``.polymorphic_on`` entry of the object (its value is used
+    to determine the class it should be promoted based on
+    ``polymorphic_identity`` of ``.managed_class``).
+
+    Map of ``polymorphic_identity`` values are stored in
+    ``.polymorphic_registry`` dictionary.
+
+    By default ``.polymorphic_on``, ``.managed_class`` and
+    ``.polymorphic_registry`` are all ``None``.
+    So ``.managed_class`` must be set and and :meth:`set_polymorphic`
+    method must be called to configure them properly.
+    """
 
     def __init__(self, fields=None,
                  required=False, if_missing=NoDefault):
@@ -357,6 +435,7 @@ class Document(Object):
         self.managed_class=None
 
     def get_polymorphic_cls(self, data):
+        """Given a mongodb document it returns the class it should be converted to."""
         l_Missing = Missing
         if self.polymorphic_registry:
             disc = data.get(self.polymorphic_on, Missing)
@@ -389,16 +468,30 @@ class Document(Object):
             d, allow_extra=allow_extra, strip_extra=strip_extra)
 
     def set_polymorphic(self, field, registry, identity):
+        """Configure polymorphic behaviour (except for ``.managed_class``).
+
+        ``field`` is the ``.polymorphic_on``, which is
+        the name of the field used to detect polymorphic type.
+
+        ``registry`` is the ``.polymorphic_registry`` which is
+        a map of field values to classes.
+
+        ``identity`` is the value which leads to ``.managed_class``
+        type itself.
+        """
+
         self.polymorphic_on = field
         self.polymorphic_registry = registry
         if self.polymorphic_on:
             registry[identity] = self.managed_class
 
-class Array(FancySchemaItem):
-    '''Array/list validator.  All elements of the array must pass validation by a
-    single field_type (which itself may be Anything, however).
-    '''
 
+class Array(FancySchemaItem):
+    """Validates a MongoDB Array.
+
+    All elements of the array must pass validation by a
+    single ``field_type`` (which itself may be Anything, however).
+    """
     def __init__(self, field_type, **kw):
         required = kw.pop('required', False)
         if_missing = kw.pop('if_missing', [])
@@ -452,17 +545,28 @@ class Array(FancySchemaItem):
 
 
 class Scalar(FancySchemaItem):
-    '''Validate that a value is NOT an array or dict'''
+    """Validate that a value is NOT an array or dict.
+
+    This is used to validate single values in MongoDB Documents.
+    """
     if_missing=None
+
     def _validate(self, value, **kw):
         if isinstance(value, (tuple, list, dict)):
             raise Invalid('%r is not a scalar' % value, value, None)
         return value
 
+
 class ParticularScalar(Scalar):
-    '''Validate that a value is NOT an array or dict and is a particular type
-    '''
+    """Specializes :class:`.Scalar` to also check for a specific ``type``.
+
+    **This is usually not directly used, but its what other validators
+    rely on to implement their behaviour**.
+    """
+
+    #: Expected Type of the validated value.
     type=()
+
     def __init__(self, **kw):
         self._allow_none = kw.pop('allow_none', True)
         if not self._allow_none:
@@ -476,7 +580,12 @@ class ParticularScalar(Scalar):
                           value, None)
         return value
 
+
 class OneOf(ParticularScalar):
+    """Expects validated value to be one of ``options``.
+
+    This is often used to validate against Enums.
+    """
     def __init__(self, *options, **kwargs):
         self.options = options
         ParticularScalar.__init__(self, **kwargs)
@@ -487,9 +596,11 @@ class OneOf(ParticularScalar):
                           value, None)
         return value
 
+
 class Value(FancySchemaItem):
-    '''Validate that a value is equal'''
+    """Checks that validated value is exactly ``value``"""
     if_missing=None
+
     def __init__(self, value, **kw):
         self.value = value
         FancySchemaItem.__init__(self, **kw)
@@ -500,19 +611,42 @@ class Value(FancySchemaItem):
                           value, None)
         return value
 
+
 class String(ParticularScalar):
+    """Validates value is ``str`` or ``unicode`` string"""
     type=six.string_types
+
+
 class Int(ParticularScalar):
+    """Validates value is an ``int``.
+
+    Also accepts float which represent integer numbers
+    like ``10.0`` -> ``10``.
+    """
     type=six.integer_types
+
     def _validate(self, value, **kw):
         if isinstance(value, float) and round(value) == value:
             value = int(value)
         return super(Int, self)._validate(value, **kw)
+
+
 class Float(ParticularScalar):
+    """Validates value is ``int`` or ``float``"""
     type=(float,) + six.integer_types
+
+
 class DateTimeTZ(ParticularScalar):
+    """Validates value is a ``datetime``."""
     type=datetime
+
+
 class DateTime(DateTimeTZ):
+    """Validates value is a ``datetime`` and ensures its on *UTC*.
+
+    If value is a ``datetime`` but it's not on UTC it gets converted
+    to UTC timezone.
+    """
     def _validate(self, value, **kw):
         value = DateTimeTZ._validate(self, value, **kw)
         if value is None: return value
@@ -525,14 +659,37 @@ class DateTime(DateTimeTZ):
         if value.tzinfo:
             value = value.astimezone(pytz.utc).replace(tzinfo=None)
         return value
+
+
 class Bool(ParticularScalar):
+    """Validates value is a ``bool``"""
     type=bool
+
+
 class Binary(ParticularScalar):
-    type=bson.Binary
+    """Validates value is a :class:`bson.Binary`"""
+    type=(bson.Binary, bytes)
+
+
 class ObjectId(Scalar):
+    """Validates value is a :class:`bson.ObjectId`.
+
+    If value is a string that represents an ObjectId
+    it gets converted to an ObjectId.
+
+    If the ObjectId is not provided (or it's :data:`.Missing`)
+    a new one gets generated. To override this behaviour
+    pass ``if_missing=None`` to the schema constructor::
+
+        >>> schema.ObjectId().validate(schema.Missing)
+        ObjectId('55d5df957ab71c0a5c3647bd')
+        >>> schema.ObjectId(if_missing=None).validate(schema.Missing)
+        None
+    """
     def if_missing(self):
-        '''Provides a pymongo.bson.ObjectId as default'''
+        """Provides a :class:`bson.ObjectId` as default"""
         return bson.ObjectId()
+
     def _validate(self, value, **kw):
         try:
             if value is None: return value

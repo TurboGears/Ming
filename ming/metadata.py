@@ -15,8 +15,27 @@ from .exc import MongoGone
 log = logging.getLogger(__name__)
 
 class Field(object):
-    '''Represents a mongo field.'''
+    """Represents a Field in a MongoDB Document
 
+    It accepts one or two positional arguments and any number of
+    keyword arguments.
+
+    If only one positional argument is provided that is considered to
+    be the schema of the Field which is one of the types available in
+    :mod:`ming.schema` module.
+
+    If two positional arguments are provided the first is considered being
+    the name of the field inside the MongoDB Document and the second is
+    still the schema type.
+
+    The ``index``, ``unique`` and ``sparse`` keyword arguments are also
+    consumed by ``Field`` to automatically create an index for the field.
+
+    Additional arguments are just forwarded to Schema constructor if
+    the provided schema argument is not already an instance. So see
+    the classes declared in :mod:`ming.schema` for details on the
+    other available keyword arguments.
+    """
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if isinstance(args[0], str):
@@ -49,7 +68,9 @@ class Field(object):
         return '<Field %s(%s)%s>' % (self.name, self.schema, flags)
 
 class Index(object):
+    """Represents a MongoDB Index of a field.
 
+    """
     def __init__(self, *fields, **kwargs):
         direction = kwargs.pop('direction', pymongo.ASCENDING)
         unique = kwargs.pop('unique', False)

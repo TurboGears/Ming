@@ -4,10 +4,7 @@
 
 .. automodule:: ming
 
-
-Functions
-----------
-
 .. autofunction:: configure
 
+.. autoclass:: Index
 

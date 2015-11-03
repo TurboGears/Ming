@@ -20,6 +20,8 @@ class NoDefault(tuple):
     '''
     def __repr__(self):
         return '<NoDefault>'
+
+#: This is the value that Missing fields in MongoDB documents receive.
 Missing = Missing()
 NoDefault = NoDefault()
 

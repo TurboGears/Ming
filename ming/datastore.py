@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import with_statement
 import time
 import logging
@@ -16,9 +17,15 @@ from pymongo.errors import ConnectionFailure
 from . import mim
 from . import exc
 
+
 def create_engine(*args, **kwargs):
-    '''Wrapper for creating Engines, setting the connection class
-    appropriately'''
+    """Creates a new :class:`.Engine` instance.
+
+    According to the provided url schema ``mongodb://`` or ``mim://``
+    it creates a MongoDB connection or an in-memory database.
+
+    All the provided keyword arguments are passed to :class:`.Engine`.
+    """
     use_class = kwargs.pop('use_class', None)
     connect_retry = kwargs.pop('connect_retry', 3)
     sleep = kwargs.pop('sleep', None)
@@ -31,22 +38,28 @@ def create_engine(*args, **kwargs):
             use_class = MongoClient
     return Engine(use_class, args, kwargs, connect_retry, auto_ensure_indexes)
 
+
 def create_datastore(uri, **kwargs):
-    '''Wrapper for creating DataStores, setting the connection class
+    """Creates a new :class:`.DataStore` for the database identified by ``uri``.
 
-    Keyword args:
+    ``uri`` is a mongodb url in the form ``mongodb://username:password@address:port/dbname``,
+    it can also be used to connect to a *replica set* by specifying multiple mongodb
+    addresses separated by comma set
+    ``mongodb://localhost:27018,localhost:27019,localhost:27020/dbname?replicaSet=rsname``.
 
-    - bind - a ming.datastore.Engine instance
-    - authenticate - a dict { name:str, password:str } with auth info
+    Optional Keyword args:
 
-    All other keyword args are passed along to create_engine()
+    - bind - a :class:`ming.datastore.Engine` instance
+    - authenticate - a dict ``{ name:str, password:str }`` with auth info
+
+    All other keyword args are passed along to :meth:`create_engine`.
 
     The following are equivalent:
 
     - create_datastore('mongodb://localhost:27017/foo')
     - create_datastore('foo')
     - create_datastore('foo', bind=create_engine())
-    '''
+    """
     auth = kwargs.pop('authenticate', None)
     bind = kwargs.pop('bind', None)
 
@@ -80,9 +93,13 @@ def create_datastore(uri, **kwargs):
 
     return DataStore(bind, database, authenticate=auth)
 
+
 class Engine(object):
-    '''Engine is a thin proxy wrapper around pymongo (or mim) connection objects,
-    providing for lazily creating the actual connection.'''
+    """Engine represents the connection to a MongoDB (or in-memory database).
+
+    The ``Engine`` class lazily creates the connection the firs time it's
+    actually accessed.
+    """
 
     def __init__(self, Connection,
                  conn_args, conn_kwargs, connect_retry, auto_ensure_indexes, _sleep=time.sleep):
@@ -100,7 +117,9 @@ class Engine(object):
         return '<Engine %r>' % self._conn
 
     def __getattr__(self, name):
-        if name == 'conn': raise AttributeError(name)
+        """Get the ``name`` database through this connection."""
+        if name == 'conn':
+            raise AttributeError(name)
         return getattr(self.conn, name)
 
     def __getitem__(self, name):
@@ -108,10 +127,16 @@ class Engine(object):
 
     @property
     def conn(self):
+        """This is the pymongo connection itself."""
         if self._conn is None: self.connect()
         return self._conn
 
     def connect(self):
+        """Actually opens the connection to MongoDB.
+
+        This is usually done automatically when accessing
+        a database for the first time through the engine.
+        """
         for x in six.moves.xrange(self._connect_retry+1):
             try:
                 with self._lock:
@@ -128,6 +153,16 @@ class Engine(object):
                     raise
 
 class DataStore(object):
+    """Represents a Database on a specific MongoDB Instance.
+
+    DataStore keeps track of a specific database on a
+    MongoDB Instance, Cluster or ReplicaSet. The database
+    is represented by its name while MongoDB is represented
+    by an :class:`.Engine` instance.
+
+    DataStores are usually created using the
+    :func:`.create_datastore` function.
+    """
 
     def __init__(self, bind, name, authenticate=None):
         self.bind = bind
@@ -139,16 +174,21 @@ class DataStore(object):
         return '<DataStore %r>' % self._db
 
     def __getattr__(self, name):
+        """Get the ``name`` collection on this database."""
         if name == 'db': raise AttributeError(name)
         return getattr(self.db, name)
 
     @property
     def conn(self):
-        '''For backward-compatibility'''
         return self.connection
 
     @property
     def db(self):
+        """This is the database on MongoDB.
+
+        Accessing this property returns the pymongo db,
+        untracked by Ming.
+        """
         if self._db is None:
             if self.bind is None: raise AttributeError
             self._db = self.bind[self.name]

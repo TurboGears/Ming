@@ -30,7 +30,14 @@ class ORMProperty(object):
             self.__class__.__name__, self.name)
 
 class FieldProperty(ORMProperty):
+    """Declares property for a value stored in a MongoDB Document.
 
+    The provided arguments are just forwarded to :class:`.Field` class
+    which is actually in charge of managing the value and its validation.
+
+    For details on available options in ``FieldProperty`` just rely on
+    :class:`.Field` documentation.
+    """
     def __init__(self, field_type, *args, **kwargs):
         ORMProperty.__init__(self)
         if isinstance(field_type, Field):
@@ -117,6 +124,21 @@ class FieldPropertyWithMissingNone(FieldProperty):
 
 
 class ForeignIdProperty(FieldProperty):
+    """Declares a field to store one or more ObjectIds of a related objects.
+
+    The ``related`` argument must be the related entity class or the name
+    of the related entity class (to avoid circular dependencies). The
+    field itself will actually store and retrieve :class:`bson.ObjectId` instances.
+
+    ``uselist`` argument can be used to tell Ming whenever the object can relate
+    to more than one remote object (many-to-many) and so the ids are stored in
+    a MongoDB Array.
+
+    Usually a ForeignIdProperty with value ``None`` means that the object is not
+    related to any other entity, in case you have entities that might have ``None``
+    as their ids you can use ``allow_none`` option to tell Ming that ``None`` is
+    a valid foreign id.
+    """
 
     def __init__(self, related, uselist=False, allow_none=False, *args, **kwargs):
         ORMProperty.__init__(self)
@@ -158,7 +180,15 @@ class ForeignIdProperty(FieldProperty):
         mgr.field_index[fld.name] = fld
         mgr.schema = mgr._get_schema()
 
+
 class RelationProperty(ORMProperty):
+    """Provides a way to access OneToMany, ManyToOne and ManyToMany relations.
+
+    The RelationProperty relies on :class:`.ForeignIdProperty` to actually
+    understand how the relation is composed and how to retrieve the related data.
+
+    Assigning a new value to the relation will properly update the related objects.
+    """
     include_in_repr = False
 
     def __init__(self, related, via=None, fetch=True):

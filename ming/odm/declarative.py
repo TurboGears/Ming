@@ -75,7 +75,10 @@ class _MappedClassMeta(type):
             indexes.append(Index(**idx))
         collection_kwargs = dict(
             polymorphic_on=mm_dict.get('polymorphic_on', None),
-            polymorphic_identity=getattr(mm, 'polymorphic_identity', None))
+            polymorphic_identity=getattr(mm, 'polymorphic_identity', None),
+            version_of=getattr(mm, 'version_of', None),
+            migrate=getattr(mm, 'migrate', None)
+        )
         if hasattr(mm, 'before_save'):
             collection_kwargs['before_save'] = mm.before_save.__func__
         if not doc_bases:
@@ -94,9 +97,29 @@ class _MappedClassMeta(type):
 
 @six.add_metaclass(_MappedClassMeta)
 class MappedClass(object):
+    """Declares a Ming Mapped Document.
+
+    Mapped Documents provide a declarative interface to
+    schema, relations and properties declaration for your
+    Models stored as MongoDB Documents.
+
+    MappedClasses required that a ``__mongometa__`` subclass
+    is available inside which provides the details regarding
+    the ``name`` of the collection storing the documents and
+    the ``session`` used to store the documents::
+
+        class WikiPage(MappedClass):
+            class __mongometa__:
+                session = session
+                name = 'wiki_page'
+
+            _id = FieldProperty(schema.ObjectId)
+            title = FieldProperty(schema.String(required=True))
+            text = FieldProperty(schema.String(if_missing=''))
+
+    """
     _registry = {}
+
     class __mongometa__:
         name=None
         session=None
-
-
