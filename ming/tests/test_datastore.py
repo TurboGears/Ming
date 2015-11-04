@@ -29,13 +29,6 @@ class TestEngineConnection(TestCase):
         assert isinstance(conn, MongoClient)
         self.assertEqual(conn.read_preference, result.read_preference)
 
-    @patch('ming.datastore.MongoClient', spec=True)
-    @patch('ming.datastore.gevent')
-    def test_greenlets(self, gevent, MockConnection):
-        from pymongo import MongoClient
-        result = create_engine('master', use_greenlets=True)
-        conn = result.connect()
-        assert isinstance(conn, MongoClient)
 
 class TestConnectionFailure(TestCase):
 

@@ -6,11 +6,6 @@ import six
 from six.moves import urllib
 from threading import Lock
 
-try:
-    import gevent
-except ImportError:
-    gevent = None
-
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
@@ -28,7 +23,6 @@ def create_engine(*args, **kwargs):
     """
     use_class = kwargs.pop('use_class', None)
     connect_retry = kwargs.pop('connect_retry', 3)
-    sleep = kwargs.pop('sleep', None)
     auto_ensure_indexes = kwargs.pop('auto_ensure_indexes', True)
     if use_class is None:
         if args and args[0].startswith('mim:'):
