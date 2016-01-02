@@ -169,7 +169,8 @@ class DataStore(object):
 
     def __getattr__(self, name):
         """Get the ``name`` collection on this database."""
-        if name == 'db': raise AttributeError(name)
+        if name == 'db':
+            raise AttributeError(name)
         return getattr(self.db, name)
 
     @property
@@ -184,7 +185,9 @@ class DataStore(object):
         untracked by Ming.
         """
         if self._db is None:
-            if self.bind is None: raise AttributeError
+            if self.bind is None:
+                raise ValueError('Trying to access db of an unconnected DataStore')
+
             self._db = self.bind[self.name]
             if self._authenticate:
                 self._db.authenticate(**self._authenticate)

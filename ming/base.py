@@ -55,6 +55,7 @@ class Object(dict):
         safe_self = _safe_bson(self)
         self.update(safe_self)
 
+
 class Cursor(object):
     '''Python class proxying a MongoDB cursor, constructing and validating
     objects that it tracks

@@ -29,6 +29,7 @@ def annotate_doc_failure(func):
             raise
     return update_wrapper(wrapper, func)
 
+
 class Session(object):
     _registry = {}
     _datastores = {}
@@ -69,19 +70,24 @@ class Session(object):
             raise ValueError('A query dict is typically the first param to find() but it is not present. '
                              'Moreover, **kwargs were found.  Kwargs are only used for options and not query criteria. '
                              'If you really want to search with no criteria and use kwarg options, pass an explicit {} as your criteria dict.')
-        allow_extra=kwargs.pop('allow_extra', True)
-        strip_extra=kwargs.pop('strip_extra', True)
-        validate=kwargs.pop('validate', True)
+
+        allow_extra = kwargs.pop('allow_extra', True)
+        strip_extra = kwargs.pop('strip_extra', True)
+        validate = kwargs.pop('validate', True)
+
         projection = kwargs.pop('fields', kwargs.pop('projection', None))
         if projection is not None:
-            args = args[:1] + (projection,) + args[1:]
+            kwargs['projection'] = projection
+
+        if not validate:
+            kwargs['as_class'] = Object
 
         collection = self._impl(cls)
-        if not validate:
-            return (
-                cls(o, skip_from_bson=True)
-                for o in collection.find(as_class=Object, *args, **kwargs))
         cursor = collection.find(*args, **kwargs)
+
+        if not validate:
+            return (cls(o, skip_from_bson=True) for o in cursor)
+
         return Cursor(cls, cursor,
                       allow_extra=allow_extra,
                       strip_extra=strip_extra)

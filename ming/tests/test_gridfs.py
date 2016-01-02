@@ -21,6 +21,7 @@ def mock_collection():
     c.find_one = mock.Mock(return_value={})
     return c
 
+
 class TestFS(TestCase):
 
     def setUp(self):

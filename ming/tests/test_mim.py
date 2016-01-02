@@ -94,7 +94,7 @@ class TestDatastore(TestCase):
         self.assertEqual(1, f(dict({'_id': 'foo', '$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count())
 
     def test_find_with_fields(self):
-        o = self.bind.db.coll.find_one({'a':2}, fields=['a'])
+        o = self.bind.db.coll.find_one({'a':2}, projection=['a'])
         assert o['a'] == 2
         assert o['_id'] == 'foo'
         assert 'c' not in o

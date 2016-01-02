@@ -172,14 +172,20 @@ class ODMSession(object):
 
         It returns an :class:`.ODMCursor` with the results.
         """
-        refresh = kwargs.pop('refresh', False)
-        decorate = kwargs.pop('decorate', None)
         if self.autoflush:
             self.flush()
+
+        refresh = kwargs.pop('refresh', False)
+        decorate = kwargs.pop('decorate', None)
         m = mapper(cls)
-        # args = list(map(deinstrument, args))
+
+        projection = kwargs.pop('fields', kwargs.pop('projection', None))
+        if projection is not None:
+            kwargs['projection'] = projection
+
         ming_cursor = self.impl.find(m.collection, *args, **kwargs)
-        odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh, decorate=decorate, fields=kwargs.get('fields'))
+        odm_cursor = ODMCursor(self, cls, ming_cursor, refresh=refresh, decorate=decorate,
+                               fields=kwargs.get('projection'))
         _call_hook(self, 'cursor_created', odm_cursor, 'find', cls, *args, **kwargs)
         return odm_cursor
 
@@ -454,6 +460,7 @@ class ContextualODMSession(ContextualProxy):
         for sess in cls._session_registry[context].values():
             sess.close()
         del cls._session_registry[context]
+
 
 class ODMCursor(object):
     """Represents the results of query.

@@ -93,14 +93,14 @@ def snippet2_1():
 
 def snippet2_2():
     session.clear()
-    WikiPage.query.find({'text': re.compile(r'^This')}, fields=('title', )).all()
+    WikiPage.query.find({'text': re.compile(r'^This')}, projection=('title',)).all()
 
 def snippet2_3():
     WikiPage.query.find({}).first()
     WikiPage.query.find({}, refresh=True).first()
 
 def snippet2_4():
-    docs = WikiPage.query.find({'text': re.compile(r'^This')}, fields=('title', )).all()
+    docs = WikiPage.query.find({'text': re.compile(r'^This')}, projection=('title',)).all()
     docs[0].title, docs[0].text
     docs[1].title, docs[1].text
 

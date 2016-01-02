@@ -54,6 +54,7 @@ from pymongo import database, collection, ASCENDING, MongoClient
 
 log = logging.getLogger(__name__)
 
+
 class Connection(object):
     _singleton = None
 
@@ -71,6 +72,7 @@ class Connection(object):
         self.read_preference = mongoclient.read_preference
         self.write_concern = mongoclient.write_concern
         self.codec_options = mongoclient.codec_options
+        self.read_concern = getattr(mongoclient, 'read_concern', None)
 
     def drop_all(self):
         self._databases = {}
@@ -339,6 +341,10 @@ class Collection(collection.Collection):
     def database(self):
         return self._database
 
+    def with_options(self, codec_options=None, read_preference=None, write_concern=None, read_concern=None):
+        # options have no meaning for MIM
+        return self
+
     def drop(self):
         self._database.drop_collection(self._name)
 
@@ -353,19 +359,19 @@ class Collection(collection.Collection):
                 if mspec is not None: yield doc, mspec
         return _gen()
 
-    def find(self, spec=None, fields=None, sort=None, limit=None, skip=None, as_class=dict, **kwargs):
-        if spec is None:
-            spec = {}
-        cur = Cursor(collection=self, fields=fields, limit=limit, skip=skip, as_class=as_class,
-                     _iterator_gen=lambda: self._find(spec, **kwargs))
+    def find(self, filter=None, projection=None, sort=None, limit=None, skip=None, as_class=dict, **kwargs):
+        if filter is None:
+            filter = {}
+        cur = Cursor(collection=self, fields=projection, limit=limit, skip=skip, as_class=as_class,
+                     _iterator_gen=lambda: self._find(filter, **kwargs))
         if sort:
             cur = cur.sort(sort)
         return cur
 
-    def find_one(self, spec_or_id=None, *args, **kwargs):
-        if spec_or_id is not None and not isinstance(spec_or_id, dict):
-            spec_or_id = {"_id": spec_or_id}
-        for result in self.find(spec_or_id, *args, **kwargs):
+    def find_one(self, filter_or_id=None, *args, **kwargs):
+        if filter_or_id is not None and not isinstance(filter_or_id, dict):
+            filter_or_id = {"_id": filter_or_id}
+        for result in self.find(filter_or_id, *args, **kwargs):
             return result
         return None
 

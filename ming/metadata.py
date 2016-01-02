@@ -338,6 +338,7 @@ class _ClassManager(object):
         else:
             return self.cls(data)
 
+
 class _ManagerDescriptor(object):
 
     def __init__(self, manager):
@@ -381,6 +382,7 @@ class _ManagerDescriptor(object):
         else:
             return self.manager.InstanceManagerClass(self.manager, inst)
 
+
 class _FieldDescriptor(object):
 
     def __init__(self, field):
@@ -399,6 +401,7 @@ class _FieldDescriptor(object):
 
     def __delete__(self, inst):
         del inst[self.name]
+
 
 class _Document(Object):
 

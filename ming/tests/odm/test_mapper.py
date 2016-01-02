@@ -198,7 +198,7 @@ class TestBasicMapping(TestCase):
         self.session.flush()
         self.session.clear()
 
-        q = self.Basic.query.find(dict(a=1), fields=['b'])
+        q = self.Basic.query.find(dict(a=1), projection=['b'])
         self.assertEqual(q.count(), 1)
 
         o = q.first()
