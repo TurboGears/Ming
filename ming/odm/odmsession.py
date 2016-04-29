@@ -484,6 +484,9 @@ class ODMCursor(object):
         """Get the number of objects retrieved by the query"""
         return self.ming_cursor.count()
 
+    def distinct(self, *args, **kwargs):
+        return self.ming_cursor.distinct(*args, **kwargs)
+
     def _next_impl(self):
         doc = next(self.ming_cursor)
         obj = self.session.imap.get(self.cls, doc['_id'])

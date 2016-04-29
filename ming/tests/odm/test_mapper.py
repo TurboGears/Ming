@@ -262,6 +262,11 @@ class TestBasicMapping(TestCase):
         self.Basic.query.distinct('field')
         assert mim_distinct.called
 
+    @patch('ming.mim.Cursor.distinct')
+    def test_cursor_distinct(self, mim_distinct):
+        self.Basic.query.find({'a': 'b'}).distinct('field')
+        assert mim_distinct.called
+
     @patch('pymongo.collection.Collection.inline_map_reduce')
     def test_inline_map_reduce(self, pymongo_inline_map_reduce):
         self.Basic.query.inline_map_reduce()

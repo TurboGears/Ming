@@ -86,6 +86,9 @@ class Cursor(object):
     def count(self):
         return self.cursor.count()
 
+    def distinct(self, *args, **kwargs):
+        return self.cursor.distinct(*args, **kwargs)
+
     def limit(self, limit):
         self.cursor = self.cursor.limit(limit)
         return self
