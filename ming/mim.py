@@ -757,7 +757,7 @@ class Match(object):
             if val.match('$', op, value): return True
         if op == '$eq':
             if isinstance(value, bson.RE_TYPE):
-                return bool(value.match(val))
+                return bool(val not in (None, ()) and value.match(val))
             return BsonArith.cmp(val, value) == 0
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
