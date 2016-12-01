@@ -1,6 +1,10 @@
 Ming News / Release Notes
 =====================================
 
+0.5.5 (Nov 30, 2016)
+------------------------------------------------
+* MIM: do not raise errors when regex matching against None or non-existant values
+
 0.5.4 (Apr 29, 2016)
 ------------------------------------------------
 * On Python3, bson.Binary actually decodes to bytes
