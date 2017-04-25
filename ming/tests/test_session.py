@@ -150,6 +150,7 @@ class TestSession(TestCase):
         self.TestDoc.m.map_reduce()
         self.TestDoc.m.inline_map_reduce()
         self.TestDoc.m.distinct()
+        self.TestDoc.m.find({'a': 'b'}).distinct()
         self.TestDoc.m.group()
 
 

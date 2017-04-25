@@ -848,9 +848,9 @@ class Match(object):
             if val.match('$', op, value): return True
         if op == '$eq':
             if isinstance(value, bson.RE_TYPE):
-                return bool(value.match(val))
+                return bool(val not in (None, ()) and value.match(val))
             if isinstance(value, bson.Regex):
-                return bool(value.try_compile().match(val))
+                return bool(val not in (None, ()) and value.try_compile().match(val))
             return BsonArith.cmp(val, value) == 0
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
