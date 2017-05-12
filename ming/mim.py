@@ -818,7 +818,7 @@ class BsonArith(object):
             (lambda x:x, [ bson.ObjectId ]),
             (lambda x:x, [ bool ]),
             (lambda x:x, [ datetime ]),
-            (lambda x:x, [ type(bson.RE_TYPE) ] ),
+            (lambda x:x, [ bson.Regex ] ),
             (lambda x:x, [ float ]),
         ]
 
@@ -1205,4 +1205,3 @@ class _DummyRequest(object):
 
     def end(self):
         pass
-
