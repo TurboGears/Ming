@@ -108,7 +108,11 @@ class Connection(object):
         return self._databases.keys()
 
     def drop_database(self, name):
-        del self._databases[name]
+        try:
+            del self._databases[name]
+        except KeyError:
+            # Mongodb does not complain when dropping a non existing DB.
+            pass
 
     def __repr__(self):
         return 'mim.Connection()'
@@ -383,7 +387,7 @@ class Collection(collection.Collection):
         if before is None:
             upserted = True
             if upsert:
-                result = self.__update(query, update, upsert)
+                result = self.__update(query, update, upsert=True)
                 query = {'_id': result['upserted']}
             else:
                 return None
@@ -408,22 +412,22 @@ class Collection(collection.Collection):
                       'find_one_and_replace, find_one_and_update)', DeprecationWarning)
         return self.__find_and_modify(query, update, fields, upsert, remove, **kwargs)
 
-    def find_one_and_delete(self, filter, projection=None, sort=None, **__):
-        return self.__find_and_modify(filter, fields=projection, sort=sort)
+    def find_one_and_delete(self, filter, projection=None, sort=None, **kwargs):
+        return self.__find_and_modify(filter, fields=projection, sort=sort, **kwargs)
 
     def find_one_and_replace(self, filter, replacement, projection=None, sort=None,
-                             return_document=False, **__):
+                             return_document=False, **kwargs):
         # ReturnDocument.BEFORE -> False
         # ReturnDocument.AFTER -> True
         return self.__find_and_modify(filter, update=replacement, fields=projection,
-                                      sort=sort, new=return_document)
+                                      sort=sort, new=return_document, **kwargs)
 
     def find_one_and_update(self, filter, update, projection=None, sort=None,
-                            return_document=False, **__):
+                            return_document=False, **kwargs):
         # ReturnDocument.BEFORE -> False
         # ReturnDocument.AFTER -> True
         return self.__find_and_modify(filter, update=update, fields=projection,
-                                      sort=sort, new=return_document)
+                                      sort=sort, new=return_document, **kwargs)
 
     def count(self, filter=None, **kwargs):
         return self.find(filter, **kwargs).count()
@@ -488,7 +492,7 @@ class Collection(collection.Collection):
             return result
         if upsert:
             doc = dict(spec)
-            MatchDoc(doc).update(updates)
+            MatchDoc(doc).update(updates, upserted=upsert)
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
@@ -555,7 +559,8 @@ class Collection(collection.Collection):
         return index_name
 
     # ensure_index is now deprecated.
-    create_index = ensure_index
+    def create_index(self, keys, **kwargs):
+        return self.ensure_index(keys, **kwargs)
 
     def index_information(self):
         return dict(
@@ -882,16 +887,19 @@ class Match(object):
                 if m: return True
             return False
         raise NotImplementedError(op)
+
     def getvalue(self, path):
         parts = path.split('.')
         subdoc, key = self.traverse(*parts)
         return subdoc[key]
+
     def get(self, key, default=None):
         try:
             return self[key]
         except KeyError:
             return default
-    def update(self, updates):
+
+    def update(self, updates, upserted=False):
         newdoc = {}
         for k, v in six.iteritems(updates):
             if k.startswith('$'): break
@@ -904,6 +912,8 @@ class Match(object):
             func = getattr(self, '_op_' + op[1:], None)
             if func is None:
                 raise NotImplementedError(op)
+            if getattr(func, 'upsert_only', False) and not upserted:
+                continue
             for k,arg in update_parts.items():
                 subdoc, key = self.traverse(k)
                 func(subdoc, key, arg)
@@ -915,6 +925,10 @@ class Match(object):
 
     def _op_set(self, subdoc, key, arg):
         subdoc[key] = bcopy(arg)
+
+    def _op_setOnInsert(self, subdoc, key, arg):
+        raise NotImplementedError('setOnInsert not implemented')
+    _op_setOnInsert.upsert_only = True
 
     def _op_unset(self, subdoc, key, arg):
         del subdoc[key]
