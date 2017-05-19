@@ -49,8 +49,9 @@ from ming.utils import LazyProperty
 
 import bson
 import six
-from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo import database, collection, ASCENDING, MongoClient
+from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
+from pymongo.results import DeleteResult
 
 log = logging.getLogger(__name__)
 
@@ -514,27 +515,30 @@ class Collection(collection.Collection):
         return self.__update(filter, update, upsert, multi=False)
 
     def __remove(self, spec=None, **kwargs):
+        result = dict(n=0)
         multi = kwargs.get('multi', True)
         if spec is None: spec = {}
-        first_found = False
         new_data = {}
         for id, doc in six.iteritems(self._data):
-            if match(spec, doc) and multi or first_found is False:
+            if match(spec, doc) and multi or result['n'] == 0:
                 self._deindex(doc)
-                first_found = True
+                result['n'] += 1
             else:
                 new_data[id] = doc
         self._data = new_data
+        return result
 
     def remove(self, spec=None, **kwargs):
         warnings.warn('remove is now deprecated, please use delete_many or delete_one', DeprecationWarning)
         self.__remove(spec, **kwargs)
 
     def delete_one(self, filter):
-        self.__remove(filter, multi=False)
+        res = self.__remove(filter, multi=False)
+        return DeleteResult(res, True)
 
     def delete_many(self, filter):
-        self.__remove(filter, multi=True)
+        res = self.__remove(filter, multi=True)
+        return DeleteResult(res, True)
 
     def list_indexes(self):
         return Cursor(self, lambda: self._indexes.values())

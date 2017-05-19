@@ -453,7 +453,6 @@ class TestCollection(TestCase):
         doc = cursor[0]
         self.assertEqual(cursor.next(), doc)
 
-
     def test_upsert_simple(self):
         test = self.bind.db.test
         test.update(
@@ -647,6 +646,23 @@ class TestCollection(TestCase):
         coll.insert({'x': {'y': 2}})
         self.assertRaises(DuplicateKeyError, coll.insert, {'x': {'y': 2}})
 
+    def test_delete_many(self):
+        coll = self.bind.db.coll
+
+        coll.insert({'dme': 1})
+        coll.insert({'dme': 1})
+        coll.insert({'dme': 2})
+
+        self.assertEqual(coll.delete_many({'dme': 1}).deleted_count, 2)
+
+    def test_delete_one(self):
+        coll = self.bind.db.coll
+
+        coll.insert({'dme': 1})
+        coll.insert({'dme': 1})
+        coll.insert({'dme': 2})
+
+        self.assertEqual(coll.delete_many({'dme': 1}).deleted_count, 1)
 
 class TestBsonCompare(TestCase):
 
