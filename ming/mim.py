@@ -908,6 +908,7 @@ class Match(object):
             self._orig.clear()
             self._orig.update(bcopy(newdoc))
             return
+
         for op, update_parts in six.iteritems(updates):
             func = getattr(self, '_op_' + op[1:], None)
             if func is None:
@@ -927,7 +928,7 @@ class Match(object):
         subdoc[key] = bcopy(arg)
 
     def _op_setOnInsert(self, subdoc, key, arg):
-        raise NotImplementedError('setOnInsert not implemented')
+        subdoc[key] = bcopy(arg)
     _op_setOnInsert.upsert_only = True
 
     def _op_unset(self, subdoc, key, arg):

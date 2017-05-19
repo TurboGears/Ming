@@ -463,6 +463,25 @@ class TestCollection(TestCase):
         doc = test.find_one()
         self.assertEqual(doc, dict(_id=0, a=5, b=6))
 
+    def test_upsert_setOnInsert(self):
+        test = self.bind.db.test
+        test.update(
+            dict(_id=0, a=5),
+            {'$set': dict(b=6),
+             '$setOnInsert': dict(c=7)},
+            upsert=True)
+        doc = test.find_one()
+        self.assertEqual(doc, dict(_id=0, a=5, b=6, c=7))
+
+        test.update(dict(_id=0, a=5), {'$set': dict(b=0, c=0)})
+        test.update(
+            dict(_id=0, a=5),
+            {'$set': dict(b=2),
+             '$setOnInsert': dict(c=7)},
+            upsert=True)
+        doc = test.find_one()
+        self.assertEqual(doc, dict(_id=0, a=5, b=2, c=0))
+
     def test_upsert_inc(self):
         test = self.bind.db.test
         test.update(
