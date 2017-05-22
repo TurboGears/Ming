@@ -595,6 +595,7 @@ class Collection(collection.Collection):
         if '_id' not in doc: return
         for keys, index in six.iteritems(self._unique_indexes):
             key_values = self._extract_index_key(doc, keys)
+            key_values = bson.BSON.encode({'k': key_values})
             old_id = index.get(key_values, ())
             if old_id == doc['_id']: continue
             if old_id in self._data:

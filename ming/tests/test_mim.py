@@ -646,6 +646,14 @@ class TestCollection(TestCase):
         coll.insert({'x': {'y': 2}})
         self.assertRaises(DuplicateKeyError, coll.insert, {'x': {'y': 2}})
 
+    def test_unique_index_whole_sdoc(self):
+        coll = self.bind.db.coll
+
+        coll.ensure_index([('x', 1)], unique=True)
+        coll.insert({'x': {'y': 1}})
+        coll.insert({'x': {'y': 2}})
+        self.assertRaises(DuplicateKeyError, coll.insert, {'x': {'y': 2}})
+
     def test_delete_many(self):
         coll = self.bind.db.coll
 
