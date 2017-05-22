@@ -657,20 +657,20 @@ class TestCollection(TestCase):
     def test_delete_many(self):
         coll = self.bind.db.coll
 
-        coll.insert({'dme': 1})
-        coll.insert({'dme': 1})
-        coll.insert({'dme': 2})
+        coll.insert({'dme-m': 1})
+        coll.insert({'dme-m': 1})
+        coll.insert({'dme-m': 2})
 
-        self.assertEqual(coll.delete_many({'dme': 1}).deleted_count, 2)
+        self.assertEqual(coll.delete_many({'dme-m': 1}).deleted_count, 2)
 
     def test_delete_one(self):
         coll = self.bind.db.coll
 
-        coll.insert({'dme': 1})
-        coll.insert({'dme': 1})
-        coll.insert({'dme': 2})
+        coll.insert({'dme-o': 1})
+        coll.insert({'dme-o': 1})
+        coll.insert({'dme-o': 2})
 
-        self.assertEqual(coll.delete_many({'dme': 1}).deleted_count, 1)
+        self.assertEqual(coll.delete_one({'dme-o': 1}).deleted_count, 1)
 
 class TestBsonCompare(TestCase):
 

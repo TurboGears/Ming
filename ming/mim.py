@@ -521,8 +521,8 @@ class Collection(collection.Collection):
         new_data = {}
         for id, doc in six.iteritems(self._data):
             if match(spec, doc) and multi or result['n'] == 0:
-                self._deindex(doc)
                 result['n'] += 1
+                self._deindex(doc)
             else:
                 new_data[id] = doc
         self._data = new_data
