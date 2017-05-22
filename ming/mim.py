@@ -589,13 +589,12 @@ class Collection(collection.Collection):
         for key in keys:
             sub, key = _traverse_doc(doc, key[0])
             key_values.append(sub.get(key, None))
-        return tuple(key_values)
+        return bson.BSON.encode({'k': key_values})
 
     def _index(self, doc):
         if '_id' not in doc: return
         for keys, index in six.iteritems(self._unique_indexes):
             key_values = self._extract_index_key(doc, keys)
-            key_values = bson.BSON.encode({'k': key_values})
             old_id = index.get(key_values, ())
             if old_id == doc['_id']: continue
             if old_id in self._data:
