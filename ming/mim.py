@@ -637,8 +637,8 @@ class Cursor(object):
         self._collection = collection
         self._iterator_gen = _iterator_gen
         self._sort = sort
-        self._skip = skip
-        self._limit = limit
+        self._skip = skip or None    # cope with 0 being passed.
+        self._limit = limit or None  # cope with 0 being passed.
         self._fields = fields
         self._as_class = as_class
         self._safe_to_chain = True
@@ -755,6 +755,10 @@ class Cursor(object):
             raise TypeError('hint index should be string, list of tuples, or None, but was %s' % type(index))
         return self
 
+    def add_option(self, *args, **kwargs):
+        # Adding options to MIM does nothing.
+        pass
+
 
 def cursor_comparator(keys):
     def comparator(a, b):
@@ -831,6 +835,7 @@ class BsonArith(object):
             (lambda x:x, [ float ]),
         ]
 
+
 def match(spec, doc):
     spec = bcopy(spec)
     if '$or' in spec:
@@ -847,6 +852,7 @@ def match(spec, doc):
     except KeyError:
         raise
     return mspec
+
 
 class Match(object):
     def match(self, key, op, value):
