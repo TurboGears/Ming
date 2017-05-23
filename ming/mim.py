@@ -520,7 +520,7 @@ class Collection(collection.Collection):
         if spec is None: spec = {}
         new_data = {}
         for id, doc in six.iteritems(self._data):
-            if match(spec, doc) and multi or result['n'] == 0:
+            if match(spec, doc) and (multi or result['n'] == 0):
                 result['n'] += 1
                 self._deindex(doc)
             else:
@@ -867,6 +867,13 @@ class Match(object):
             if isinstance(value, bson.Regex):
                 return bool(val not in (None, ()) and value.try_compile().match(val))
             return BsonArith.cmp(val, value) == 0
+        if op == '$regex':
+            if not isinstance(value, (bson.RE_TYPE, bson.Regex)):
+                value = re.compile(value)
+            if isinstance(value, bson.RE_TYPE):
+                return bool(val not in (None, ()) and value.match(val))
+            elif isinstance(value, bson.Regex):
+                return bool(val not in (None, ()) and value.try_compile().match(val))
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
         if op == '$gte': return BsonArith.cmp(val, value) >= 0
