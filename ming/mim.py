@@ -51,7 +51,7 @@ import bson
 import six
 from pymongo import database, collection, ASCENDING, MongoClient
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
-from pymongo.results import DeleteResult, UpdateResult
+from pymongo.results import DeleteResult, UpdateResult, InsertManyResult, InsertOneResult
 
 log = logging.getLogger(__name__)
 
@@ -434,6 +434,7 @@ class Collection(collection.Collection):
         return self.find(filter, **kwargs).count()
 
     def __insert(self, doc_or_docs, manipulate=True, **kwargs):
+        result = []
         if not isinstance(doc_or_docs, list):
             doc_or_docs = [ doc_or_docs ]
         for doc in doc_or_docs:
@@ -443,23 +444,28 @@ class Collection(collection.Collection):
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
+            result.append(_id)
             if _id in self._data:
                 if kwargs.get('w', 1):
                     raise DuplicateKeyError('duplicate ID on insert')
                 continue
             self._index(doc)
             self._data[_id] = bcopy(doc)
-        return _id
+        return result
 
     def insert(self, doc_or_docs, manipulate=True, **kwargs):
-        warnings.warn('insert is now deprecated, please use insert_one or insert_multi', DeprecationWarning)
+        warnings.warn('insert is now deprecated, please use insert_one or insert_many', DeprecationWarning)
         return self.__insert(doc_or_docs, manipulate, **kwargs)
 
     def insert_one(self, document):
-        return self.__insert(document)
+        result = self.__insert(document)
+        if result:
+            result = result[0]
+        return InsertOneResult(result, True)
 
-    def insert_multi(self, documents, ordered=True):
-        return self.__insert(documents)
+    def insert_many(self, documents, ordered=True):
+        result = self.__insert(documents)
+        return InsertManyResult(result, True)
 
     def save(self, doc, **kwargs):
         warnings.warn('save is now deprecated, please use insert_one or replace_one', DeprecationWarning)
