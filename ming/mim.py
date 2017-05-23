@@ -51,7 +51,7 @@ import bson
 import six
 from pymongo import database, collection, ASCENDING, MongoClient
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
-from pymongo.results import DeleteResult
+from pymongo.results import DeleteResult, UpdateResult
 
 log = logging.getLogger(__name__)
 
@@ -481,12 +481,15 @@ class Collection(collection.Collection):
             updatedExisting=False,
             err=None,
             ok=1.0,
-            n=0)
+            n=0,
+            nModified=0
+        )
         for doc, mspec in self._find(spec):
             self._deindex(doc)
             mspec.update(updates)
             self._index(doc)
             result['n'] += 1
+            result['nModified'] += 1
             if not multi: break
         if result['n']:
             result['updatedExisting'] = True
@@ -509,10 +512,12 @@ class Collection(collection.Collection):
         return self.__update(spec, updates, upsert, multi)
 
     def update_many(self, filter, update, upsert=False):
-        return self.__update(filter, update, upsert, multi=True)
+        result = self.__update(filter, update, upsert, multi=True)
+        return UpdateResult(result, True)
 
     def update_one(self, filter, update, upsert=False):
-        return self.__update(filter, update, upsert, multi=False)
+        result = self.__update(filter, update, upsert, multi=False)
+        return UpdateResult(result, True)
 
     def __remove(self, spec=None, **kwargs):
         result = dict(n=0)
