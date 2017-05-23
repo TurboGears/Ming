@@ -461,7 +461,7 @@ class Collection(collection.Collection):
         result = self.__insert(document)
         if result:
             result = result[0]
-        return InsertOneResult(result, True)
+        return InsertOneResult(result or None, True)
 
     def insert_many(self, documents, ordered=True):
         result = self.__insert(documents)
