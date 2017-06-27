@@ -11,6 +11,8 @@ import warnings
 from datetime import datetime
 from hashlib import md5
 
+import pickle
+
 try:
     import spidermonkey
     from spidermonkey import Runtime
@@ -186,6 +188,21 @@ class Database(database.Database):
             return list(set(_lookup(d, key) for d in collection.find()))
         elif 'getlasterror' in command:
             return dict(connectionId=None, err=None, n=0, ok=1.0)
+        elif 'collstats' in command:
+            collection = self._collections[command['collstats']]
+
+            # We simulate everything based on the first object size,
+            # doesn't probably make sense to go through all the objects to compute this.
+            # Also instead of evaluating their in-memory size we use pickle
+            # as python stores references.
+            first_object_size = len(pickle.dumps(next(iter(collection._data.values()), {})))
+            return {
+                "ns": '%s.%s' % (collection.database.name, collection.name),
+                "count": len(collection._data),
+                "size": first_object_size * len(collection._data),
+                "avgObjSize": first_object_size,
+                "storageSize": first_object_size * len(collection._data)
+            }
         else:
             raise NotImplementedError(repr(command))
 
