@@ -605,6 +605,10 @@ class Collection(collection.Collection):
         keys = tuple(i[0] for i in index)
         self._unique_indexes.pop(keys, None)
 
+    def drop_indexes(self):
+        for iname in list(self._indexes.keys()):
+            self.drop_index(iname)
+
     def _get_wc_override(self):
         '''For gridfs compatibility'''
         return {}
