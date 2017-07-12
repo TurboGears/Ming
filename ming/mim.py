@@ -185,7 +185,8 @@ class Database(database.Database):
         elif 'distinct' in command:
             collection = self._collections[command['distinct']]
             key = command['key']
-            return list(set(_lookup(d, key) for d in collection.find()))
+            filter = command.get('filter')
+            return list(set(_lookup(d, key) for d in collection.find(filter=filter)))
         elif 'getlasterror' in command:
             return dict(connectionId=None, err=None, n=0, ok=1.0)
         elif 'collstats' in command:
@@ -649,10 +650,10 @@ class Collection(collection.Collection):
         cmd_args.update(kwargs)
         return self.database.command(cmd_args)
 
-    def distinct(self, key):
+    def distinct(self, key, filter=None, **kwargs):
         return self.database.command({'distinct': self.name,
                                       'key': key,
-                                      })
+                                      'filter': filter})
 
 
 class Cursor(object):
