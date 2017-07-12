@@ -462,6 +462,28 @@ class TestCollection(TestCase):
         doc = test.find_one()
         self.assertEqual(doc, dict(_id=0, a=5, b=6))
 
+    def test_upsert_duplicated(self):
+        test = self.bind.db.test
+        test.ensure_index([('a', 1)], unique=True)
+
+        # Try with any index
+        test.update({'x': 'NOT_FOUND1'}, {'$set': {'a': 0}}, upsert=True)
+        try:
+            test.update({'x': 'NOT_FOUND2'}, {'$set': {'a': 0}}, upsert=True)
+        except DuplicateKeyError:
+            pass
+        else:
+            assert False, 'Had to detect duplicate key'
+
+        # Now try with _id
+        test.update({'x': 'NOT_FOUND3'}, {'$set': {'_id': 0}}, upsert=True)
+        try:
+            test.update({'x': 'NOT_FOUND4'}, {'$set': {'_id': 0}}, upsert=True)
+        except DuplicateKeyError:
+            pass
+        else:
+            assert False, 'Had to detect duplicate key'
+
     def test_upsert_setOnInsert(self):
         test = self.bind.db.test
         test.update(

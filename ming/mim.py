@@ -524,6 +524,8 @@ class Collection(collection.Collection):
             _id = doc.get('_id', ())
             if _id == ():
                 _id = doc['_id'] = bson.ObjectId()
+            if _id in self._data:
+                raise DuplicateKeyError('duplicate ID on upsert')
             self._index(doc)
             self._data[_id] = bcopy(doc)
             result['upserted'] = _id
