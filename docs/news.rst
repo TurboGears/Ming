@@ -1,6 +1,18 @@
 Ming News / Release Notes
 =====================================
 
+0.6.0 (Sep 24, 2017)
+--------------------
+* Support new PyMongo 3.X API
+* MIM: Fix duplicated keys are detected on upsertions
+* MIM: Support for filters on distinct
+* MIM: Provide drop_indexes
+* MIM: Simulate collstats
+* MIM: Support insert_one and insert_many results
+* MIM: Support update_one and update_many results
+* MIM: Support indexing whole subdocuments
+* MIM: Support for setOnInsert
+
 0.5.5 (Nov 30, 2016)
 ------------------------------------------------
 * MIM: do not raise errors when regex matching against None or non-existant values
