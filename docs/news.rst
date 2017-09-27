@@ -1,6 +1,11 @@
 Ming News / Release Notes
 =====================================
 
+0.6.1 (Sep 27, 2017)
+--------------------
+
+* MIM: Support searching for $regex that contain text instead of only "startswith"
+
 0.6.0 (Sep 24, 2017)
 --------------------
 * Support new PyMongo 3.X API
