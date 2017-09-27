@@ -805,6 +805,22 @@ class TestMatch(TestCase):
         self.assertIsNone(mim.match( {'c': regex}, doc))
         self.assertIsNone(mim.match( {'d': regex}, doc))
 
+    def test_regex_match_inside(self):
+        doc = { 'a': 'bar', 'b': 'bat', 'c': None}
+        regex = re.compile(r'ar')
+        self.assertIsNotNone(mim.match( {'a': regex}, doc))
+        self.assertIsNone(mim.match( {'b': regex}, doc))
+        self.assertIsNone(mim.match( {'c': regex}, doc))
+        self.assertIsNone(mim.match( {'d': regex}, doc))
+
+    def test_regex_match_begin(self):
+        doc = { 'a': 'bar', 'b': 'bet', 'c': None}
+        regex = re.compile(r'^ba')
+        self.assertIsNotNone(mim.match( {'a': regex}, doc))
+        self.assertIsNone(mim.match( {'b': regex}, doc))
+        self.assertIsNone(mim.match( {'c': regex}, doc))
+        self.assertIsNone(mim.match( {'d': regex}, doc))
+
     def test_subdoc_partial(self):
         doc = {'a': {'b': 1, 'c': 1}}
         self.assertIsNotNone(mim.match({'a.b': 1}, doc))

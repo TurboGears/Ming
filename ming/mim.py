@@ -898,17 +898,17 @@ class Match(object):
             if val.match('$', op, value): return True
         if op == '$eq':
             if isinstance(value, bson.RE_TYPE):
-                return bool(val not in (None, ()) and value.match(val))
+                return bool(val not in (None, ()) and value.search(val))
             if isinstance(value, bson.Regex):
-                return bool(val not in (None, ()) and value.try_compile().match(val))
+                return bool(val not in (None, ()) and value.try_compile().search(val))
             return BsonArith.cmp(val, value) == 0
         if op == '$regex':
             if not isinstance(value, (bson.RE_TYPE, bson.Regex)):
                 value = re.compile(value)
             if isinstance(value, bson.RE_TYPE):
-                return bool(val not in (None, ()) and value.match(val))
+                return bool(val not in (None, ()) and value.search(val))
             elif isinstance(value, bson.Regex):
-                return bool(val not in (None, ()) and value.try_compile().match(val))
+                return bool(val not in (None, ()) and value.try_compile().search(val))
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
         if op == '$gte': return BsonArith.cmp(val, value) >= 0
