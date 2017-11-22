@@ -126,6 +126,10 @@ class Cursor(object):
     def all(self):
         return list(self)
 
+    def rewind(self):
+        self.cursor = self.cursor.rewind()
+        return self
+
 NoneType = type(None)
 def _safe_bson(obj):
     '''Verify that the obj is safe for bsonification (in particular, no tuples or
