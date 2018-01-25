@@ -938,6 +938,12 @@ class Match(object):
                 m = match(value, ele)
                 if m: return True
             return False
+        if op == '$search':
+            collection = get_collection_from_objectid(self['_id'])
+            for field, _ in collection._indexes.values()[0]['key']:
+                if value.lower() in self[field].lower():
+                    return True
+            return False
         raise NotImplementedError(op)
 
     def getvalue(self, path):
@@ -1261,6 +1267,15 @@ def _project(doc, fields):
             log.debug("Field %s doesn't in %s, skip..." % (key, sub_doc.keys()))
             pass
     return result
+
+
+def get_collection_from_objectid(_id):
+    for db in Connection.get()._databases.values():
+        for collection in db._collections.values():
+            if _id in collection._data.keys():
+                return collection
+    return None
+
 
 class _DummyRequest(object):
 
