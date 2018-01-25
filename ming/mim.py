@@ -1273,7 +1273,7 @@ def _project(doc, fields):
 def get_collection_from_objectid(_id):
     for db in Connection.get()._databases.values():
         for collection in db._collections.values():
-            if _id in collection._data.keys():
+            if _id in collection._data:
                 return collection
     return None
 
