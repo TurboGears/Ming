@@ -592,3 +592,12 @@ class ODMCursor(object):
     def all(self):
         """Retrieve all the results of the query"""
         return list(self)
+
+    def rewind(self):
+        """Rewind this cursor to its unevaluated state.
+        Reset this cursor if it has been partially or completely evaluated.
+        Any options that are present on the cursor will remain in effect.
+        Future iterating performed on this cursor will cause new queries to be sent to the server,
+        even if the resultant data has already been retrieved by this cursor.
+        """
+        return self.ming_cursor.rewind()
