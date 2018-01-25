@@ -940,7 +940,8 @@ class Match(object):
             return False
         if op == '$search':
             collection = get_collection_from_objectid(self['_id'])
-            for field, _ in collection._indexes.values()[0]['key']:
+            for index in collection._indexes.values()[0]['key']:
+                field = index[0]
                 if value.lower() in self[field].lower():
                     return True
             return False

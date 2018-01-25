@@ -109,6 +109,15 @@ class TestDatastore(TestCase):
         cursor.rewind()
         assert cursor.next() == doc
 
+    def test_search(self):
+        conn = mim.Connection().get()
+        coll = conn.searchdatabase.coll
+        coll.create_index([dict(field='text')])
+        coll.insert({'field': 'text to be searched'})
+        coll.insert({'field': 'text to be'})
+        assert coll.find({'$text': {'$search': 'searched'}},
+                         {'score': {'$meta': 'textScore'}}).count() == 1
+
 
 class TestDottedOperators(TestCase):
 
