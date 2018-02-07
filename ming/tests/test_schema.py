@@ -1,5 +1,5 @@
 from unittest import TestCase, main
-from datetime import datetime
+from datetime import datetime, date
 
 import ming.datastore
 import pytz
@@ -73,6 +73,10 @@ class TestSchemaItem(TestCase):
         self.assertEqual(
             datetime(2012,2,8,20,42,14,123000),
             si.validate(pytz.timezone('US/Pacific').localize(datetime(2012,2,8,12,42,14,123456))))
+
+    def test_date_to_datetime(self):
+        si = S.SchemaItem.make(datetime)
+        self.assertEqual(datetime(2018, 2, 7, 0, 0), si.validate(date(2018, 2, 7)))
 
     def test_migrate(self):
         si = S.Migrate(int, str, str)
@@ -153,4 +157,3 @@ class TestSchemaItem(TestCase):
 
 if __name__ == '__main__':
     main()
-
