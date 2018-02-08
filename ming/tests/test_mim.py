@@ -112,7 +112,7 @@ class TestDatastore(TestCase):
     def test_search(self):
         conn = mim.Connection().get()
         coll = conn.searchdatabase.coll
-        coll.create_index([dict(field='text')])
+        coll.create_index([('field', 'text')])
         coll.insert({'field': 'text to be searched'})
         coll.insert({'field': 'text to be'})
         assert coll.find({'$text': {'$search': 'searched'}},

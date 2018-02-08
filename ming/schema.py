@@ -2,7 +2,7 @@ import types
 import logging
 
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, date
 
 import bson
 import pymongo
@@ -646,8 +646,11 @@ class DateTime(DateTimeTZ):
 
     If value is a ``datetime`` but it's not on UTC it gets converted
     to UTC timezone.
+    if value is instance of ``date`` it will be converted to ``datetime``
     """
     def _validate(self, value, **kw):
+        if isinstance(value, date) and not isinstance(value, datetime):
+            value = datetime(value.year, value.month, value.day)
         value = DateTimeTZ._validate(self, value, **kw)
         if value is None: return value
         if not isinstance(value, self.type):
@@ -712,5 +715,3 @@ SHORTHAND={
     float:Float,
     bool:Bool,
     datetime:DateTime}
-
-

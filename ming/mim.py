@@ -940,10 +940,10 @@ class Match(object):
             return False
         if op == '$search':
             collection = get_collection_from_objectid(self['_id'])
-            for index in collection._indexes.values()[0]['key']:
-                field = index[0]
-                if value.lower() in self[field].lower():
-                    return True
+            for _keys in (index['key'] for index in collection._indexes.values()):
+                for field in (key[0] for key in _keys if key[1] == 'text'):
+                    if value.lower() in self[field].lower():
+                        return True
             return False
         raise NotImplementedError(op)
 

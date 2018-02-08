@@ -20,3 +20,5 @@ Vagrantfile
 parser_*.out
 parsetab_*
 .tox
+.eggs/
+venv/
