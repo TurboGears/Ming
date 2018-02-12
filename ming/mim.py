@@ -991,7 +991,11 @@ class Match(object):
     _op_setOnInsert.upsert_only = True
 
     def _op_unset(self, subdoc, key, arg):
-        del subdoc[key]
+        try:
+            del subdoc[key]
+        except KeyError:
+            # $unset should do nothing if the key doesn't exist.
+            pass
 
     def _op_push(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])

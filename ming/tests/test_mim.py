@@ -156,6 +156,11 @@ class TestDottedOperators(TestCase):
         obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
         self.assertEqual(obj, { 'b': { 'f': [{u'g': 1}, {}] } })
 
+        # Check that it even works for keys that are not there.
+        self.coll.update({}, { '$unset': { 'b.this_does_not_exists': 1 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
+        self.assertEqual(obj, { 'b': { 'f': [{u'g': 1}, {}] } })
+
     def test_push_dotted(self):
         self.coll.update({}, { '$push': { 'b.e': 4 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
