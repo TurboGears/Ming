@@ -435,7 +435,7 @@ class Collection(collection.Collection):
         return self.__find_and_modify(query, update, fields, upsert, remove, **kwargs)
 
     def find_one_and_delete(self, filter, projection=None, sort=None, **kwargs):
-        return self.__find_and_modify(filter, fields=projection, sort=sort, **kwargs)
+        return self.__find_and_modify(filter, fields=projection, remove=True, sort=sort, **kwargs)
 
     def find_one_and_replace(self, filter, replacement, projection=None, sort=None,
                              return_document=False, **kwargs):

@@ -730,6 +730,17 @@ class TestCollection(TestCase):
 
         self.assertEqual(coll.delete_one({'dme-o': 1}).deleted_count, 1)
 
+    def test_find_one_and_delete(self):
+        coll = self.bind.db.coll
+
+        coll.insert({'dme-o': 1})
+        coll.insert({'dme-o': 1})
+        coll.insert({'dme-o': 2})
+
+        coll.find_one_and_delete({'dme-o': 1})
+        self.assertEqual(len(list(coll.find({'dme-o': {'$exists': True}}))), 2)
+
+
 class TestBsonCompare(TestCase):
 
     def test_boolean_bson_type(self):
