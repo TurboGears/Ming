@@ -987,6 +987,8 @@ class Match(object):
         subdoc[key] += arg
 
     def _op_set(self, subdoc, key, arg):
+        if isinstance(subdoc, list):
+            key = int(key)
         subdoc[key] = bcopy(arg)
 
     def _op_setOnInsert(self, subdoc, key, arg):
@@ -1151,6 +1153,8 @@ class MatchList(Match):
     def __setitem__(self, key, value):
         if key == '$':
             key = self._pos
+        if isinstance(self._doc, list):
+            key = int(key)
         self._doc[key] = value
         self._orig[key] = value
     def __delitem__(self, key):

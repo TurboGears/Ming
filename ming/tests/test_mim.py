@@ -151,6 +151,15 @@ class TestDottedOperators(TestCase):
         obj = self.coll.find_one({}, { '_id': 0, 'b.c': 1 })
         self.assertEqual(obj, { 'b': { 'c': 4 } })
 
+    def test_set_dotted_with_integer(self):
+        self.bind.db.coll.insert(
+            {'_id':'foo2', 'a':2,
+             'b': [1,2,3],
+             'x': {} })
+        self.coll.update({'_id': 'foo2'}, {'$set': {'b.0': 4}})
+        obj = self.coll.find_one({'_id': 'foo2'})
+        self.assertEqual(obj, {u'a': 2, u'x': {}, u'_id': u'foo2', u'b': [4, 2, 3]})
+
     def test_unset_dotted(self):
         self.coll.update({}, { '$unset': { 'b.f.1.g': 1 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
