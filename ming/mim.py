@@ -411,7 +411,8 @@ class Collection(collection.Collection):
             else:
                 return None
 
-        before = self.find_one(query, fields, sort=kwargs.get('sort'))
+        before = self.find_one(query, sort=kwargs.get('sort'))
+
         if remove:
             self.__remove({'_id': before['_id']})
         elif not upserted:
@@ -423,6 +424,8 @@ class Collection(collection.Collection):
         elif upserted:
             return None
         else:
+            if fields is not None:
+                return _project(before, fields)
             return before
 
     def find_and_modify(self, query=None, update=None, fields=None,

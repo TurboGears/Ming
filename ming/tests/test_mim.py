@@ -629,6 +629,13 @@ class TestCollection(TestCase):
                                                                               {'$set': {'i': 2}},
                                                                               new=True))
 
+    def test_find_and_modify_returns_new_value_on_new_filter_id(self):
+        self.bind.db.foo.insert({'i': 1})
+        self.assertEqual({'i': 2}, self.bind.db.foo.find_and_modify({'i': 1},
+                                                                    {'$set': {'i': 2}},
+                                                                    fields={'_id': False, 'i': True},
+                                                                    new=True))
+
     def test_find_and_modify_returns_new_value_on_new_upsert(self):
         self.assertEqual({'_id': 1, 'i': 2}, self.bind.db.foo.find_and_modify({'i': 1},
                                                                               {'$set': {'_id': 1,
