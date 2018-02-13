@@ -732,11 +732,13 @@ class TestCollection(TestCase):
     def test_index_information(self):
         self.bind.db.coll.ensure_index([('myfield', 1)],
                                        background=True,
-                                       expireAfterSeconds=42)
+                                       expireAfterSeconds=42,
+                                       unique=True)
         info = self.bind.db.coll.index_information()
-        self.assertEqual(info['myfield']['key'][0], ('myfield', 1))
+        self.assertEqual(info['myfield']['key'], [('myfield', 1)])
         self.assertEqual(info['myfield']['background'], 1)
         self.assertEqual(info['myfield']['expireAfterSeconds'], 42)
+        self.assertEqual(info['myfield']['unique'], True)
 
     def test_insert_manipulate_false(self):
         doc = {'x': 1}

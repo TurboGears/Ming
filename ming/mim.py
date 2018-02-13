@@ -580,14 +580,15 @@ class Collection(collection.Collection):
         if isinstance(key_or_list, list):
             keys = tuple(tuple(k) for k in key_or_list)
         else:
-            keys = ((key_or_list, ASCENDING),)
+            keys = ([key_or_list, ASCENDING],)
         if name:
             index_name = name
         else:
             index_name = '_'.join([k[0] for k in keys])
-        self._indexes[index_name] = { "key": keys }
+        self._indexes[index_name] = { "key": list(keys) }
         self._indexes[index_name].update(kwargs)
         if not unique: return
+        self._indexes[index_name]['unique'] = True
         self._unique_indexes[keys] = index = {}
         for id, doc in six.iteritems(self._data):
             key_values = self._extract_index_key(doc, keys)
