@@ -227,6 +227,12 @@ class TestDottedOperators(TestCase):
         obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
         self.assertEqual(obj, { 'b': { 'e': [1,2,3,4] } })
 
+    def test_addToSet_empty(self):
+        self.coll.update_many({}, { '$unset': { 'b': True, 'x': True, 'a': True } })
+        self.coll.update_many({}, { '$addToSet': { 'y.z': 4 } })
+        obj = self.coll.find_one({ '_id': 'foo'})
+        self.assertEqual(obj, {'_id': 'foo', 'y': {'z': [4]}})
+
     def test_project_dotted(self):
         obj = self.coll.find_one({}, { 'b.e': 1 })
         self.assertEqual(obj, { '_id': 'foo', 'b': { 'e': [ 1,2,3] } })
