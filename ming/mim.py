@@ -918,6 +918,11 @@ class Match(object):
             if not isinstance(value, (bson.RE_TYPE, bson.Regex)):
                 value = re.compile(value)
             if isinstance(value, bson.RE_TYPE):
+                if isinstance(val, MatchList):
+                    for item in val:
+                        if bool(item not in (None, ()) and value.search(item)):
+                            return True
+                    return False
                 return bool(val not in (None, ()) and value.search(val))
             elif isinstance(value, bson.Regex):
                 return bool(val not in (None, ()) and value.try_compile().search(val))
