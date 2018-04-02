@@ -757,6 +757,7 @@ class TestBsonCompare(TestCase):
         assert mim.BsonArith.cmp(1.1, -1.3) == 1
         assert mim.BsonArith.cmp(1.1, 1.1111) == -1
 
+
 class TestMatch(TestCase):
 
     def test_simple_match(self):
@@ -872,6 +873,14 @@ class TestMatch(TestCase):
         self.assertIsNotNone(mim.match({'a': {'b': 1}}, doc))
         self.assertIsNone(mim.match({'a': {'b': 2}}, doc))
         self.assertIsNone(mim.match({'a': {'b': 1, 'c': 1}}, doc))
+
+    def test_subdoc_deep(self):
+        doc = {'a': {'b': {'c': 1}}}
+        self.assertIsNotNone(mim.match({'a': {'b': {'c': 1}}}, doc))
+
+    def test_subdoc_deep_list(self):
+        doc = {'a': [0, [1, 1, 1], 2, 3]}
+        self.assertIsNotNone(mim.match({'a': [0, [1, 1, 1], 2, 3]}, doc))
 
     def test_traverse_none(self):
         doc = {'a': None}
