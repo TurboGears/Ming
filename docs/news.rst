@@ -1,9 +1,18 @@
 Ming News / Release Notes
 =====================================
 
+The latest releases are 0.6.x and support PyMongo 3.  The 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
+
+0.6.? - unreleased
+------------------------------------------------
+* MIM: match correctly when search values are lists or dicts more than 1 level deep.
+
+0.5.6 (Apr 2, 2018)
+------------------------------------------------
+* MIM: match correctly when search values are lists or dicts more than 1 level deep.
+
 0.6.1 (Sep 27, 2017)
 --------------------
-
 * MIM: Support searching for $regex that contain text instead of only "startswith"
 
 0.6.0 (Sep 24, 2017)
