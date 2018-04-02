@@ -716,12 +716,13 @@ class BsonArith(object):
 
     @classmethod
     def _build_types(cls):
+        # this is a list of conversion functions, and the types they apply to
         cls._types = [
             (lambda x:x, [ type(None) ]),
             (lambda x:x, [ int ] + list(six.integer_types)),
             (lambda x:x, list(set([str, six.text_type]))),
-            (lambda x:dict(x), [ dict, MatchDoc ]),
-            (lambda x:list(x), [ list, MatchList ]),
+            (lambda x:{k: cls.to_bson(v) for k, v in six.iteritems(x)}, [ dict, MatchDoc ]),
+            (lambda x:list(cls.to_bson(i) for i in x), [ list, MatchList ]),
             (lambda x:x, [ tuple ]),
             (lambda x:x, [ bson.Binary ]),
             (lambda x:x, [ bson.ObjectId ]),
