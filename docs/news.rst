@@ -1,6 +1,11 @@
 Ming News / Release Notes
 =====================================
 
+All further 0.5.x releases
+--------------------------
+Changes are in the **master** branch's news.rst, for easier discoverability.
+
+
 0.5.5 (Nov 30, 2016)
 ------------------------------------------------
 * MIM: do not raise errors when regex matching against None or non-existant values
