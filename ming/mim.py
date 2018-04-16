@@ -478,13 +478,13 @@ class Collection(collection.Collection):
         warnings.warn('insert is now deprecated, please use insert_one or insert_many', DeprecationWarning)
         return self.__insert(doc_or_docs, manipulate, **kwargs)
 
-    def insert_one(self, document):
+    def insert_one(self, document, session=None):
         result = self.__insert(document)
         if result:
             result = result[0]
         return InsertOneResult(result or None, True)
 
-    def insert_many(self, documents, ordered=True):
+    def insert_many(self, documents, ordered=True, session=None):
         result = self.__insert(documents)
         return InsertManyResult(result, True)
 
@@ -566,15 +566,15 @@ class Collection(collection.Collection):
         warnings.warn('remove is now deprecated, please use delete_many or delete_one', DeprecationWarning)
         self.__remove(spec, **kwargs)
 
-    def delete_one(self, filter):
+    def delete_one(self, filter, session=None):
         res = self.__remove(filter, multi=False)
         return DeleteResult(res, True)
 
-    def delete_many(self, filter):
+    def delete_many(self, filter, session=None):
         res = self.__remove(filter, multi=True)
         return DeleteResult(res, True)
 
-    def list_indexes(self):
+    def list_indexes(self, session=None):
         return Cursor(self, lambda: self._indexes.values())
 
     def ensure_index(self, key_or_list, unique=False, cache_for=300,
