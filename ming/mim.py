@@ -667,11 +667,6 @@ class Cursor(object):
         if isinstance(fields, (tuple, list)):
             fields = dict((f, 1) for f in fields)
 
-        if fields is not None and '_id' not in fields:
-            f = { '_id': 1 }
-            f.update(fields)
-            fields = f
-
         self._collection = collection
         self._iterator_gen = _iterator_gen
         self._sort = sort
@@ -1261,6 +1256,7 @@ def wrap_as_class(value, as_class):
     else:
         return value
 
+
 def _traverse_doc(doc, key):
     path = key.split('.')
     cur = doc
@@ -1268,15 +1264,49 @@ def _traverse_doc(doc, key):
         cur = cur.setdefault(part, {})
     return cur, path[-1]
 
+
+def _traverse_delete(doc, path):
+    return _traverse_delete_(doc, path.split('.'))
+
+
+def _traverse_delete_(doc, keys):
+    if len(keys) == 1:
+        del doc[keys[0]]
+    else:
+        return _traverse_delete_(doc[keys[0]], keys[1:])
+
+
 def _project(doc, fields):
-    result = {}
+    if [name for name, value in fields.items() if value == 1 or value is True]:
+        result = {'_id': doc['_id']}
+    else:
+        result = doc
+
     for name, value in fields.items():
-        if not value: continue
+        if not value:
+            _traverse_delete(result, name)
+            continue
+        if isinstance(value, dict):
+            if value.keys()[0] == '$slice':
+                v = value.values()[0]
+                if isinstance(v, list):
+                    # skip and limit
+                    l, key = _traverse_doc(doc, name)
+                    l[key] = l[key][v[0]:v[0] + v[1]]
+                else:
+                    l, key = _traverse_doc(doc, name)
+                    if v < 0:
+                        l[key] = l[key][v:]
+                    else:
+                        l[key] = l[key][:v]
+
         sub_doc, key = _traverse_doc(doc, name)
         sub_result, key = _traverse_doc(result, name)
         try:
             sub_result[key] = sub_doc[key]
         except KeyError:
+            if name == 'score':
+                sub_result['score'] = 'text score sorting not implemented in mim'
             log.debug("Field %s doesn't in %s, skip..." % (key, sub_doc.keys()))
             pass
     return result

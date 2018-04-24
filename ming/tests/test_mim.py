@@ -13,7 +13,7 @@ class TestDatastore(TestCase):
     def setUp(self):
         self.bind = create_datastore('mim:///testdb')
         self.bind.conn.drop_all()
-        self.bind.db.coll.insert({'_id':'foo', 'a':2, 'c':[1,2,3]})
+        self.bind.db.coll.insert({'_id':'foo', 'a':2, 'c':[1,2,3], 'z': {'egg': 'spam', 'spam': 'egg'}})
         for r in range(4):
             self.bind.db.rcoll.insert({'_id':'r%s' % r, 'd':r})
 
@@ -94,7 +94,8 @@ class TestDatastore(TestCase):
         self.assertEqual(1, f(dict({'_id': 'foo', '$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count())
 
     def test_find_with_fields(self):
-        o = self.bind.db.coll.find_one({'a':2}, projection=['a'])
+        # I think this should be removed
+        o = self.bind.db.coll.find_one({'a': 2}, projection=['a'])
         assert o['a'] == 2
         assert o['_id'] == 'foo'
         assert 'c' not in o
@@ -111,6 +112,12 @@ class TestDatastore(TestCase):
         assert o['a'] == 2
         assert 'c' not in o
 
+    def test_find_with_projection_of_0_dotted(self):
+        o = self.bind.db.coll.find_one({'a': 2}, projection={'z.egg': 0})
+        assert o['_id'] == 'foo'
+        assert o['a'] == 2
+        assert o['z'] == {'spam': 'egg'}
+
     def test_find_with_progection_positive_slice(self):
         o = self.bind.db.coll.find_one({'a': 2}, projection={'c': {'$slice': 2}})
         assert o['_id'] == 'foo'
@@ -122,6 +129,12 @@ class TestDatastore(TestCase):
         assert o['_id'] == 'foo'
         assert o['a'] == 2
         assert o['c'] == [2, 3]
+
+    def test_find_with_projection_skip_and_limit_slice(self):
+        o = self.bind.db.coll.find_one({'a': 2}, projection={'c': {'$slice': [1, 1]}})
+        assert o['_id'] == 'foo'
+        assert o['a'] == 2
+        assert o['c'] == [2]
 
     def test_find_with_projection_of_text_score(self):
         o = self.bind.db.coll.find_one({'a': 2}, projection={'score': {'$meta': 'textScore'}})
