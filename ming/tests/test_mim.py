@@ -99,6 +99,37 @@ class TestDatastore(TestCase):
         assert o['_id'] == 'foo'
         assert 'c' not in o
 
+    def test_find_with_projection_of_1(self):
+        o = self.bind.db.coll.find_one({'a': 2}, projection={'c': 1})
+        assert o['_id'] == 'foo'  # the _id must be always present
+        assert 'a' not in o
+        assert o['c'] == [1, 2, 3]
+
+    def test_find_with_projection_of_0(self):
+        o = self.bind.db.coll.find_one({'a': 2}, projection={'c': 0})
+        assert o['_id'] == 'foo'
+        assert o['a'] == 2
+        assert 'c' not in o
+
+    def test_find_with_progection_positive_slice(self):
+        o = self.bind.db.coll.find_one({'a': 2}, projection={'c': {'$slice': 2}})
+        assert o['_id'] == 'foo'
+        assert o['a'] == 2
+        assert o['c'] == [1, 2]
+
+    def test_find_with_projection_negative_slice(self):
+        o = self.bind.db.coll.find_one({'a': 2}, projection={'c': {'$slice': -2}})
+        assert o['_id'] == 'foo'
+        assert o['a'] == 2
+        assert o['c'] == [2, 3]
+
+    def test_find_with_projection_of_text_score(self):
+        o = self.bind.db.coll.find_one({'a': 2}, projection={'score': {'$meta': 'textScore'}})
+        assert o['_id'] == 'foo'
+        assert o['a'] == 2
+        assert o['c'] == [1, 2, 3]
+        assert o['score'] == 'text score sorting not implemented in mim'
+
     def test_rewind(self):
         collection = self.bind.db.coll
         collection.insert({'a':'b'}, safe=True)
