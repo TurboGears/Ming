@@ -424,9 +424,7 @@ class Collection(collection.Collection):
         elif upserted:
             return None
         else:
-            if fields is not None:
-                return _project(before, fields)
-            return before
+            return Projection(fields).apply(before)
 
     def find_and_modify(self, query=None, update=None, fields=None,
                         upsert=False, remove=False, **kwargs):
@@ -673,6 +671,7 @@ class Cursor(object):
         self._skip = skip or None    # cope with 0 being passed.
         self._limit = limit or None  # cope with 0 being passed.
         self._fields = fields
+        self._projection = Projection(fields)
         self._as_class = as_class
         self._safe_to_chain = True
 
@@ -733,8 +732,7 @@ class Cursor(object):
     def next(self):
         value = six.next(self.iterator)
         value = bcopy(value)
-        if self._fields:
-            value = _project(value, self._fields)
+        value = self._projection.apply(value)
         return wrap_as_class(value, self._as_class)
 
     __next__ = next
@@ -1320,51 +1318,78 @@ def _traverse_doc(doc, key):
     return cur, path[-1]
 
 
-def _traverse_delete(doc, path):
-    return _traverse_delete_(doc, path.split('.'))
+class Projection(object):
+    """Applies a projection to a field matching a query.
 
+    The projection is applied by the Cursor while consuming
+    the iterator of documents matching the query.
+    """
+    def __init__(self, projection):
+        self._projection = projection
 
-def _traverse_delete_(doc, keys):
-    if len(keys) == 1:
-        del doc[keys[0]]
-    else:
-        return _traverse_delete_(doc[keys[0]], keys[1:])
+    def apply(self, doc):
+        if not self._projection:
+            return doc
 
+        if [_ for _ in self._projection.values() if _ in (1, True)]:
+            # If at least one projected field was projected with 1/True
+            # it means that the fields should be limited to the specified fields.
+            # The ``_id`` is always there unless explicitly excluded.
+            result = {'_id': doc['_id']}
+        else:
+            # Otherwise it means that we are excluding some fields (those at 0)
+            # or applying projection operations and so all fields that are
+            # not explicitly excluded should be projected.
+            result = doc
 
-def _project(doc, fields):
-    if [name for name, value in fields.items() if value == 1 or value is True]:
-        result = {'_id': doc['_id']}
-    else:
-        result = doc
+        for name, value in self._projection.items():
+            if value in (0, False):
+                self._pop_key(result, name)
+                continue
 
-    for name, value in fields.items():
-        if not value:
-            _traverse_delete(result, name)
-            continue
-        if isinstance(value, dict):
-            if value.keys()[0] == '$slice':
-                v = value.values()[0]
-                if isinstance(v, list):
-                    # skip and limit
-                    l, key = _traverse_doc(doc, name)
-                    l[key] = l[key][v[0]:v[0] + v[1]]
-                else:
-                    l, key = _traverse_doc(doc, name)
-                    if v < 0:
-                        l[key] = l[key][v:]
+            if isinstance(value, dict):
+                for projection_op, op_args in value.items():
+                    if projection_op == '$slice':
+                        v = op_args
+                        if isinstance(v, list):
+                            # skip and limit
+                            l, key = _traverse_doc(doc, name)
+                            l[key] = l[key][v[0]:v[0] + v[1]]
+                        else:
+                            l, key = _traverse_doc(doc, name)
+                            if v < 0:
+                                l[key] = l[key][v:]
+                            else:
+                                l[key] = l[key][:v]
+                    elif projection_op == '$meta':
+                        if op_args == 'textScore':
+                            subdoc, subkey = _traverse_doc(doc, name)
+                            subdoc[subkey] = 1.0  # Currently we always fake a 1.0 score.
+                        else:
+                            raise ValueError('Unsupported $meta projection %s' % op_args)
                     else:
-                        l[key] = l[key][:v]
+                        raise ValueError('Unsupported projection operator %s' % projection_op)
 
-        sub_doc, key = _traverse_doc(doc, name)
-        sub_result, key = _traverse_doc(result, name)
-        try:
-            sub_result[key] = sub_doc[key]
-        except KeyError:
-            if name == 'score':
-                sub_result['score'] = 'text score sorting not implemented in mim'
-            log.debug("Field %s doesn't in %s, skip..." % (key, sub_doc.keys()))
-            pass
-    return result
+            sub_doc, key = _traverse_doc(doc, name)
+            sub_result, key = _traverse_doc(result, name)
+            try:
+                sub_result[key] = sub_doc[key]
+            except KeyError:
+                log.debug("Field %s doesn't in %s, skip..." % (key, sub_doc.keys()))
+                pass
+        return result
+
+    def _pop_key(self, doc, key):
+        """Removes a key or subkey from the document.
+
+        The key can be in the form subdoc.subkey to
+        remove a key from a subdocument.
+        """
+        path = key.split('.')
+        cur = doc
+        for step in path[:-1]:
+            cur = cur[step]
+        cur.pop(path[-1], None)
 
 
 def get_collection_from_objectid(_id):

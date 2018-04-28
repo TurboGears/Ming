@@ -141,7 +141,7 @@ class TestDatastore(TestCase):
         assert o['_id'] == 'foo'
         assert o['a'] == 2
         assert o['c'] == [1, 2, 3]
-        assert o['score'] == 'text score sorting not implemented in mim'
+        assert o['score'] == 1.0  # MIM currently always reports 1 as the score.
 
     def test_rewind(self):
         collection = self.bind.db.coll
