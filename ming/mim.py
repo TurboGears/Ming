@@ -871,6 +871,14 @@ class BsonArith(object):
 
 
 def match(spec, doc):
+    """Checks if the given ``doc`` matches the provided ``spec``.
+
+    This is used by find and other places in need of checking
+    documents against a provided filter.
+
+    Returns the ``MatchDoc`` instance for the matching document
+    or ``None`` if the document doesn't match.
+    """
     spec = bcopy(spec)
     if '$or' in spec:
         if any(match(branch, doc) for branch in spec.pop('$or')):
@@ -889,6 +897,13 @@ def match(spec, doc):
 
 
 class Match(object):
+    """Foundation for ``MatchDoc`` and ``MatchList``.
+
+    Provides all the functions that you might need to apply
+    against a document or a list of documents to check if
+    it matches a query or to apply update operations to it
+    in case of an update query.
+    """
     def match(self, key, op, value):
         log.debug('match(%r, %r, %r, %r)',
                   self, key, op, value)
@@ -1048,6 +1063,16 @@ class Match(object):
 
 
 class MatchDoc(Match):
+    """A document matching a specific query.
+
+    A document that is a candidate for execution of a query,
+    gets promoted to a ``MatchDoc``. This exposes enables the
+    features needed to:
+
+        - check if the document matches against the query
+        - update the document if the query was an update one.
+    """
+
     def __init__(self, doc):
         self._orig = doc
         self._doc = {}
@@ -1059,6 +1084,29 @@ class MatchDoc(Match):
             else:
                 self._doc[k] = v
     def traverse(self, first, *rest):
+        """Resolves a parent.child.leaf path within the document.
+
+        Returns a tuple ``(subdoc, leaf_key)`` where:
+
+        - ``subdoc`` is a new ``MatchDoc`` for the deepest subdocument
+          containing the leaf key expressed by the provided path.
+        - ``leaf_key`` is the key of the field in ``subdoc``containing
+          the value that the path provided leads to.
+
+        For example in case of a document like::
+
+            {
+                'root': {
+                    'subdoc': {
+                        'value': 5
+                    }
+                }
+            }
+
+        The path ``root.subdoc.value`` will return a ``MatchDoc``
+        for the subdocument ``root.subdoc`` as the ``subdoc`` and
+        ``value`` as the ``leaf_key``.
+        """
         if not rest:
             if '.' in first:
                 return self.traverse(*(first.split('.')))
@@ -1094,6 +1142,13 @@ class MatchDoc(Match):
 
 
 class MatchList(Match):
+    """A List that is part of a document matching a query.
+
+    A ``MatchDoc`` might contain lists within itself,
+    all those lists will be wrapped in a ``MatchList``
+    so their content can be traversed, tested against the filter
+    and updated according to the query being executed.
+    """
     def __init__(self, doc, pos=None):
         self._orig = doc
         self._doc = []
