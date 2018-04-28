@@ -68,7 +68,7 @@ Alternatively, if you don't have **pip** installed, `download it from PyPi
 .. note::
 
     To use the bleeding-edge version of Ming, you can get the source from
-    `SourceForge <http://sourceforge.net/p/merciless/code/ci/master/tree/>`_
+    `GitHub <https://github.com/TurboGears/Ming>`_
     and install it as above.
 
 Connecting to MongoDB
