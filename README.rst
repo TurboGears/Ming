@@ -22,9 +22,8 @@ Ming
 .. image:: https://img.shields.io/twitter/follow/turbogearsorg.svg?style=social&label=Follow
     :target: https://twitter.com/turbogearsorg
 
-Ming is a MongoDB ODM ( Object Document Mapper, like an ORM but for Document based databases).
-
-Ming builds on top of ``pymongo`` by exending with:
+Ming is a MongoDB ODM ( Object Document Mapper, like an ORM but for Document based databases),
+that builds on top of ``pymongo`` by extending it with:
 
 * Declarative Models
 * Schema Validation and Conversion
@@ -33,6 +32,12 @@ Ming builds on top of ``pymongo`` by exending with:
 * Identity Map
 * One-To-Many, Many-To-One and Many-To-Many Relations
 * Pure InMemory MongoDB Implementation
+
+Ming is the official MongoDB support layer of `TurboGears <http://www.turbogears.org>`_ web
+framework, thus feel free to join the TurboGears Gitter or Twitter to discuss Ming.
+
+If you want to dig further in Ming, documentation is available
+at http://ming.readthedocs.io/en/latest/
 
 Getting Started
 ---------------
@@ -73,8 +78,3 @@ Then you can create and query those models::
       _id=ObjectId('5ae4ef717ddf1ff6704afff5')
       title='FirstPage'>
 
-Documentation
--------------
-
-If you want to dig further in Ming, you can find the documentation
-on http://ming.readthedocs.io/en/latest/
