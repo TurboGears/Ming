@@ -909,23 +909,13 @@ class Match(object):
         if isinstance(val, MatchList):
             if val.match('$', op, value): return True
         if op == '$eq':
-            if isinstance(value, bson.RE_TYPE):
-                return bool(val not in (None, ()) and value.search(val))
-            if isinstance(value, bson.Regex):
-                return bool(val not in (None, ()) and value.try_compile().search(val))
+            if isinstance(value, (bson.RE_TYPE, bson.Regex)):
+                return self._match_regex(value, val)
             return BsonArith.cmp(val, value) == 0
         if op == '$regex':
             if not isinstance(value, (bson.RE_TYPE, bson.Regex)):
                 value = re.compile(value)
-            if isinstance(value, bson.RE_TYPE):
-                if isinstance(val, MatchList):
-                    for item in val:
-                        if bool(item not in (None, ()) and value.search(item)):
-                            return True
-                    return False
-                return bool(val not in (None, ()) and value.search(val))
-            elif isinstance(value, bson.Regex):
-                return bool(val not in (None, ()) and value.try_compile().search(val))
+            return self._match_regex(value, val)
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
         if op == '$gte': return BsonArith.cmp(val, value) >= 0
@@ -963,6 +953,17 @@ class Match(object):
                         return True
             return False
         raise NotImplementedError(op)
+
+    def _match_regex(self, regex, val):
+        if isinstance(regex, bson.Regex):
+            regex = regex.try_compile()
+
+        if isinstance(val, MatchList):
+            for item in val:
+                if bool(item not in (None, ()) and regex.search(item)):
+                    return True
+            return False
+        return bool(val not in (None, ()) and regex.search(val))
 
     def getvalue(self, path):
         parts = path.split('.')

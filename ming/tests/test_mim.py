@@ -907,6 +907,15 @@ class TestMatch(TestCase):
         self.assertIsNone(mim.match( {'c': regex}, doc))
         self.assertIsNone(mim.match( {'d': regex}, doc))
 
+    def test_regex_match_array(self):
+        doc = { 'a': ['hello world'], 'b': ['good night'], 'c': ['this is hello world'],
+                'd': ['one', 'two', 'hello three']}
+        regex = re.compile(r'^hello')
+        self.assertIsNotNone(mim.match( {'a': regex}, doc))
+        self.assertIsNone(mim.match( {'b': regex}, doc))
+        self.assertIsNone(mim.match( {'c': regex}, doc))
+        self.assertIsNotNone(mim.match( {'d': regex}, doc))
+
     def test_subdoc_partial(self):
         doc = {'a': {'b': 1, 'c': 1}}
         self.assertIsNotNone(mim.match({'a.b': 1}, doc))
