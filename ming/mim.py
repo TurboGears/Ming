@@ -995,20 +995,48 @@ class Match(object):
             for k,arg in update_parts.items():
                 subdoc, key = self.traverse(k)
                 func(subdoc, key, arg)
+                if getattr(func, 'ensure_key', False):
+                    # The function would create all intermediate subdocuments
+                    # if they didn't exist already.
+                    self._ensure_orig_key(k)
+
         validate(self._orig)
+
+    def _ensure_orig_key(self, k):
+        """Ensures that the path k leads to an existing subdocument in the matched document.
+
+        While traversing a MatchDoc creates all the intermediate missing subdocuments
+        in the MatchDoc._doc, the original document in the collection will still be lacking them.
+
+        This ensures that all steps that lead to the path and were missing in the
+        collection document are created and correspond to the objects that were created
+        into the MatchDoc while traversing it, so that any change to the MatchDoc is reflected
+        into the collection document too.
+        """
+        path = k.split('.')
+        doc = self
+        for step in path[:-1]:
+            if isinstance(doc, MatchList):
+                step = int(step)
+            if step not in doc._orig:
+                doc._orig[step] = doc._doc[step]._orig
+            doc = doc._doc[step]
 
     def _op_inc(self, subdoc, key, arg):
         subdoc.setdefault(key, 0)
         subdoc[key] += arg
+    _op_inc.ensure_key = True
 
     def _op_set(self, subdoc, key, arg):
         if isinstance(subdoc, list):
             key = int(key)
         subdoc[key] = bcopy(arg)
+    _op_set.ensure_key = True
 
     def _op_setOnInsert(self, subdoc, key, arg):
         subdoc[key] = bcopy(arg)
     _op_setOnInsert.upsert_only = True
+    _op_setOnInsert.ensure_key = True
 
     def _op_unset(self, subdoc, key, arg):
         try:
@@ -1025,6 +1053,7 @@ class Match(object):
             args = [arg]
         for member in args:
             l.append(bcopy(member))
+    _op_push.ensure_key = True
 
     def _op_pop(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
@@ -1036,6 +1065,7 @@ class Match(object):
     def _op_pushAll(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
         l.extend(bcopy(arg))
+    _op_pushAll.ensure_key = True
 
     def _op_addToSet(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
@@ -1047,6 +1077,7 @@ class Match(object):
         for member in args:
             if member not in l:
                 l.append(bcopy(member))
+    _op_addToSet.ensure_key = True
 
     def _op_pull(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
