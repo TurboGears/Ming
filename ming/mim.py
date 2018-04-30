@@ -908,6 +908,9 @@ class Match(object):
                 return bool(val not in (None, ()) and value.search(val))
             elif isinstance(value, bson.Regex):
                 return bool(val not in (None, ()) and value.try_compile().search(val))
+        if op == '$options':
+            log.debug('$options not implemented')
+            return True  # return True so at least doesn't fail if you use them
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
         if op == '$gte': return BsonArith.cmp(val, value) >= 0
