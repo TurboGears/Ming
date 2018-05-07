@@ -145,7 +145,7 @@ class TestDatastore(TestCase):
         assert o['_id'] == 'foo'
         assert o['a'] == 2
         assert o['c'] == [1, 2, 3]
-        assert o['score'] == 'text score sorting not implemented in mim'
+        assert o['score'] == 1.0  # MIM currently always reports 1 as the score.
 
     def test_rewind(self):
         collection = self.bind.db.coll
@@ -218,6 +218,11 @@ class TestDottedOperators(TestCase):
         obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
         self.assertEqual(obj, { 'b': { 'f': [{u'g': 1}, {}] } })
 
+        # Check that unsetting subkeys of a nonexisting subdocument has no side effect
+        self.coll.update({}, {'$unset': {'this_does_not_exists.x.y.z': 1}})
+        obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
+        self.assertEqual(obj, { 'b': { 'f': [{u'g': 1}, {}] } })
+
     def test_push_dotted(self):
         self.coll.update({}, { '$push': { 'b.e': 4 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
@@ -230,6 +235,12 @@ class TestDottedOperators(TestCase):
         self.coll.update({}, { '$addToSet': { 'b.e': 4 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
         self.assertEqual(obj, { 'b': { 'e': [1,2,3,4] } })
+
+    def test_addToSet_empty(self):
+        self.coll.update_many({}, { '$unset': { 'b': True, 'x': True, 'a': True } })
+        self.coll.update_many({}, { '$addToSet': { 'y.z': 4 } })
+        obj = self.coll.find_one({ '_id': 'foo'})
+        self.assertEqual(obj, {'_id': 'foo', 'y': {'z': [4]}})
 
     def test_project_dotted(self):
         obj = self.coll.find_one({}, { 'b.e': 1 })
@@ -725,11 +736,13 @@ class TestCollection(TestCase):
     def test_index_information(self):
         self.bind.db.coll.ensure_index([('myfield', 1)],
                                        background=True,
-                                       expireAfterSeconds=42)
+                                       expireAfterSeconds=42,
+                                       unique=True)
         info = self.bind.db.coll.index_information()
-        self.assertEqual(info['myfield']['key'][0], ('myfield', 1))
+        self.assertEqual(info['myfield']['key'], [('myfield', 1)])
         self.assertEqual(info['myfield']['background'], 1)
         self.assertEqual(info['myfield']['expireAfterSeconds'], 42)
+        self.assertEqual(info['myfield']['unique'], True)
 
     def test_insert_manipulate_false(self):
         doc = {'x': 1}
@@ -910,6 +923,15 @@ class TestMatch(TestCase):
         self.assertIsNone(mim.match( {'b': regex}, doc))
         self.assertIsNone(mim.match( {'c': regex}, doc))
         self.assertIsNone(mim.match( {'d': regex}, doc))
+
+    def test_regex_match_array(self):
+        doc = { 'a': ['hello world'], 'b': ['good night'], 'c': ['this is hello world'],
+                'd': ['one', 'two', 'hello three']}
+        regex = re.compile(r'^hello')
+        self.assertIsNotNone(mim.match( {'a': regex}, doc))
+        self.assertIsNone(mim.match( {'b': regex}, doc))
+        self.assertIsNone(mim.match( {'c': regex}, doc))
+        self.assertIsNotNone(mim.match( {'d': regex}, doc))
 
     def test_subdoc_partial(self):
         doc = {'a': {'b': 1, 'c': 1}}

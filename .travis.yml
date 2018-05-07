@@ -1,0 +1,20 @@
+language: python
+sudo: false
+python:
+  - "2.7"
+  - "3.3"
+  - "3.4"
+  - "3.5"
+  - "3.6"
+  - "pypy"
+
+install:
+  - "travis_retry pip install --upgrade pip"
+  - "travis_retry pip install --upgrade setuptools"
+  - "travis_retry pip install coveralls"
+  - "travis_retry pip install tox-travis"
+
+script: "tox"
+
+after_success:
+  - "coveralls"

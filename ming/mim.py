@@ -424,9 +424,7 @@ class Collection(collection.Collection):
         elif upserted:
             return None
         else:
-            if fields is not None:
-                return _project(before, fields)
-            return before
+            return Projection(fields).apply(before)
 
     def find_and_modify(self, query=None, update=None, fields=None,
                         upsert=False, remove=False, **kwargs):
@@ -478,13 +476,13 @@ class Collection(collection.Collection):
         warnings.warn('insert is now deprecated, please use insert_one or insert_many', DeprecationWarning)
         return self.__insert(doc_or_docs, manipulate, **kwargs)
 
-    def insert_one(self, document):
+    def insert_one(self, document, session=None):
         result = self.__insert(document)
         if result:
             result = result[0]
         return InsertOneResult(result or None, True)
 
-    def insert_many(self, documents, ordered=True):
+    def insert_many(self, documents, ordered=True, session=None):
         result = self.__insert(documents)
         return InsertManyResult(result, True)
 
@@ -566,15 +564,15 @@ class Collection(collection.Collection):
         warnings.warn('remove is now deprecated, please use delete_many or delete_one', DeprecationWarning)
         self.__remove(spec, **kwargs)
 
-    def delete_one(self, filter):
+    def delete_one(self, filter, session=None):
         res = self.__remove(filter, multi=False)
         return DeleteResult(res, True)
 
-    def delete_many(self, filter):
+    def delete_many(self, filter, session=None):
         res = self.__remove(filter, multi=True)
         return DeleteResult(res, True)
 
-    def list_indexes(self):
+    def list_indexes(self, session=None):
         return Cursor(self, lambda: self._indexes.values())
 
     def ensure_index(self, key_or_list, unique=False, cache_for=300,
@@ -582,14 +580,15 @@ class Collection(collection.Collection):
         if isinstance(key_or_list, list):
             keys = tuple(tuple(k) for k in key_or_list)
         else:
-            keys = ((key_or_list, ASCENDING),)
+            keys = ([key_or_list, ASCENDING],)
         if name:
             index_name = name
         else:
             index_name = '_'.join([k[0] for k in keys])
-        self._indexes[index_name] = { "key": keys }
+        self._indexes[index_name] = { "key": list(keys) }
         self._indexes[index_name].update(kwargs)
         if not unique: return
+        self._indexes[index_name]['unique'] = True
         self._unique_indexes[keys] = index = {}
         for id, doc in six.iteritems(self._data):
             key_values = self._extract_index_key(doc, keys)
@@ -673,6 +672,7 @@ class Cursor(object):
         self._skip = skip or None    # cope with 0 being passed.
         self._limit = limit or None  # cope with 0 being passed.
         self._fields = fields
+        self._projection = Projection(fields)
         self._as_class = as_class
         self._safe_to_chain = True
 
@@ -733,8 +733,7 @@ class Cursor(object):
     def next(self):
         value = six.next(self.iterator)
         value = bcopy(value)
-        if self._fields:
-            value = _project(value, self._fields)
+        value = self._projection.apply(value)
         return wrap_as_class(value, self._as_class)
 
     __next__ = next
@@ -871,6 +870,14 @@ class BsonArith(object):
 
 
 def match(spec, doc):
+    """Checks if the given ``doc`` matches the provided ``spec``.
+
+    This is used by find and other places in need of checking
+    documents against a provided filter.
+
+    Returns the ``MatchDoc`` instance for the matching document
+    or ``None`` if the document doesn't match.
+    """
     spec = bcopy(spec)
     if '$or' in spec:
         if any(match(branch, doc) for branch in spec.pop('$or')):
@@ -889,6 +896,13 @@ def match(spec, doc):
 
 
 class Match(object):
+    """Foundation for ``MatchDoc`` and ``MatchList``.
+
+    Provides all the functions that you might need to apply
+    against a document or a list of documents to check if
+    it matches a query or to apply update operations to it
+    in case of an update query.
+    """
     def match(self, key, op, value):
         log.debug('match(%r, %r, %r, %r)',
                   self, key, op, value)
@@ -896,21 +910,19 @@ class Match(object):
         if isinstance(val, MatchList):
             if val.match('$', op, value): return True
         if op == '$eq':
-            if isinstance(value, bson.RE_TYPE):
-                return bool(val not in (None, ()) and value.search(val))
-            if isinstance(value, bson.Regex):
-                return bool(val not in (None, ()) and value.try_compile().search(val))
+            if isinstance(value, (bson.RE_TYPE, bson.Regex)):
+                return self._match_regex(value, val)
             return BsonArith.cmp(val, value) == 0
         if op == '$regex':
             if not isinstance(value, (bson.RE_TYPE, bson.Regex)):
                 value = re.compile(value)
-            if isinstance(value, bson.RE_TYPE):
-                return bool(val not in (None, ()) and value.search(val))
-            elif isinstance(value, bson.Regex):
-                return bool(val not in (None, ()) and value.try_compile().search(val))
+            return self._match_regex(value, val)
         if op == '$options':
+            # $options is currently only correlated to $regex and is not a standalone operator
+            # always True to prevent code that use for example case insensitive regex from failing
+            # tests without any reason
             log.warn('$options not implemented')
-            return True  # return True so at least doesn't fail if you use them
+            return True
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
         if op == '$gte': return BsonArith.cmp(val, value) >= 0
@@ -949,6 +961,17 @@ class Match(object):
             return False
         raise NotImplementedError(op)
 
+    def _match_regex(self, regex, val):
+        if isinstance(regex, bson.Regex):
+            regex = regex.try_compile()
+
+        if isinstance(val, MatchList):
+            for item in val:
+                if bool(item not in (None, ()) and regex.search(item)):
+                    return True
+            return False
+        return bool(val not in (None, ()) and regex.search(val))
+
     def getvalue(self, path):
         parts = path.split('.')
         subdoc, key = self.traverse(*parts)
@@ -979,20 +1002,48 @@ class Match(object):
             for k,arg in update_parts.items():
                 subdoc, key = self.traverse(k)
                 func(subdoc, key, arg)
+                if getattr(func, 'ensure_key', False):
+                    # The function would create all intermediate subdocuments
+                    # if they didn't exist already.
+                    self._ensure_orig_key(k)
+
         validate(self._orig)
+
+    def _ensure_orig_key(self, k):
+        """Ensures that the path k leads to an existing subdocument in the matched document.
+
+        While traversing a MatchDoc creates all the intermediate missing subdocuments
+        in the MatchDoc._doc, the original document in the collection will still be lacking them.
+
+        This ensures that all steps that lead to the path and were missing in the
+        collection document are created and correspond to the objects that were created
+        into the MatchDoc while traversing it, so that any change to the MatchDoc is reflected
+        into the collection document too.
+        """
+        path = k.split('.')
+        doc = self
+        for step in path[:-1]:
+            if isinstance(doc, MatchList):
+                step = int(step)
+            if step not in doc._orig:
+                doc._orig[step] = doc._doc[step]._orig
+            doc = doc._doc[step]
 
     def _op_inc(self, subdoc, key, arg):
         subdoc.setdefault(key, 0)
         subdoc[key] += arg
+    _op_inc.ensure_key = True
 
     def _op_set(self, subdoc, key, arg):
         if isinstance(subdoc, list):
             key = int(key)
         subdoc[key] = bcopy(arg)
+    _op_set.ensure_key = True
 
     def _op_setOnInsert(self, subdoc, key, arg):
         subdoc[key] = bcopy(arg)
     _op_setOnInsert.upsert_only = True
+    _op_setOnInsert.ensure_key = True
 
     def _op_unset(self, subdoc, key, arg):
         try:
@@ -1009,6 +1060,7 @@ class Match(object):
             args = [arg]
         for member in args:
             l.append(bcopy(member))
+    _op_push.ensure_key = True
 
     def _op_pop(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
@@ -1020,6 +1072,7 @@ class Match(object):
     def _op_pushAll(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
         l.extend(bcopy(arg))
+    _op_pushAll.ensure_key = True
 
     def _op_addToSet(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
@@ -1031,6 +1084,7 @@ class Match(object):
         for member in args:
             if member not in l:
                 l.append(bcopy(member))
+    _op_addToSet.ensure_key = True
 
     def _op_pull(self, subdoc, key, arg):
         l = subdoc.setdefault(key, [])
@@ -1051,6 +1105,16 @@ class Match(object):
 
 
 class MatchDoc(Match):
+    """A document matching a specific query.
+
+    A document that is a candidate for execution of a query,
+    gets promoted to a ``MatchDoc``. This exposes enables the
+    features needed to:
+
+        - check if the document matches against the query
+        - update the document if the query was an update one.
+    """
+
     def __init__(self, doc):
         self._orig = doc
         self._doc = {}
@@ -1062,6 +1126,29 @@ class MatchDoc(Match):
             else:
                 self._doc[k] = v
     def traverse(self, first, *rest):
+        """Resolves a parent.child.leaf path within the document.
+
+        Returns a tuple ``(subdoc, leaf_key)`` where:
+
+        - ``subdoc`` is a new ``MatchDoc`` for the deepest subdocument
+          containing the leaf key expressed by the provided path.
+        - ``leaf_key`` is the key of the field in ``subdoc``containing
+          the value that the path provided leads to.
+
+        For example in case of a document like::
+
+            {
+                'root': {
+                    'subdoc': {
+                        'value': 5
+                    }
+                }
+            }
+
+        The path ``root.subdoc.value`` will return a ``MatchDoc``
+        for the subdocument ``root.subdoc`` as the ``subdoc`` and
+        ``value`` as the ``leaf_key``.
+        """
         if not rest:
             if '.' in first:
                 return self.traverse(*(first.split('.')))
@@ -1097,6 +1184,13 @@ class MatchDoc(Match):
 
 
 class MatchList(Match):
+    """A List that is part of a document matching a query.
+
+    A ``MatchDoc`` might contain lists within itself,
+    all those lists will be wrapped in a ``MatchList``
+    so their content can be traversed, tested against the filter
+    and updated according to the query being executed.
+    """
     def __init__(self, doc, pos=None):
         self._orig = doc
         self._doc = []
@@ -1268,51 +1362,78 @@ def _traverse_doc(doc, key):
     return cur, path[-1]
 
 
-def _traverse_delete(doc, path):
-    return _traverse_delete_(doc, path.split('.'))
+class Projection(object):
+    """Applies a projection to a field matching a query.
 
+    The projection is applied by the Cursor while consuming
+    the iterator of documents matching the query.
+    """
+    def __init__(self, projection):
+        self._projection = projection
 
-def _traverse_delete_(doc, keys):
-    if len(keys) == 1:
-        del doc[keys[0]]
-    else:
-        return _traverse_delete_(doc[keys[0]], keys[1:])
+    def apply(self, doc):
+        if not self._projection:
+            return doc
 
+        if [_ for _ in self._projection.values() if _ in (1, True)]:
+            # If at least one projected field was projected with 1/True
+            # it means that the fields should be limited to the specified fields.
+            # The ``_id`` is always there unless explicitly excluded.
+            result = {'_id': doc['_id']}
+        else:
+            # Otherwise it means that we are excluding some fields (those at 0)
+            # or applying projection operations and so all fields that are
+            # not explicitly excluded should be projected.
+            result = doc
 
-def _project(doc, fields):
-    if [name for name, value in fields.items() if value == 1 or value is True]:
-        result = {'_id': doc['_id']}
-    else:
-        result = doc
+        for name, value in self._projection.items():
+            if value in (0, False):
+                self._pop_key(result, name)
+                continue
 
-    for name, value in fields.items():
-        if not value:
-            _traverse_delete(result, name)
-            continue
-        if isinstance(value, dict):
-            if value.keys()[0] == '$slice':
-                v = value.values()[0]
-                if isinstance(v, list):
-                    # skip and limit
-                    l, key = _traverse_doc(doc, name)
-                    l[key] = l[key][v[0]:v[0] + v[1]]
-                else:
-                    l, key = _traverse_doc(doc, name)
-                    if v < 0:
-                        l[key] = l[key][v:]
+            if isinstance(value, dict):
+                for projection_op, op_args in value.items():
+                    if projection_op == '$slice':
+                        v = op_args
+                        if isinstance(v, list):
+                            # skip and limit
+                            l, key = _traverse_doc(doc, name)
+                            l[key] = l[key][v[0]:v[0] + v[1]]
+                        else:
+                            l, key = _traverse_doc(doc, name)
+                            if v < 0:
+                                l[key] = l[key][v:]
+                            else:
+                                l[key] = l[key][:v]
+                    elif projection_op == '$meta':
+                        if op_args == 'textScore':
+                            subdoc, subkey = _traverse_doc(doc, name)
+                            subdoc[subkey] = 1.0  # Currently we always fake a 1.0 score.
+                        else:
+                            raise ValueError('Unsupported $meta projection %s' % op_args)
                     else:
-                        l[key] = l[key][:v]
+                        raise ValueError('Unsupported projection operator %s' % projection_op)
 
-        sub_doc, key = _traverse_doc(doc, name)
-        sub_result, key = _traverse_doc(result, name)
-        try:
-            sub_result[key] = sub_doc[key]
-        except KeyError:
-            if name == 'score':
-                sub_result['score'] = 'text score sorting not implemented in mim'
-            log.debug("Field %s doesn't in %s, skip..." % (key, sub_doc.keys()))
-            pass
-    return result
+            sub_doc, key = _traverse_doc(doc, name)
+            sub_result, key = _traverse_doc(result, name)
+            try:
+                sub_result[key] = sub_doc[key]
+            except KeyError:
+                log.debug("Field %s doesn't in %s, skip..." % (key, sub_doc.keys()))
+                pass
+        return result
+
+    def _pop_key(self, doc, key):
+        """Removes a key or subkey from the document.
+
+        The key can be in the form subdoc.subkey to
+        remove a key from a subdocument.
+        """
+        path = key.split('.')
+        cur = doc
+        for step in path[:-1]:
+            cur = cur[step]
+        cur.pop(path[-1], None)
 
 
 def get_collection_from_objectid(_id):
