@@ -917,6 +917,12 @@ class Match(object):
             if not isinstance(value, (bson.RE_TYPE, bson.Regex)):
                 value = re.compile(value)
             return self._match_regex(value, val)
+        if op == '$options':
+            # $options is currently only correlated to $regex and is not a standalone operator
+            # always True to prevent code that use for example case insensitive regex from failing
+            # tests without any reason
+            log.warn('$options not implemented')
+            return True
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
         if op == '$gte': return BsonArith.cmp(val, value) >= 0

@@ -27,6 +27,10 @@ class TestDatastore(TestCase):
         assert 4 == f(dict(_id=re.compile(r'r\d+'))).count()
         assert 2 == f(dict(_id=re.compile(r'r[0-1]'))).count()
 
+    def test_regex_options(self):
+        f = self.bind.db.rcoll.find
+        assert 2 == f(dict(_id={'$regex': 'r[0-1]', '$options': 'i'})).count()
+
     def test_eq(self):
         f = self.bind.db.rcoll.find
         assert 1 == f(dict(d={'$eq': 0})).count()
