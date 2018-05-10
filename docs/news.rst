@@ -1,11 +1,17 @@
 Ming News / Release Notes
 =====================================
 
-The latest releases are 0.6.x and support PyMongo 3.  The 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
+The latest releases are 0.7.x and support PyMongo 3.  The 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
 
-0.6.? - unreleased
+0.7.0 (May 10, 2018)
 ------------------------------------------------
-* MIM: match correctly when search values are lists or dicts more than 1 level deep.
+* MIM: Support for PyMongo 3.6
+* MIM: Partial support for ``$text`` queries
+* MIM: Make created index match more the style pymongo itself stores indexes.
+* MIM: Support matching ``$regex`` against arrays.
+* MIM: Support fake ``$score`` in projections.
+* MIM: Support ``$slice`` in projections.
+* MIM: Partial support for bulk writes, currently only ``UpdateOne``.
 
 0.5.6 (Apr 2, 2018)
 ------------------------------------------------
