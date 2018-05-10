@@ -51,7 +51,7 @@ from ming.utils import LazyProperty
 
 import bson
 import six
-from pymongo import database, collection, ASCENDING, MongoClient
+from pymongo import database, collection, ASCENDING, MongoClient, UpdateOne
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo.results import DeleteResult, UpdateResult, InsertManyResult, InsertOneResult
 
@@ -658,6 +658,16 @@ class Collection(collection.Collection):
         return self.database.command({'distinct': self.name,
                                       'key': key,
                                       'filter': filter})
+
+    def bulk_write(self, requests, ordered=True,
+                   bypass_document_validation=False):
+        for step in requests:
+            if isinstance(step, UpdateOne):
+                self.update_one(step._filter, step._doc, upsert=step._upsert)
+            else:
+                raise NotImplementedError(
+                    "MIM currently doesn't support %s operations" % type(step)
+                )
 
 
 class Cursor(object):

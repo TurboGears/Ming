@@ -4,6 +4,7 @@ from unittest import TestCase
 
 import bson
 from ming import create_datastore, mim
+from pymongo import UpdateOne
 from pymongo.errors import OperationFailure, DuplicateKeyError
 from nose import SkipTest
 from mock import patch
@@ -951,3 +952,21 @@ class TestMatch(TestCase):
     def test_traverse_none(self):
         doc = {'a': None}
         self.assertIsNone(mim.match({'a.b.c': 1}, doc))
+
+
+class TestBulkOperations(TestCase):
+    def setUp(self):
+        self.bind = create_datastore('mim:///testdb')
+        self.bind.conn.drop_all()
+        
+    def test_update_one(self):
+        coll = self.bind.db.coll
+        coll.insert({'dme-o': 1})
+        coll.insert({'dme-o': 1})
+
+        coll.bulk_write([
+            UpdateOne({'dme-o': 1}, {'$set': {'dme-o': 2}})
+        ])
+
+        data = sorted([a['dme-o'] for a in coll.find({'dme-o': {'$exists': True}})])
+        self.assertEqual(data, [1, 2])
