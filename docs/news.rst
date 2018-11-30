@@ -3,6 +3,11 @@ Ming News / Release Notes
 
 The latest releases are 0.7.x and support PyMongo 3.  The 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
 
+0.7.1 (Nov 30, 2018)
+--------------------
+
+* MIM: Minimal support for ``Collection.aggregate``
+
 0.7.0 (May 10, 2018)
 ------------------------------------------------
 * MIM: Support for PyMongo 3.6
