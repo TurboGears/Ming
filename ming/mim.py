@@ -669,6 +669,27 @@ class Collection(collection.Collection):
                     "MIM currently doesn't support %s operations" % type(step)
                 )
 
+    def aggregate(self, pipeline, **kwargs):
+        steps = {}
+        for step in pipeline:
+            if set(step.keys()) & set(steps.keys()):
+                raise ValueError(
+                    'MIM currently supports a single step per type. Duplicate %s' % step
+                )
+            if set(step.keys()) - {'$match', '$project', '$sort', '$limit'}:
+                raise ValueError(
+                    'MIM currently only supports $match,$project,$sort,$limit steps.'
+                )
+            steps.update(step)
+
+        sort = steps.get('$sort', None)
+        if isinstance(sort, (bson.SON, dict)):
+            sort = sort.items()
+        return self.find(filter=steps.get('$match', {}),
+                         sort=sort,
+                         projection=steps.get('$project', None),
+                         limit=steps.get('$limit', None))
+
 
 class Cursor(object):
     def __init__(self, collection, _iterator_gen,

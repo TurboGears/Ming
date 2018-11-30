@@ -247,7 +247,7 @@ class TestBasicMapping(TestCase):
         self.session.expunge(doc)
         self.session.expunge(doc)
 
-    @patch('pymongo.collection.Collection.aggregate')
+    @patch('ming.mim.Collection.aggregate')
     def test_aggregate(self, pymongo_aggregate):
         self.Basic.query.aggregate([])
         assert pymongo_aggregate.called

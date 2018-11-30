@@ -9,6 +9,7 @@ from pymongo.errors import OperationFailure, DuplicateKeyError
 from nose import SkipTest
 from mock import patch
 
+
 class TestDatastore(TestCase):
 
     def setUp(self):
@@ -974,3 +975,39 @@ class TestBulkOperations(TestCase):
 
         data = sorted([a['dme-o'] for a in coll.find({'dme-o': {'$exists': True}})])
         self.assertEqual(data, [1, 2])
+
+
+class TestAggregate(TestCase):
+
+    def setUp(self):
+        self.bind = create_datastore('mim:///testdb')
+        self.bind.conn.drop_all()
+        self.bind.db.coll.insert({'_id':'foo', 'a':2, 'c':[1,2,3],
+                                  'z': {'egg': 'spam', 'spam': 'egg'}})
+        for r in range(4):
+            self.bind.db.rcoll.insert({'_id':'r%s' % r, 'd':r})
+
+    def test_aggregate_match(self):
+        res = self.bind.db.rcoll.aggregate([{'$match': {'d': {'$lt': 2}}}])
+        self.assertEqual(len(list(res)), 2)
+
+    def test_aggregate_match_sort(self):
+        res = self.bind.db.rcoll.aggregate([{'$match': {'d': {'$lt': 2}}},
+                                            {'$sort': {'d': -1}}])
+        res = list(res)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0]['d'], 1)
+
+        res = self.bind.db.rcoll.aggregate([{'$match': {'d': {'$lt': 2}}},
+                                            {'$sort': {'d': 1}}])
+        res = list(res)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0]['d'], 0)
+
+    def test_aggregate_match_sort_limit(self):
+        res = self.bind.db.rcoll.aggregate([{'$match': {'d': {'$lt': 2}}},
+                                            {'$sort': {'d': -1}},
+                                            {'$limit': 1}])
+        res = list(res)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]['d'], 1)
