@@ -684,7 +684,7 @@ class Collection(collection.Collection):
 
         sort = steps.get('$sort', None)
         if isinstance(sort, (bson.SON, dict)):
-            sort = sort.items()
+            sort = list(sort.items())
         return self.find(filter=steps.get('$match', {}),
                          sort=sort,
                          projection=steps.get('$project', None),
