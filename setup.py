@@ -34,7 +34,6 @@ setup(name='Ming',
       include_package_data=True,
       zip_safe=True,
       install_requires=[
-        "FormEncode >= 1.2.1",
         "pymongo>=3.0,<3.7",
         "pytz",
         "six>=1.6.1"
