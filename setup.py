@@ -34,16 +34,18 @@ setup(name='Ming',
       include_package_data=True,
       zip_safe=True,
       install_requires=[
+        # "FormEncode >= 1.2.1", # required to use ``ming.configure``
         "pymongo>=3.0,<3.7",
         "pytz",
         "six>=1.6.1"
       ],
-      tests_require = [
+      tests_require=[
         "nose",
         "mock >=0.8.0",
         "pytz",
         "WebOb",
         "webtest",
+        "FormEncode >= 1.2.1",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
       ],
       entry_points="""

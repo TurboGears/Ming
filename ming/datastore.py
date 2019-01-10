@@ -21,11 +21,11 @@ def create_engine(*args, **kwargs):
 
     All the provided keyword arguments are passed to :class:`.Engine`.
     """
-    use_class = kwargs.pop("use_class", None)
-    connect_retry = kwargs.pop("connect_retry", 3)
-    auto_ensure_indexes = kwargs.pop("auto_ensure_indexes", True)
+    use_class = kwargs.pop('use_class', None)
+    connect_retry = kwargs.pop('connect_retry', 3)
+    auto_ensure_indexes = kwargs.pop('auto_ensure_indexes', True)
     if use_class is None:
-        if args and args[0].startswith("mim:"):
+        if args and args[0].startswith('mim:'):
             use_class = lambda *a, **kw: mim.Connection.get()
             args = args[1:]
         else:
@@ -53,12 +53,12 @@ def create_datastore(uri, **kwargs):
     - create_datastore('foo')
     - create_datastore('foo', bind=create_engine())
     """
-    bind = kwargs.pop("bind", None)
+    bind = kwargs.pop('bind', None)
 
     if bind and kwargs:
         raise exc.MingConfigError(
-            "Unrecognized kwarg(s) when supplying bind: %s" % (kwargs.keys(),)
-        )
+            "Unrecognized kwarg(s) when supplying bind: %s" %
+            (kwargs.keys(),))
 
     parts = urllib.parse.urlsplit(uri)
 
@@ -83,18 +83,11 @@ class Engine(object):
     """Engine represents the connection to a MongoDB (or in-memory database).
 
     The ``Engine`` class lazily creates the connection the firs time it's
-    actually c.
+    actually accessed.
     """
 
-    def __init__(
-        self,
-        Connection,
-        conn_args,
-        conn_kwargs,
-        connect_retry,
-        auto_ensure_indexes,
-        _sleep=time.sleep,
-    ):
+    def __init__(self, Connection,
+                 conn_args, conn_kwargs, connect_retry, auto_ensure_indexes, _sleep=time.sleep):
         self._Connection = Connection
         self._conn_args = conn_args
         self._conn_kwargs = conn_kwargs
@@ -105,12 +98,12 @@ class Engine(object):
         self._conn = None
         self._lock = Lock()
 
-    def __repr__(self):  # pragma no cover
-        return "<Engine %r>" % self._conn
+    def __repr__(self): # pragma no cover
+        return '<Engine %r>' % self._conn
 
     def __getattr__(self, name):
         """Get the ``name`` database through this connection."""
-        if name == "conn":
+        if name == 'conn':
             raise AttributeError(name)
         return getattr(self.conn, name)
 
@@ -120,8 +113,7 @@ class Engine(object):
     @property
     def conn(self):
         """This is the pymongo connection itself."""
-        if self._conn is None:
-            self.connect()
+        if self._conn is None: self.connect()
         return self._conn
 
     def connect(self):
@@ -130,18 +122,17 @@ class Engine(object):
         This is usually done automatically when accessing
         a database for the first time through the engine.
         """
-        for x in six.moves.xrange(self._connect_retry + 1):
+        for x in six.moves.xrange(self._connect_retry+1):
             try:
                 with self._lock:
                     if self._conn is None:
                         self._conn = self._Connection(
-                            *self._conn_args, **self._conn_kwargs
-                        )
+                            *self._conn_args, **self._conn_kwargs)
                     else:
                         return self._conn
             except ConnectionFailure:
                 if x < self._connect_retry:
-                    self._log.exception("Error connecting (#%d)", x)
+                    self._log.exception('Error connecting (#%d)', x)
                     self._sleep(1)
                 else:
                     raise
@@ -165,12 +156,12 @@ class DataStore(object):
         self._authenticate = authenticate
         self._db = None
 
-    def __repr__(self):  # pragma no cover
-        return "<DataStore %r>" % self._db
+    def __repr__(self): # pragma no cover
+        return '<DataStore %r>' % self._db
 
     def __getattr__(self, name):
         """Get the ``name`` collection on this database."""
-        if name == "db":
+        if name == 'db':
             raise AttributeError(name)
         return getattr(self.db, name)
 
@@ -187,7 +178,7 @@ class DataStore(object):
         """
         if self._db is None:
             if self.bind is None:
-                raise ValueError("Trying to access db of an unconnected DataStore")
+                raise ValueError('Trying to access db of an unconnected DataStore')
 
             self._db = self.bind[self.name]
         return self._db

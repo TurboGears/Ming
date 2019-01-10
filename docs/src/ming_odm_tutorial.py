@@ -221,3 +221,15 @@ def connection_session():
     # through the session as .db and .bind
     session.db
     session.bind
+
+
+def connection_configure():
+    from ming import configure
+    from ming.odm import ThreadLocalODMSession
+
+    configure(**{'ming.mysession.uri': 'mongodb://localhost:27017/tutorial'})
+
+    session = ThreadLocalODMSession.by_name('mysession')
+    session.db
+
+    ThreadLocalODMSession.by_name('mysession') is session
