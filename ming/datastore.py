@@ -44,7 +44,6 @@ def create_datastore(uri, **kwargs):
     Optional Keyword args:
 
     - bind - a :class:`ming.datastore.Engine` instance
-    - authenticate - a dict ``{ name:str, password:str }`` with auth info
 
     All other keyword args are passed along to :meth:`create_engine`.
 
@@ -54,7 +53,6 @@ def create_datastore(uri, **kwargs):
     - create_datastore('foo')
     - create_datastore('foo', bind=create_engine())
     """
-    auth = kwargs.pop('authenticate', None)
     bind = kwargs.pop('bind', None)
 
     if bind and kwargs:
@@ -66,26 +64,19 @@ def create_datastore(uri, **kwargs):
 
     # Create the engine (if necessary)
     if parts.scheme:
-        if bind: raise exc.MingConfigError("bind not allowed with full URI")
-        bind_uri = parts._replace(
-            netloc=parts.netloc.split('@')[-1],
-            path='/').geturl()
-        bind = create_engine(bind_uri, **kwargs)
-
-    # extract the auth information
-    if parts.username:
-        if auth: raise exc.MingConfigError(
-            "auth info supplied in uri and kwargs")
-        auth = dict(
-            name=parts.username, password=parts.password)
+        if bind:
+            raise exc.MingConfigError("bind not allowed with full URI")
+        bind = create_engine(uri, **kwargs)
 
     # extract the database
     database = parts.path
-    if database.startswith('/'): database = database[1:]
+    if database.startswith("/"):
+        database = database[1:]
 
-    if bind is None: bind = create_engine(**kwargs)
+    if bind is None:
+        bind = create_engine(**kwargs)
 
-    return DataStore(bind, database, authenticate=auth)
+    return DataStore(bind, database)
 
 
 class Engine(object):
@@ -146,6 +137,7 @@ class Engine(object):
                 else:
                     raise
 
+
 class DataStore(object):
     """Represents a Database on a specific MongoDB Instance.
 
@@ -189,7 +181,4 @@ class DataStore(object):
                 raise ValueError('Trying to access db of an unconnected DataStore')
 
             self._db = self.bind[self.name]
-            if self._authenticate:
-                self._db.authenticate(**self._authenticate)
         return self._db
-

@@ -1,3 +1,4 @@
+import sys
 from unittest import TestCase, main
 
 from mock import patch, Mock
@@ -8,12 +9,15 @@ from ming import Session
 from ming import mim
 from ming import create_datastore, create_engine
 from ming.datastore import Engine
+from ming.exc import MingConfigError
+
 
 class DummyConnection(object):
-    def __init__(*args, **kwargs): pass
+    def __init__(*args, **kwargs):
+        pass
+
 
 class TestEngineConnection(TestCase):
-
     @patch('ming.datastore.MongoClient', spec=True)
     def test_normal(self, MockConnection):
         from pymongo import MongoClient
@@ -42,13 +46,15 @@ class TestConnectionFailure(TestCase):
         self.assertRaises(ConnectionFailure, engine.connect)
         self.assertEqual(failures[0], 18)
 
+
 class TestEngineMim(TestCase):
-    
+
     def test_mim(self):
         with patch('ming.datastore.mim.Connection', spec=True) as Connection:
             result = create_engine('mim:///')
             conn = result.connect()
             assert conn is Connection.get()
+
 
 class TestReplicaSet(TestCase):
 
@@ -61,8 +67,8 @@ class TestReplicaSet(TestCase):
         conn = result.connect()
         assert isinstance(conn, MongoClient)
 
-class TestDatastore(TestCase):
 
+class TestDatastore(TestCase):
     def setUp(self):
         self.patcher_conn = patch('ming.datastore.MongoClient')
         self.MockConn = self.patcher_conn.start()
@@ -85,12 +91,31 @@ class TestDatastore(TestCase):
             create_datastore('test_db'),
             'test_db')
 
-    def test_with_auth_in_uri(self):
-        ds = create_datastore('mongodb://user:pass@server/test_db')
-        self._check_datastore(ds, 'test_db')
-        self.assertEqual(
-            ds._authenticate,
-            dict(name='user', password='pass'))
+    @patch('ming.datastore.MongoClient', spec=True)
+    def test_configure_no_formencode(self, Connection):
+        with patch.dict(sys.modules, {"formencode": None}):
+            self.assertRaises(
+                MingConfigError,
+                ming.configure,
+                **{
+                    "ming.main.uri": "mongodb://localhost:27017/test_db",
+                    "ming.main.connect_retry": 1,
+                    "ming.main.tz_aware": False,
+                }
+            )
+
+    @patch('ming.datastore.MongoClient', spec=True)
+    def test_configure_no_formencode_variabledecode(self, Connection):
+        with patch.dict(sys.modules, {"formencode.variabledecode": None}):
+            self.assertRaises(
+                MingConfigError,
+                ming.configure,
+                **{
+                    "ming.main.uri": "mongodb://localhost:27017/test_db",
+                    "ming.main.connect_retry": 1,
+                    "ming.main.tz_aware": False,
+                }
+            )
 
     @patch('ming.datastore.MongoClient', spec=True)
     def test_configure(self, Connection):
@@ -105,6 +130,23 @@ class TestDatastore(TestCase):
         assert session.bind.bind._auto_ensure_indexes
         args, kwargs = Connection.call_args
         assert 'database' not in kwargs
+
+    @patch('ming.datastore.MongoClient', spec=True)
+    def test_configure_with_database(self, Connection):
+        ming.configure(
+            **{
+                "ming.main.uri": "mongodb://localhost:27017/test_db",
+                "ming.main.database": "another_test_db",
+                "ming.main.connect_retry": 1,
+                "ming.main.tz_aware": False,
+            }
+        )
+        session = Session.by_name("main")
+        assert session.bind.conn is not None
+        assert session.bind.db is not None
+        assert session.bind.bind._auto_ensure_indexes
+        args, kwargs = Connection.call_args
+        assert "database" in kwargs
 
     @patch('ming.datastore.MongoClient', spec=True)
     def test_configure_auto_ensure_indexes(self, Connection):
@@ -139,13 +181,6 @@ class TestDatastore(TestCase):
             create_datastore,
             'test_db', bind=create_engine('master'), replicaSet='foo')
 
-    def test_no_double_auth(self):
-        self.assertRaises(
-            ming.exc.MingConfigError,
-            create_datastore,
-            'mongodb://user:pass@server/test_db',
-            authenticate=dict(name='user', password='pass'))
-
     def test_mim_ds(self):
         ds = create_datastore('mim:///test_db')
         conn = ds.bind.connect()
@@ -154,6 +189,7 @@ class TestDatastore(TestCase):
     def _check_datastore(self, ds, db_name):
         assert ds.db is self.MockConn()[db_name]
         assert ds.name == db_name
+
 
 if __name__ == '__main__':
     main()
