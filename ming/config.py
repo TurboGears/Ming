@@ -7,10 +7,10 @@ from ming.datastore import create_datastore
 
 def variable_decode(**kwargs):
     try:
-        from formencode.variabledecode import variable_decode
+        from formencode.variabledecode import variable_decode as fe_variable_decode
     except ImportError:
         raise MingConfigError("Need to install FormEncode to use ``ming.configure``")
-    return variable_decode(kwargs)
+    return fe_variable_decode(kwargs)
 
 
 def configure(**kwargs):
