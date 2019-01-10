@@ -106,16 +106,6 @@ you will just pass it to the Session and rely on the session itself:
 
 .. run-pysnippet:: ming_odm_tutorial connection_session
 
-You can also use :meth:`ming.configure` to configure your session from
-a configuration dictionary with keys starting with ``ming.session_name.*``, this is
-useful in case your web framework has no support for Ming but loads
-its configuration into a dictionary:
-
-.. run-pysnippet:: ming_odm_tutorial connection_configure
-
-The first part must be 'ming', the second part is a session name, and the third
-parts are used as parameters to construct a :class:`.DataStore` object.
-
 .. note::
 
     If you are using the TurboGears2 web framework the framework sets up
