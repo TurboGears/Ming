@@ -28,16 +28,11 @@ def configure_from_nested_dict(config):
     except ImportError:
         raise MingConfigError("Need to install FormEncode to use ``ming.configure``")
 
-    class AuthenticateSchema(schema.Schema):
-        name = validators.UnicodeString(not_empty=True)
-        password = validators.UnicodeString(not_empty=True)
-
     class DatastoreSchema(schema.Schema):
         allow_extra_fields = True
 
         uri = validators.UnicodeString(if_missing=None, if_empty=None)
         database = validators.UnicodeString(if_missing=None, if_empty=None)
-        authenticate = AuthenticateSchema(if_missing=None, if_empty=None)
         connect_retry = validators.Number(if_missing=3, if_empty=0)
         auto_ensure_indexes = validators.StringBool(if_missing=True)
         # pymongo
