@@ -186,6 +186,12 @@ class TestDatastore(TestCase):
         conn = ds.bind.connect()
         assert conn is mim.Connection.get()
 
+    def test_create_datastore_bind_not_allowed(self):
+        self.assertRaises(
+            ming.exc.MingConfigError,
+            create_datastore,
+            'mim://test_db', bind=create_engine('master'))
+
     def _check_datastore(self, ds, db_name):
         assert ds.db is self.MockConn()[db_name]
         assert ds.name == db_name
