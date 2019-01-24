@@ -2,7 +2,6 @@
 from __future__ import with_statement
 import time
 import logging
-
 import six
 from six.moves import urllib
 from threading import Lock
