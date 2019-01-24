@@ -2,9 +2,9 @@
 from __future__ import with_statement
 import time
 import logging
-import urllib.parse
 
 import six
+from six.moves import urllib
 from threading import Lock
 
 from pymongo import MongoClient
