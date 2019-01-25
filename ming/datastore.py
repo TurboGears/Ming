@@ -7,7 +7,8 @@ from six.moves import urllib
 from threading import Lock
 
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
+from pymongo.errors import ConnectionFailure, InvalidURI
+from pymongo.uri_parser import parse_uri
 
 from . import mim
 from . import exc
@@ -60,16 +61,18 @@ def create_datastore(uri, **kwargs):
             "Unrecognized kwarg(s) when supplying bind: %s" %
             (kwargs.keys(),))
 
-    parts = urllib.parse.urlsplit(uri)
-
-    # Create the engine (if necessary)
-    if parts.scheme:
-        if bind:
-            raise exc.MingConfigError("bind not allowed with full URI")
-        bind = create_engine(uri, **kwargs)
+    try:
+        database = parse_uri(uri)["database"]
+    except InvalidURI:
+        urlparts = urllib.parse.urlsplit(uri)
+        database = urlparts.path
+        # Create the engine (if necessary)
+        if urlparts.scheme:
+            if bind:
+                raise exc.MingConfigError("bind not allowed with full URI")
+            bind = create_engine(uri, **kwargs)
 
     # extract the database
-    database = parts.path
     if database.startswith("/"):
         database = database[1:]
 
