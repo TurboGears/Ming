@@ -62,10 +62,10 @@ def create_datastore(uri, **kwargs):
             (kwargs.keys(),))
 
     try:
-        parts = parse_uri(uri)
+        database = parse_uri(uri)["database"]
     except InvalidURI:
         urlparts = urllib.parse.urlsplit(uri)
-        parts = {"database": urlparts.path}
+        database = urlparts.path
         # Create the engine (if necessary)
         if urlparts.scheme:
             if bind:
@@ -73,7 +73,6 @@ def create_datastore(uri, **kwargs):
             bind = create_engine(uri, **kwargs)
 
     # extract the database
-    database = parts.get("database")
     if database.startswith("/"):
         database = database[1:]
 
