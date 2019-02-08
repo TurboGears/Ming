@@ -81,7 +81,7 @@ def create_datastore(uri, **kwargs):
         bind = create_engine(uri, **kwargs)
 
     if bind is None:
-        # Couldn't parse a valid connection endpoing,
+        # Couldn't parse a valid connection endpoint,
         # Create engine without connection.
         bind = create_engine(**kwargs)
 
