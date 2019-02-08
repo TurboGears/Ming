@@ -66,17 +66,23 @@ def create_datastore(uri, **kwargs):
     except InvalidURI:
         urlparts = urllib.parse.urlsplit(uri)
         database = urlparts.path
-        # Create the engine (if necessary)
-        if urlparts.scheme:
-            if bind:
-                raise exc.MingConfigError("bind not allowed with full URI")
-            bind = create_engine(uri, **kwargs)
+        if not urlparts.scheme:
+            # provided uri is invalid for PyMongo and for Ming
+            uri = None
 
     # extract the database
     if database.startswith("/"):
         database = database[1:]
 
+    if uri:
+        # User provided a valid connection URL.
+        if bind:
+            raise exc.MingConfigError("bind not allowed with full URI")
+        bind = create_engine(uri, **kwargs)
+
     if bind is None:
+        # Couldn't parse a valid connection endpoing,
+        # Create engine without connection.
         bind = create_engine(**kwargs)
 
     return DataStore(bind, database)

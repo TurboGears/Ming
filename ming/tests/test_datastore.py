@@ -92,6 +92,15 @@ class TestDatastore(TestCase):
             'test_db')
 
     @patch('ming.datastore.MongoClient', spec=True)
+    def test_replica_set(self, MockConn):
+        from pymongo import MongoClient
+        result = create_datastore(
+            'mongodb://localhost:23,localhost:27017,localhost:999/test_db',
+            replicaSet='foo')
+        print(result.bind._conn_args[0])
+        assert result.bind._conn_args[0].startswith('mongodb://localhost:23,localhost:27017,localhost:999')
+
+    @patch('ming.datastore.MongoClient', spec=True)
     def test_configure_no_formencode(self, Connection):
         with patch.dict(sys.modules, {"formencode": None}):
             self.assertRaises(
