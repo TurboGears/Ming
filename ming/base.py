@@ -6,6 +6,7 @@ from datetime import datetime
 
 import bson
 import six
+from bson import Decimal128
 
 from ming.exc import MingException
 
@@ -144,7 +145,7 @@ def _safe_bson(obj):
             bson.ObjectId)):
         return obj
     elif isinstance(obj, decimal.Decimal):
-        return float(obj)
+        return Decimal128(obj)
     else:
         assert False, '%s is not safe for bsonification: %r' % (
             type(obj), obj)

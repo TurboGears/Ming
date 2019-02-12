@@ -1,5 +1,8 @@
+from decimal import Decimal, ROUND_DOWN
 from unittest import TestCase, main
 from datetime import datetime, date
+
+from bson import Decimal128
 
 import ming.datastore
 import pytz
@@ -154,6 +157,51 @@ class TestSchemaItem(TestCase):
 
     def test_nodefault(self):
         self.assertEqual(repr(S.NoDefault), '<NoDefault>')
+
+
+class TestNumberDecimal(TestCase):
+    def test_dont_allow_none(self):
+        si = S.NumberDecimal(allow_none=False)
+        self.assertRaises(S.Invalid, si.validate, None)
+
+    def test_default_values(self):
+        si = S.NumberDecimal()
+        assert si.validate(0.123456789) == Decimal128("0.123457")
+        assert si.validate(0.123456789) != Decimal128("0.123456789")
+        assert si.validate(0.123456432) == Decimal128("0.123456")
+        assert si.validate(0.123456432) != Decimal128("0.123456432")
+
+    def test_specify_precision(self):
+        si = S.NumberDecimal(precision=2)
+        assert si.validate(0.123456789) == Decimal128("0.12")
+        assert si.validate(0.125432109) == Decimal128("0.13")
+
+    def test_specify_rounding(self):
+        si = S.NumberDecimal(precision=2, rounding=ROUND_DOWN)
+        assert si.validate(0.129999999) == Decimal128("0.12")
+        assert si.validate(0.123456789) == Decimal128("0.12")
+
+    def test_input_int(self):
+        si = S.NumberDecimal(precision=2)
+        assert si.validate(0) == Decimal128("0.00")
+        assert si.validate(1) == Decimal128("1.00")
+
+    def test_input_float(self):
+        si = S.NumberDecimal(precision=2)
+        assert si.validate(12.42) == Decimal128("12.42")
+
+    def test_input_decimal(self):
+        si = S.NumberDecimal(precision=2)
+        assert si.validate(Decimal("12.42")) == Decimal128("12.42")
+
+    def test_input_decimal128(self):
+        si = S.NumberDecimal(precision=2)
+        assert si.validate(Decimal128("12.42")) == Decimal128("12.42")
+
+    def test_input_str(self):
+        si = S.NumberDecimal(precision=2)
+        self.assertRaises(S.Invalid, si.validate, "12.42")
+
 
 if __name__ == '__main__':
     main()
