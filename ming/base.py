@@ -1,6 +1,7 @@
 """Ming Base module.  Good stuff here.
 """
 import decimal
+import warnings
 from collections import defaultdict
 from datetime import datetime
 
@@ -53,6 +54,9 @@ class Object(dict):
             return bson
 
     def make_safe(self):
+        warnings.warn("make_safe is now deprecated. "
+                      "If your code relies on make_safe for validation, "
+                      "you should consider adding your own layer of validation", DeprecationWarning)
         safe_self = _safe_bson(self)
         self.update(safe_self)
 
@@ -132,14 +136,18 @@ class Cursor(object):
         return self
 
 NoneType = type(None)
-def _safe_bson(obj):
+def _safe_bson(obj, _no_warning=False):
     '''Verify that the obj is safe for bsonification (in particular, no tuples or
     Decimal objects
     '''
+    if not _no_warning:
+        warnings.warn("_safe_bson is now deprecated. "
+                      "If your code relies on _safe_bson for validation, "
+                      "you should consider adding your own layer of validation", DeprecationWarning)
     if isinstance(obj, list):
-        return [ _safe_bson(o) for o in obj ]
+        return [ _safe_bson(o, True) for o in obj ]
     elif isinstance(obj, dict):
-        return Object((k, _safe_bson(v)) for k,v in six.iteritems(obj))
+        return Object((k, _safe_bson(v, True)) for k,v in six.iteritems(obj))
     elif isinstance(obj, six.string_types + six.integer_types + (
             float, datetime, NoneType,
             bson.ObjectId)):
