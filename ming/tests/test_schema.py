@@ -164,6 +164,10 @@ class TestNumberDecimal(TestCase):
         si = S.NumberDecimal(allow_none=False)
         self.assertRaises(S.Invalid, si.validate, None)
 
+    def test_allow_none(self):
+        si = S.NumberDecimal()
+        assert si.validate(None) is None
+
     def test_default_values(self):
         si = S.NumberDecimal()
         assert si.validate(0.123456789) == Decimal128("0.123457")
