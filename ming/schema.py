@@ -736,7 +736,7 @@ class NumberDecimal(ParticularScalar):
     ):
         super(NumberDecimal, self).__init__(**kwargs)
         self.precision = precision
-        self._quantizing = Decimal(f".{'0' * (self.precision - 1)}1")
+        self._quantizing = Decimal("." + "0" * (self.precision - 1) + "1")
         self.rounding = rounding
 
     def _validate(self, value, **kw):
