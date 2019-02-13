@@ -741,8 +741,6 @@ class NumberDecimal(ParticularScalar):
 
     def _validate(self, value, **kw):
         value = super(NumberDecimal, self)._validate(value, **kw)
-        if value is None:
-            return
         if isinstance(value, Decimal128):
             value = value.to_decimal()
         elif not isinstance(value, Decimal):
