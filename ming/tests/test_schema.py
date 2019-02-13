@@ -168,13 +168,6 @@ class TestNumberDecimal(TestCase):
         si = S.NumberDecimal()
         assert si.validate(None) is None
 
-    def test_default_values(self):
-        si = S.NumberDecimal()
-        assert si.validate(0.123456789) == Decimal128("0.123457")
-        assert si.validate(0.123456789) != Decimal128("0.123456789")
-        assert si.validate(0.123456432) == Decimal128("0.123456")
-        assert si.validate(0.123456432) != Decimal128("0.123456432")
-
     def test_specify_precision(self):
         si = S.NumberDecimal(precision=2)
         assert si.validate(0.123456789) == Decimal128("0.12")
@@ -185,21 +178,38 @@ class TestNumberDecimal(TestCase):
         assert si.validate(0.129999999) == Decimal128("0.12")
         assert si.validate(0.123456789) == Decimal128("0.12")
 
-    def test_input_int(self):
+    def test_input_int_precision_explicit(self):
         si = S.NumberDecimal(precision=2)
         assert si.validate(0) == Decimal128("0.00")
         assert si.validate(1) == Decimal128("1.00")
 
-    def test_input_float(self):
+    def test_input_float_precision_explicit(self):
         si = S.NumberDecimal(precision=2)
         assert si.validate(12.42) == Decimal128("12.42")
 
-    def test_input_decimal(self):
+    def test_input_decimal_precision_explicit(self):
         si = S.NumberDecimal(precision=2)
         assert si.validate(Decimal("12.42")) == Decimal128("12.42")
 
-    def test_input_decimal128(self):
+    def test_input_decimal128_precision_explicit(self):
         si = S.NumberDecimal(precision=2)
+        assert si.validate(Decimal128("12.42")) == Decimal128("12.42")
+
+    def test_input_int(self):
+        si = S.NumberDecimal()
+        assert si.validate(0) == Decimal128("0")
+        assert si.validate(1) == Decimal128("1")
+
+    def test_input_float(self):
+        si = S.NumberDecimal()
+        assert si.validate(12.42) == Decimal128("12.42")
+
+    def test_input_decimal(self):
+        si = S.NumberDecimal()
+        assert si.validate(Decimal("12.42")) == Decimal128("12.42")
+
+    def test_input_decimal128(self):
+        si = S.NumberDecimal()
         assert si.validate(Decimal128("12.42")) == Decimal128("12.42")
 
     def test_input_str(self):

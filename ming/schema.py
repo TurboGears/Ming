@@ -730,22 +730,31 @@ class NumberDecimal(ParticularScalar):
 
     def __init__(
         self,
-        precision=6,
+        precision=None,
         rounding=ROUND_HALF_DOWN,
         **kwargs
     ):
         super(NumberDecimal, self).__init__(**kwargs)
         self.precision = precision
-        self._quantizing = Decimal("." + "0" * (self.precision - 1) + "1")
+        self._quantizing = None
+        if precision:
+            self._quantizing = Decimal("." + "0" * (self.precision - 1) + "1")
         self.rounding = rounding
 
     def _validate(self, value, **kw):
         value = super(NumberDecimal, self)._validate(value, **kw)
-        if isinstance(value, Decimal128):
-            value = value.to_decimal()
-        elif not isinstance(value, Decimal):
-            value = Decimal(value)
-        return Decimal128(value.quantize(self._quantizing, rounding=self.rounding))
+        if self._quantizing:
+            if isinstance(value, Decimal128):
+                value = value.to_decimal()
+            elif not isinstance(value, Decimal):
+                value = Decimal(value)
+            return Decimal128(value.quantize(self._quantizing, rounding=self.rounding))
+        else:
+            if isinstance(value, Decimal128):
+                return value
+            if value.__class__ in (float,) + six.integer_types:
+                value = str(value)
+            return Decimal128(value)
 
 
 # Shorthand for various SchemaItems
