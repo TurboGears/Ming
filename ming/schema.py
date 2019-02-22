@@ -3,11 +3,13 @@ import logging
 
 from copy import deepcopy
 from datetime import datetime, date
+from decimal import Decimal, ROUND_HALF_DOWN, Context
 
 import bson
 import pymongo
 import pytz
 import six
+from bson import Decimal128
 
 from .utils import LazyProperty
 from .base import Object as BaseObject, Missing, NoDefault
@@ -708,10 +710,53 @@ class ObjectId(Scalar):
         except Exception as ex:
             raise Invalid(str(ex), value, None)
 
+
+class NumberDecimal(ParticularScalar):
+    """Validates value is compatible with :class:`bson.Decimal128`.
+
+    Useful for financial data that need arbitrary precision.
+
+    The argument `precision` specifies the number of decimal digits to evaluate.
+    Defaults to 6.
+
+    The argument `rounding` specifies the kind of rounding to be performed.
+    Valid values are `decimal.ROUND_DOWN`, `decimal.ROUND_HALF_UP`, `decimal.ROUND_HALF_EVEN`,
+    `decimal.ROUND_CEILING`, `decimal.ROUND_FLOOR`, `decimal.ROUND_UP`,
+    `decimal.ROUND_HALF_DOWN`, `decimal.ROUND_05UP`.
+    Defaults to `decimal.ROUND_HALF_DOWN`.
+
+    """
+    type = (int, float, Decimal, Decimal128)
+
+    def __init__(
+        self,
+        precision=None,
+        rounding=ROUND_HALF_DOWN,
+        **kwargs
+    ):
+        super(NumberDecimal, self).__init__(**kwargs)
+        self.precision = precision
+        self.rounding = rounding
+        self._context = Context(prec=34, rounding=rounding)  # Max Decimal128 precision
+        if self.precision:
+            self._quantizing = self._context.create_decimal(Decimal(str(10 ** -precision)))
+
+    def _validate(self, value, **kw):
+        value = super(NumberDecimal, self)._validate(value, **kw)
+        if isinstance(value, Decimal128):
+            value = value.to_decimal()
+        value = self._context.create_decimal(value)
+        if self.precision:
+            value = value.quantize(self._quantizing, rounding=self.rounding)
+        return Decimal128(value)
+
+
 # Shorthand for various SchemaItems
-SHORTHAND={
-    int:Int,
-    str:String,
-    float:Float,
-    bool:Bool,
-    datetime:DateTime}
+SHORTHAND = {
+    int: Int,
+    str: String,
+    float: Float,
+    bool: Bool,
+    datetime: DateTime,
+    Decimal128: NumberDecimal,
+}

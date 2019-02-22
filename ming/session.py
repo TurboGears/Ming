@@ -144,7 +144,6 @@ class Session(object):
         hook = doc.m.before_save
         if hook: hook(doc)
         if validate:
-            doc.make_safe()
             if doc.m.schema is None:
                 data = dict(doc)
             else:
@@ -201,7 +200,6 @@ class Session(object):
         immediately
         """
         fields_values = Object.from_bson(fields_values)
-        fields_values.make_safe()
         for k,v in six.iteritems(fields_values):
             self._set(doc, k.split('.'), v)
         impl = self._impl(doc)
