@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal, ROUND_DOWN, ROUND_HALF_DOWN
 from unittest import TestCase, main
 from datetime import datetime, date
 
@@ -202,7 +202,11 @@ class TestNumberDecimal(TestCase):
 
     def test_input_float(self):
         si = S.NumberDecimal()
-        assert si.validate(12.42) == Decimal128("12.42")
+        validated = si.validate(12.42)
+        assert isinstance(validated, Decimal128)
+        quantized = validated.to_decimal().quantize(Decimal("0.01"),
+                                                    rounding=ROUND_HALF_DOWN)
+        assert quantized == Decimal("12.42")
 
     def test_input_decimal(self):
         si = S.NumberDecimal()

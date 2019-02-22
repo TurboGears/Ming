@@ -3,7 +3,7 @@ import logging
 
 from copy import deepcopy
 from datetime import datetime, date
-from decimal import Decimal, ROUND_HALF_DOWN
+from decimal import Decimal, ROUND_HALF_DOWN, Context
 
 import bson
 import pymongo
@@ -736,25 +736,19 @@ class NumberDecimal(ParticularScalar):
     ):
         super(NumberDecimal, self).__init__(**kwargs)
         self.precision = precision
-        self._quantizing = None
-        if precision:
-            self._quantizing = Decimal("." + "0" * (self.precision - 1) + "1")
         self.rounding = rounding
+        self._context = Context(prec=34, rounding=rounding)  # Max Decimal128 precision
+        if self.precision:
+            self._quantizing = self._context.create_decimal(Decimal(str(10 ** -precision)))
 
     def _validate(self, value, **kw):
         value = super(NumberDecimal, self)._validate(value, **kw)
-        if self._quantizing:
-            if isinstance(value, Decimal128):
-                value = value.to_decimal()
-            elif not isinstance(value, Decimal):
-                value = Decimal(value)
-            return Decimal128(value.quantize(self._quantizing, rounding=self.rounding))
-        else:
-            if isinstance(value, Decimal128):
-                return value
-            if value.__class__ in (float,) + six.integer_types:
-                value = str(value)
-            return Decimal128(value)
+        if isinstance(value, Decimal128):
+            value = value.to_decimal()
+        value = self._context.create_decimal(value)
+        if self.precision:
+            value = value.quantize(self._quantizing, rounding=self.rounding)
+        return Decimal128(value)
 
 
 # Shorthand for various SchemaItems
