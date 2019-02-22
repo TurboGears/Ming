@@ -6,7 +6,7 @@ python:
   - "3.5"
   - "3.6"
   - "3.7-dev"
-  - "pypy"
+  - "pypy2.7-6.0"
 
 install:
   - "travis_retry pip install --upgrade pip"
