@@ -3,6 +3,12 @@ Ming News / Release Notes
 
 The latest releases are 0.7.x and support PyMongo 3.  The 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
 
+0.9.0 (Feb 22, 2019)
+--------------------
+
+* Support for Decimal128 type in MongoDB through ``schema.NumberDecimal``
+* Deprecation of ``make_safe`` for Ming Documents
+
 0.8.1 (Feb 22, 2019)
 --------------------
 
