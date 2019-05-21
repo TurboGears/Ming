@@ -70,12 +70,12 @@ Contributing
 
 **Yes please!**  We are always looking for contributions, additions and improvements.
 
-The source is available on `SourceForge <http://sourceforge.net/p/merciless/code/ci/master/tree/>`_
+The source is available on `GitHub <https://github.com/TurboGears/Ming>`_
 and contributions are always encouraged. Contributions can be as simple as
 minor tweaks to this documentation or to ming itself.
 
-To contribute, `fork the project <https://sourceforge.net/p/merciless/code/fork>`_
-and send a merge request.
+To contribute, `fork the project <https://github.com/TurboGears/Ming/fork>`_
+and send a pull request.
 
 Changes
 =======
