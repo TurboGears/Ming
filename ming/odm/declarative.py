@@ -80,7 +80,7 @@ class _MappedClassMeta(type):
             migrate=getattr(mm, 'migrate', None)
         )
         if hasattr(mm, 'before_save'):
-            collection_kwargs['before_save'] = mm.before_save.__func__
+            collection_kwargs['before_save'] = getattr(mm.before_save, '__func__', mm.before_save)
         if not doc_bases:
             collection_cls = collection(
                 mm.name, mm.session and mm.session.impl,
