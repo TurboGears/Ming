@@ -1,3 +1,4 @@
+from collections import defaultdict
 from unittest import TestCase
 
 from ming import schema as S
@@ -666,3 +667,32 @@ class TestODMCursor(TestCase):
         cursor = ODMCursor(session, cls, mongo_cursor)
         self.assertRaises(MingException, lambda: bool(cursor))
 
+
+class TestHooks(TestCase):
+
+    def setUp(self):
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+        self.hooks_called = defaultdict(list)
+        tc = self
+        class Basic(MappedClass):
+            class __mongometa__:
+                name = 'hook'
+                session = self.session
+                def before_save(instance):
+                    tc.hooks_called['before_save'].append(instance)
+
+            _id = FieldProperty(S.ObjectId)
+            a = FieldProperty(int)
+        Mapper.compile_all()
+        self.Basic = Basic
+        self.session.remove(self.Basic)
+
+    def test_hook_base(self):
+        doc = self.Basic()
+        doc.a = 5
+        self.session.flush()
+        self.assertEqual(self.hooks_called['before_save'],
+                         [
+                             {'_id': doc._id, 'a': doc.a}
+                         ])
