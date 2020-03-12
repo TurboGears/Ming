@@ -1,7 +1,12 @@
 Ming News / Release Notes
 =====================================
 
-The latest releases are 0.7.x and support PyMongo 3.  The 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
+The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
+
+0.9.2 (Mar 12, 2020)
+--------------------
+
+* Support ODM before_save hook on Python 3
 
 0.9.1 (May 15, 2019)
 --------------------
@@ -39,6 +44,11 @@ The latest releases are 0.7.x and support PyMongo 3.  The 0.5.x releases support
 * MIM: Support fake ``$score`` in projections.
 * MIM: Support ``$slice`` in projections.
 * MIM: Partial support for bulk writes, currently only ``UpdateOne``.
+
+
+0.5.7 (Mar 12, 2020)
+------------------------------------------------
+* Support ODM before_save hook on Python 3
 
 0.5.6 (Apr 2, 2018)
 ------------------------------------------------
