@@ -35,7 +35,7 @@ setup(name='Ming',
       include_package_data=True,
       zip_safe=True,
       install_requires=[
-        "pymongo>=3.0,<3.8",
+        "pymongo>=3.0,<3.12",
         "pytz",
         "six>=1.6.1"
       ],
