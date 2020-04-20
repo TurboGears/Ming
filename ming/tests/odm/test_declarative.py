@@ -26,9 +26,10 @@ class TestIndex(TestCase):
         assert len(mgr.indexes) == 1, mgr.indexes
 
 class TestRelation(TestCase):
+    DATASTORE = 'mim:///test_db'
 
     def setUp(self):
-        self.datastore = create_datastore('mim:///test_db')
+        self.datastore = create_datastore(self.DATASTORE)
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
             class __mongometa__:
@@ -49,7 +50,10 @@ class TestRelation(TestCase):
 
     def tearDown(self):
         self.session.clear()
-        self.datastore.conn.drop_all()
+        try:
+            self.datastore.conn.drop_all()
+        except TypeError:
+            self.datastore.conn.drop_database(self.datastore.db)
 
     def test_parent(self):
         parent = self.Parent(_id=1)
@@ -134,6 +138,10 @@ class TestRelation(TestCase):
 
         parent = self.Parent.query.get(_id=1)
         self.assertEqual(len(parent.children), 4)
+
+
+class TestRealMongoRelation(TestRelation):
+    DATASTORE = "ming_tests"
 
 
 class TestManyToManyListRelation(TestCase):
@@ -500,9 +508,10 @@ class TestBasicMapperExtension(TestCase):
         self.session.flush()
 
 class TestBasicMapping(TestCase):
+    DATASTORE = 'mim:///test_db'
 
     def setUp(self):
-        self.datastore = create_datastore('mim:///test_db')
+        self.datastore = create_datastore(self.DATASTORE)
         self.session = ODMSession(bind=self.datastore)
         class Basic(MappedClass):
             class __mongometa__:
@@ -521,7 +530,10 @@ class TestBasicMapping(TestCase):
 
     def tearDown(self):
         self.session.clear()
-        self.datastore.conn.drop_all()
+        try:
+            self.datastore.conn.drop_all()
+        except TypeError:
+            self.datastore.conn.drop_database(self.datastore.db)
 
     def test_repr(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
@@ -617,6 +629,10 @@ class TestBasicMapping(TestCase):
         self.session.expunge(doc)
         self.session.expunge(doc)
         self.session.expunge(doc)
+
+
+class TestRealBasicMapping(TestBasicMapping):
+    DATASTORE = "test_ming"
 
 
 class TestPolymorphic(TestCase):
