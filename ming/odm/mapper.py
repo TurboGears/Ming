@@ -148,7 +148,10 @@ class Mapper(object):
         for m in cls.all_mappers():
             m._compiled = False
         cls._all_mappers = []
-
+        cls._mapper_by_classname.clear()
+        cls._mapper_by_class.clear()
+        cls._mapper_by_collection.clear()
+        
     @classmethod
     def ensure_all_indexes(cls):
         """Ensures indexes for each registered :class:`.MappedClass` subclass are created"""

@@ -29,6 +29,7 @@ class TestRelation(TestCase):
     DATASTORE = 'mim:///test_db'
 
     def setUp(self):
+        Mapper.clear_all()
         self.datastore = create_datastore(self.DATASTORE)
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -147,6 +148,7 @@ class TestRealMongoRelation(TestRelation):
 class TestManyToManyListRelation(TestCase):
 
     def setUp(self):
+        Mapper.clear_all()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -258,6 +260,7 @@ class TestManyToManyListRelation(TestCase):
 class TestManyToManyListReverseRelation(TestCase):
 
     def setUp(self):
+        Mapper.clear_all()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -305,6 +308,7 @@ class TestManyToManyListReverseRelation(TestCase):
 class TestManyToManyListCyclic(TestCase):
 
     def setUp(self):
+        Mapper.clear_all()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
 
@@ -348,6 +352,7 @@ class TestManyToManyListCyclic(TestCase):
 class TestRelationWithNone(TestCase):
 
     def setUp(self):
+        Mapper.clear_all()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class GrandParent(MappedClass):
@@ -415,6 +420,8 @@ class TestRelationWithNone(TestCase):
 
 class ObjectIdRelationship(TestCase):
     def setUp(self):
+        Mapper.clear_all()
+        
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -438,6 +445,7 @@ class ObjectIdRelationship(TestCase):
                 Parent,
                 if_missing=lambda:bson.ObjectId('deadbeefdeadbeefdeadbeef'))
             field_with_default = RelationProperty('Parent', 'field_with_default_id')
+        
         Mapper.compile_all()
         self.Parent = Parent
         self.Child = Child
@@ -638,6 +646,7 @@ class TestRealBasicMapping(TestBasicMapping):
 class TestPolymorphic(TestCase):
 
     def setUp(self):
+        Mapper.clear_all()
         self.datastore = create_datastore('mim:///test_db')
         self.doc_session = Session(self.datastore)
         self.odm_session = ODMSession(self.doc_session)
@@ -687,6 +696,7 @@ class TestODMCursor(TestCase):
 class TestHooks(TestCase):
 
     def setUp(self):
+        Mapper.clear_all()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         self.hooks_called = defaultdict(list)

@@ -5,9 +5,10 @@ from .property import ORMProperty
 import six
 
 class _MappedClassMeta(type):
-
+ 
     def __init__(cls, name, bases, dct):
-        cls._registry['%s.%s' % (cls.__module__, cls.__name__)] = mapper(cls)
+        if dct.get("_mm_mapped", True):
+            cls._registry['%s.%s' % (cls.__module__, cls.__name__)] = mapper(cls)
         cls._compiled = False
 
     def __new__(meta, name, bases, dct):
@@ -18,7 +19,7 @@ class _MappedClassMeta(type):
             mapper(b).collection for b in mapped_bases ]
         # Build up the mongometa class
         mm_bases = tuple(
-            (b.__mongometa__ for b in mapped_bases
+            (b.__mongometa__ for b in bases
              if hasattr(b, '__mongometa__')))
         if not mm_bases:
             mm_bases = (object,)
@@ -45,11 +46,12 @@ class _MappedClassMeta(type):
             else:
                 clsdict[k] = v
         cls = type.__new__(meta, name, bases, clsdict)
-        mapper(cls, collection_class, mm.session,
-               properties=properties,
-               include_properties=include_properties,
-               exclude_properties=exclude_properties,
-               extensions=extensions)
+        if dct.get("_mm_mapped", True):
+            mapper(cls, collection_class, mm.session,
+                   properties=properties,
+                   include_properties=include_properties,
+                   exclude_properties=exclude_properties,
+                   extensions=extensions)
         return cls
 
     @classmethod
@@ -118,6 +120,7 @@ class MappedClass(object):
             text = FieldProperty(schema.String(if_missing=''))
 
     """
+    _mm_mapped = False  # All other subclasses will be mapped, this one wont
     _registry = {}
 
     class __mongometa__:

@@ -47,6 +47,7 @@ setup(name='Ming',
         "FormEncode >= 1.2.1",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
       ],
+      test_suite="ming.tests",
       extras_require={
         "configure": [
             "FormEncode >= 1.2.1",  # required to use ``ming.configure``

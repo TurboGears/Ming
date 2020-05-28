@@ -14,6 +14,7 @@ from ming.odm.middleware import MingMiddleware
 class TestRelation(TestCase):
 
     def setUp(self):
+        Mapper.clear_all()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ThreadLocalODMSession(Session(bind=self.datastore))
         class Parent(MappedClass):
