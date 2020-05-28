@@ -40,7 +40,6 @@ setup(name='Ming',
         "six>=1.6.1"
       ],
       tests_require=[
-        "nose",
         "mock >=0.8.0",
         "pytz",
         "WebOb",
@@ -57,6 +56,5 @@ setup(name='Ming',
       # -*- Entry points: -*-
       [paste.filter_factory]
       ming_autoflush=ming.odm.middleware:make_ming_autoflush_middleware
-      """,
-      test_suite='nose.collector'
-      )
+      """
+)
