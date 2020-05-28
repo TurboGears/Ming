@@ -52,6 +52,12 @@ class TestFS(TestCase):
         assert not self.TestFS.m.exists(filename='test.txt')
         fobj = self.TestFS.m.get()
         assert fobj is None
+        
+    def test_seek(self):
+        with self.TestFS.m.new_file('test.txt') as fp:
+            fp.write('The quick brown fox')
+        fobj = self.TestFS.m.fs.get(fp._id)
+        fobj.seek(0)
 
     def test_strange_mimetype(self):
         with self.TestFS.m.new_file('test.ming') as fp:
