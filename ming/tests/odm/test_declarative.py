@@ -25,6 +25,50 @@ class TestIndex(TestCase):
         mgr = mapper(Test).collection.m
         assert len(mgr.indexes) == 1, mgr.indexes
 
+class TestMapping(TestCase):
+    DATASTORE = 'mim:///test_db'
+
+    def setUp(self):
+        Mapper.clear_all()
+        self.datastore = create_datastore(self.DATASTORE)
+        self.session = ODMSession(bind=self.datastore)
+        
+    def tearDown(self):
+        self.session.clear()
+        try:
+            self.datastore.conn.drop_all()
+        except TypeError:
+            self.datastore.conn.drop_database(self.datastore.db)
+        Mapper.clear_all()
+      
+    def test_with_mixins(self):
+        class Mixin1(object):
+            def dosomething(self):
+                pass
+            
+        class Mixin2(object):
+            def domore(self):
+                pass
+        
+        class User(MappedClass, Mixin1, Mixin2):
+            class __mongometa__:
+                name = "userswithmixin"
+                session = self.session
+                
+            _id = FieldProperty(int)
+            username = FieldProperty(str)
+            
+        u = User(_id=None, username="anonymous")
+        self.session.flush()
+        
+        u2 = User.query.find({"username": "anonymous"}).first()
+        assert u._id == u2._id
+
+
+class TestMappingReal(TestMapping):
+    DATASTORE = "ming_tests"
+
+        
 class TestRelation(TestCase):
     DATASTORE = 'mim:///test_db'
 
