@@ -159,6 +159,13 @@ class TestDatastore(TestCase):
         cursor.rewind()
         assert cursor.next() == doc
 
+    def test_close(self):
+        collection = self.bind.db.coll
+        collection.insert({'a': 'b'})
+        cursor = collection.find()
+        cursor.close()
+        self.assertRaises(StopIteration, cursor.next)
+
     def test_search(self):
         conn = mim.Connection().get()
         coll = conn.searchdatabase.coll

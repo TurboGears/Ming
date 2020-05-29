@@ -822,6 +822,9 @@ class Cursor(object):
         # Adding options to MIM does nothing.
         pass
 
+    def close(self):
+        self._iterator_gen = lambda: iter(())
+
 
 def cursor_comparator(keys):
     def comparator(a, b):
