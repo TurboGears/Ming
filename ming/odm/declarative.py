@@ -7,20 +7,17 @@ import six
 class _MappedClassMeta(type):
  
     def __init__(cls, name, bases, dct):
-        if dct.get("_mm_mapped", True):
-            cls._registry['%s.%s' % (cls.__module__, cls.__name__)] = mapper(cls)
+        cls._registry['%s.%s' % (cls.__module__, cls.__name__)] = mapper(cls)
         cls._compiled = False
 
     def __new__(meta, name, bases, dct):
         # Get the mapped base class(es)
-        mapped_bases = [
-            b for b in bases if hasattr(b, 'query') ]
-        doc_bases = [
-            mapper(b).collection for b in mapped_bases ]
+        mapped_bases = [b for b in bases if hasattr(b, 'query')]
+        doc_bases = [mapper(b).collection for b in mapped_bases]
         # Build up the mongometa class
         mm_bases = tuple(
-            (b.__mongometa__ for b in bases
-             if hasattr(b, '__mongometa__')))
+            (b.__mongometa__ for b in mapped_bases if hasattr(b, '__mongometa__'))
+        )
         if not mm_bases:
             mm_bases = (object,)
         mm_dict = {}
@@ -46,12 +43,11 @@ class _MappedClassMeta(type):
             else:
                 clsdict[k] = v
         cls = type.__new__(meta, name, bases, clsdict)
-        if dct.get("_mm_mapped", True):
-            mapper(cls, collection_class, mm.session,
-                   properties=properties,
-                   include_properties=include_properties,
-                   exclude_properties=exclude_properties,
-                   extensions=extensions)
+        mapper(cls, collection_class, mm.session,
+               properties=properties,
+               include_properties=include_properties,
+               exclude_properties=exclude_properties,
+               extensions=extensions)
         return cls
 
     @classmethod
@@ -120,19 +116,8 @@ class MappedClass(object):
             text = FieldProperty(schema.String(if_missing=''))
 
     """
-    _mm_mapped = False  # All other subclasses will be mapped, this one wont
     _registry = {}
 
     class __mongometa__:
         name=None
         session=None
-
-    def __init__(self, **kwargs):
-        # Currently there is code out there that explicitly relies
-        # on the fact that Ming doesn't support multiple inheritance
-        # on MappedClass and thus doesn't invoke super for __init__.
-        #
-        # MappedClass should only be used in conjunction with Mixins that
-        # don't provide a custom __init__.
-        for k,v in six.iteritems(kwargs):
-            setattr(self, k, v)

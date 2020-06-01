@@ -29,7 +29,7 @@ class TestMapping(TestCase):
     DATASTORE = 'mim:///test_db'
 
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore(self.DATASTORE)
         self.session = ODMSession(bind=self.datastore)
         
@@ -39,7 +39,7 @@ class TestMapping(TestCase):
             self.datastore.conn.drop_all()
         except TypeError:
             self.datastore.conn.drop_database(self.datastore.db)
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
       
     def test_with_mixins(self):
         class Mixin1(object):
@@ -76,7 +76,7 @@ class TestRelation(TestCase):
     DATASTORE = 'mim:///test_db'
 
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore(self.DATASTORE)
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -195,7 +195,7 @@ class TestRealMongoRelation(TestRelation):
 class TestManyToManyListRelation(TestCase):
 
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -307,7 +307,7 @@ class TestManyToManyListRelation(TestCase):
 class TestManyToManyListReverseRelation(TestCase):
 
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -355,7 +355,7 @@ class TestManyToManyListReverseRelation(TestCase):
 class TestManyToManyListCyclic(TestCase):
 
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
 
@@ -399,7 +399,7 @@ class TestManyToManyListCyclic(TestCase):
 class TestRelationWithNone(TestCase):
 
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class GrandParent(MappedClass):
@@ -467,7 +467,7 @@ class TestRelationWithNone(TestCase):
 
 class ObjectIdRelationship(TestCase):
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
@@ -693,7 +693,7 @@ class TestRealBasicMapping(TestBasicMapping):
 class TestPolymorphic(TestCase):
 
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.doc_session = Session(self.datastore)
         self.odm_session = ODMSession(self.doc_session)
@@ -743,7 +743,7 @@ class TestODMCursor(TestCase):
 class TestHooks(TestCase):
 
     def setUp(self):
-        Mapper.clear_all()
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         self.hooks_called = defaultdict(list)
