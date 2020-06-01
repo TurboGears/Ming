@@ -43,6 +43,9 @@ class TestMapping(TestCase):
       
     def test_with_mixins(self):
         class Mixin1(object):
+            def __init__(self):
+                pass
+            
             def dosomething(self):
                 pass
             
@@ -55,7 +58,7 @@ class TestMapping(TestCase):
                 name = "userswithmixin"
                 session = self.session
                 
-            _id = FieldProperty(int)
+            _id = FieldProperty(S.ObjectId)
             username = FieldProperty(str)
             
         u = User(_id=None, username="anonymous")

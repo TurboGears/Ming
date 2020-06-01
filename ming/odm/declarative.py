@@ -126,3 +126,13 @@ class MappedClass(object):
     class __mongometa__:
         name=None
         session=None
+
+    def __init__(self, **kwargs):
+        # Currently there is code out there that explicitly relies
+        # on the fact that Ming doesn't support multiple inheritance
+        # on MappedClass and thus doesn't invoke super for __init__.
+        #
+        # MappedClass should only be used in conjunction with Mixins that
+        # don't provide a custom __init__.
+        for k,v in six.iteritems(kwargs):
+            setattr(self, k, v)
