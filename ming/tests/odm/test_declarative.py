@@ -67,6 +67,25 @@ class TestMapping(TestCase):
         u2 = User.query.find({"username": "anonymous"}).first()
         assert u._id == u2._id
 
+    def test_delete_super(self):
+        class User(MappedClass):
+            class __mongometa__:
+                name = "user_with_custom_delete"
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            username = FieldProperty(str)
+            
+            def delete(self):
+                super(User, self).delete()
+
+        u = User(_id=None, username="anonymous")
+        self.session.flush()
+        u.delete()
+        self.session.flush()
+
+        assert not User.query.find({"username": "anonymous"}).count()
+
 
 class TestMappingReal(TestMapping):
     DATASTORE = "ming_tests"
