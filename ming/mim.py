@@ -139,6 +139,13 @@ class Database(database.Database):
         else:
             self._jsruntime = None
 
+    def __repr__(self):
+        return "mim.Database(%r, %r)" % (self.__client, self.__name)
+
+    def with_options(self, codec_options=None, read_preference=None, write_concern=None, read_concern=None):
+        # options have no meaning for MIM
+        return self
+
     @property
     def name(self):
         return self._name
@@ -350,6 +357,9 @@ class Collection(collection.Collection):
         self._data = {}
         self._unique_indexes = {}
         self._indexes = {}
+
+    def __repr__(self):
+        return "mim.Collection(%r, %r)" % (self._database, self.__name)
 
     def clear(self):
         self._data = {}

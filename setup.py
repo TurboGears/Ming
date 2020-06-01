@@ -35,12 +35,11 @@ setup(name='Ming',
       include_package_data=True,
       zip_safe=True,
       install_requires=[
-        "pymongo>=3.0,<3.8",
+        "pymongo>=3.0,<3.11",
         "pytz",
         "six>=1.6.1"
       ],
       tests_require=[
-        "nose",
         "mock >=0.8.0",
         "pytz",
         "WebOb",
@@ -48,6 +47,7 @@ setup(name='Ming',
         "FormEncode >= 1.2.1",
         # "python-spidermonkey >= 0.0.10", # required for full MIM functionality
       ],
+      test_suite="ming.tests",
       extras_require={
         "configure": [
             "FormEncode >= 1.2.1",  # required to use ``ming.configure``
@@ -57,6 +57,5 @@ setup(name='Ming',
       # -*- Entry points: -*-
       [paste.filter_factory]
       ming_autoflush=ming.odm.middleware:make_ming_autoflush_middleware
-      """,
-      test_suite='nose.collector'
-      )
+      """
+)

@@ -176,7 +176,7 @@ class DataStore(object):
 
     @property
     def conn(self):
-        return self.connection
+        return self.bind.conn
 
     @property
     def db(self):

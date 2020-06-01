@@ -6,7 +6,6 @@ import bson
 from ming import create_datastore, mim
 from pymongo import UpdateOne
 from pymongo.errors import OperationFailure, DuplicateKeyError
-from nose import SkipTest
 from mock import patch
 
 
@@ -333,7 +332,7 @@ class TestMRCommands(TestCommands):
     def setUp(self):
         super(TestMRCommands, self).setUp()
         if not self.bind.db._jsruntime:
-            raise SkipTest
+            self.skipTest("Javascript Runtime Unavailable")
 
     def test_mr_inline(self):
         result = self.bind.db.command(

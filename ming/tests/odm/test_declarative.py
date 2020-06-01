@@ -25,10 +25,78 @@ class TestIndex(TestCase):
         mgr = mapper(Test).collection.m
         assert len(mgr.indexes) == 1, mgr.indexes
 
-class TestRelation(TestCase):
+class TestMapping(TestCase):
+    DATASTORE = 'mim:///test_db'
 
     def setUp(self):
-        self.datastore = create_datastore('mim:///test_db')
+        Mapper._mapper_by_classname.clear()
+        self.datastore = create_datastore(self.DATASTORE)
+        self.session = ODMSession(bind=self.datastore)
+        
+    def tearDown(self):
+        self.session.clear()
+        try:
+            self.datastore.conn.drop_all()
+        except TypeError:
+            self.datastore.conn.drop_database(self.datastore.db)
+        Mapper._mapper_by_classname.clear()
+      
+    def test_with_mixins(self):
+        class Mixin1(object):
+            def __init__(self):
+                pass
+            
+            def dosomething(self):
+                pass
+            
+        class Mixin2(object):
+            def domore(self):
+                pass
+        
+        class User(MappedClass, Mixin1, Mixin2):
+            class __mongometa__:
+                name = "userswithmixin"
+                session = self.session
+                
+            _id = FieldProperty(S.ObjectId)
+            username = FieldProperty(str)
+            
+        u = User(_id=None, username="anonymous")
+        self.session.flush()
+        
+        u2 = User.query.find({"username": "anonymous"}).first()
+        assert u._id == u2._id
+
+    def test_delete_super(self):
+        class User(MappedClass):
+            class __mongometa__:
+                name = "user_with_custom_delete"
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            username = FieldProperty(str)
+            
+            def delete(self):
+                super(User, self).delete()
+
+        u = User(_id=None, username="anonymous")
+        self.session.flush()
+        u.delete()
+        self.session.flush()
+
+        assert not User.query.find({"username": "anonymous"}).count()
+
+
+class TestMappingReal(TestMapping):
+    DATASTORE = "ming_tests"
+
+        
+class TestRelation(TestCase):
+    DATASTORE = 'mim:///test_db'
+
+    def setUp(self):
+        Mapper._mapper_by_classname.clear()
+        self.datastore = create_datastore(self.DATASTORE)
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
             class __mongometa__:
@@ -49,7 +117,10 @@ class TestRelation(TestCase):
 
     def tearDown(self):
         self.session.clear()
-        self.datastore.conn.drop_all()
+        try:
+            self.datastore.conn.drop_all()
+        except TypeError:
+            self.datastore.conn.drop_database(self.datastore.db)
 
     def test_parent(self):
         parent = self.Parent(_id=1)
@@ -136,9 +207,14 @@ class TestRelation(TestCase):
         self.assertEqual(len(parent.children), 4)
 
 
+class TestRealMongoRelation(TestRelation):
+    DATASTORE = "ming_tests"
+
+
 class TestManyToManyListRelation(TestCase):
 
     def setUp(self):
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -250,6 +326,7 @@ class TestManyToManyListRelation(TestCase):
 class TestManyToManyListReverseRelation(TestCase):
 
     def setUp(self):
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -297,6 +374,7 @@ class TestManyToManyListReverseRelation(TestCase):
 class TestManyToManyListCyclic(TestCase):
 
     def setUp(self):
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
 
@@ -340,6 +418,7 @@ class TestManyToManyListCyclic(TestCase):
 class TestRelationWithNone(TestCase):
 
     def setUp(self):
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class GrandParent(MappedClass):
@@ -407,6 +486,8 @@ class TestRelationWithNone(TestCase):
 
 class ObjectIdRelationship(TestCase):
     def setUp(self):
+        Mapper._mapper_by_classname.clear()
+        
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -430,6 +511,7 @@ class ObjectIdRelationship(TestCase):
                 Parent,
                 if_missing=lambda:bson.ObjectId('deadbeefdeadbeefdeadbeef'))
             field_with_default = RelationProperty('Parent', 'field_with_default_id')
+        
         Mapper.compile_all()
         self.Parent = Parent
         self.Child = Child
@@ -500,9 +582,10 @@ class TestBasicMapperExtension(TestCase):
         self.session.flush()
 
 class TestBasicMapping(TestCase):
+    DATASTORE = 'mim:///test_db'
 
     def setUp(self):
-        self.datastore = create_datastore('mim:///test_db')
+        self.datastore = create_datastore(self.DATASTORE)
         self.session = ODMSession(bind=self.datastore)
         class Basic(MappedClass):
             class __mongometa__:
@@ -521,7 +604,10 @@ class TestBasicMapping(TestCase):
 
     def tearDown(self):
         self.session.clear()
-        self.datastore.conn.drop_all()
+        try:
+            self.datastore.conn.drop_all()
+        except TypeError:
+            self.datastore.conn.drop_database(self.datastore.db)
 
     def test_repr(self):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
@@ -619,9 +705,14 @@ class TestBasicMapping(TestCase):
         self.session.expunge(doc)
 
 
+class TestRealBasicMapping(TestBasicMapping):
+    DATASTORE = "test_ming"
+
+
 class TestPolymorphic(TestCase):
 
     def setUp(self):
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.doc_session = Session(self.datastore)
         self.odm_session = ODMSession(self.doc_session)
@@ -671,6 +762,7 @@ class TestODMCursor(TestCase):
 class TestHooks(TestCase):
 
     def setUp(self):
+        Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         self.hooks_called = defaultdict(list)
