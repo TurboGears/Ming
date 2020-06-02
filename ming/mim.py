@@ -85,12 +85,6 @@ class Connection(object):
         for db in self._databases.values():
             db.clear()
 
-    def start_request(self):
-        return _DummyRequest()
-
-    def end_request(self):
-        pass
-
     def _make_database(self):
         return Database(self)
 
@@ -1487,14 +1481,3 @@ def get_collection_from_objectid(_id):
                 return collection
     return None
 
-
-class _DummyRequest(object):
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, ex_type, ex_value, ex_tb):
-        pass
-
-    def end(self):
-        pass
