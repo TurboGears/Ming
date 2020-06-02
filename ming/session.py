@@ -75,12 +75,9 @@ class Session(object):
         strip_extra = kwargs.pop('strip_extra', True)
         validate = kwargs.pop('validate', True)
 
-        projection = kwargs.pop('fields', kwargs.pop('projection', None))
+        projection = kwargs.pop('projection', None)
         if projection is not None:
             kwargs['projection'] = projection
-
-        if not validate:
-            kwargs['as_class'] = Object
 
         collection = self._impl(cls)
         cursor = collection.find(*args, **kwargs)

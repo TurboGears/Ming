@@ -392,11 +392,12 @@ class Collection(collection.Collection):
                 if mspec is not None: yield doc, mspec
         return _gen()
 
-    def find(self, filter=None, projection=None, sort=None, limit=None, skip=None, as_class=dict, **kwargs):
+    def find(self, filter=None, projection=None, skip=0, limit=0, **kwargs):
         if filter is None:
             filter = {}
-        cur = Cursor(collection=self, fields=projection, limit=limit, skip=skip, as_class=as_class,
+        cur = Cursor(collection=self, projection=projection, limit=limit, skip=skip,
                      _iterator_gen=lambda: self._find(filter, **kwargs))
+        sort = kwargs.get('sort')
         if sort:
             cur = cur.sort(sort)
         return cur
@@ -703,18 +704,16 @@ class Collection(collection.Collection):
 
 class Cursor(object):
     def __init__(self, collection, _iterator_gen,
-                 sort=None, skip=None, limit=None, fields=None, as_class=dict):
-        if isinstance(fields, (tuple, list)):
-            fields = dict((f, 1) for f in fields)
+                 sort=None, skip=None, limit=None, projection=None):
+        if isinstance(projection, (tuple, list)):
+            projection = dict((f, 1) for f in projection)
 
         self._collection = collection
         self._iterator_gen = _iterator_gen
         self._sort = sort
         self._skip = skip or None    # cope with 0 being passed.
         self._limit = limit or None  # cope with 0 being passed.
-        self._fields = fields
-        self._projection = Projection(fields)
-        self._as_class = as_class
+        self._projection = Projection(projection)
         self._safe_to_chain = True
 
     @LazyProperty
@@ -737,8 +736,8 @@ class Cursor(object):
             sort=self._sort,
             skip=self._skip,
             limit=self._limit,
-            fields=self._fields,
-            as_class=self._as_class)
+            projection=self._projection._projection,
+        )
         for k,v in overrides.items():
             setattr(result, k, v)
         return result
@@ -775,7 +774,10 @@ class Cursor(object):
         value = six.next(self.iterator)
         value = bcopy(value)
         value = self._projection.apply(value)
-        return wrap_as_class(value, self._as_class)
+
+        # mim doesn't currently do anything with codec_options, so this doesn't do anything currently
+        # but leaving it here as a placeholder for the future - otherwise we should delete wrap_as_class()
+        return wrap_as_class(value, self._collection.codec_options.document_class)
 
     __next__ = next
 

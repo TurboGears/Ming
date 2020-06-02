@@ -98,8 +98,7 @@ class TestDatastore(TestCase):
         self.assertEqual(0, f(dict({'_id': 'bar', '$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count())
         self.assertEqual(1, f(dict({'_id': 'foo', '$or': [{'a': 2}, {'c':{'$all':[1,2,3]}}]})).count())
 
-    def test_find_with_fields(self):
-        # I think this should be removed
+    def test_find_with_projection_list(self):
         o = self.bind.db.coll.find_one({'a': 2}, projection=['a'])
         assert o['a'] == 2
         assert o['_id'] == 'foo'
