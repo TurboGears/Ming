@@ -27,8 +27,8 @@ class TestFS(TestCase):
     def setUp(self):
         self.ds = create_datastore('mim:///test')
         self.Session = Session(bind=self.ds)
-        self.TestFS = fs.filesystem(
-            'test_fs', self.Session)
+        self.fs_coll = 'test_fs'
+        self.TestFS = fs.filesystem(self.fs_coll, self.Session)
 
     def tearDown(self):
         self.ds.bind.drop_all()
@@ -97,4 +97,7 @@ class TestFS(TestCase):
             self.TestFS.m.get_version('test.txt', -1).read().decode(),
             'jumped over the lazy dog')
 
-
+    def test_custom_index(self):
+        self.ds.db['{}.files'.format(self.fs_coll)].ensure_index('custom_fld')
+        with self.TestFS.m.new_file('test.txt') as fp:
+            fp.write('The quick brown fox')
