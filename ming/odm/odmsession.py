@@ -127,13 +127,8 @@ class ODMSession(object):
         self.imap.clear()
 
     def close(self):
-        """Clear the session and tell MongoDB the connection can be closed."""
+        """Clear the session."""
         self.clear()
-
-        # This should now be needed anymore,
-        # see http://emptysqua.re/blog/good-idea-at-the-time-pymongo-start-request/
-        # if self.impl.bind:
-        #    self.impl.bind.conn.end_request()
 
     def get(self, cls, idvalue):
         """Retrieves ``cls`` by its ``_id`` value passed as ``idvalue``.
