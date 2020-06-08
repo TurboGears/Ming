@@ -3,6 +3,15 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
 
+0.10.0 (Jun 8, 2020)
+--------------------
+
+* Support for PyMongo 3.10
+* Support for Python 3.8
+* Removed start_request/end_request from MIM
+* Added ``Cursor.close`` to MIM
+* Moved testing from ``nose`` to  ``unittest``
+
 0.9.2 (Mar 12, 2020)
 --------------------
 
