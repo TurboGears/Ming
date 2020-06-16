@@ -713,7 +713,9 @@ class Cursor(object):
     @LazyProperty
     def iterator(self):
         self._safe_to_chain = False
-        result = (doc for doc,match in self._iterator_gen())
+        # normally a (doc, match) tuple but could be a single doc (e.g. when gridfs indexes involved)
+        result = (doc_match[0] if isinstance(doc_match, tuple) else doc_match
+                  for doc_match in self._iterator_gen())
         if self._sort is not None:
             result = sorted(result, key=cmp_to_key(
                     cursor_comparator(self._sort)))
