@@ -3,6 +3,11 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
 
+0.10.1 (Jun 17, 2020)
+---------------------
+* fix situation with gridfs indexes and MIM
+* fix validate=False and update some MIM params to match pymongo closer
+
 0.10.0 (Jun 8, 2020)
 --------------------
 
