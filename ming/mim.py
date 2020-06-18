@@ -495,7 +495,7 @@ class Collection(collection.Collection):
         warnings.warn('save is now deprecated, please use insert_one or replace_one', DeprecationWarning)
         _id = doc.get('_id', ())
         if _id == ():
-            return self._insert(doc)
+            return self.__insert(doc)
         else:
             self.__update({'_id':_id}, doc, upsert=True)
             return _id

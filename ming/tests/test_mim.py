@@ -764,6 +764,15 @@ class TestCollection(TestCase):
             self.bind.db.coll.insert(doc, manipulate=True)
         self.assertEqual(doc, {'x': 1, '_id': sample_id})
 
+    def test_save_id(self):
+        doc = {'_id': bson.ObjectId(), 'x': 1}
+        self.bind.db.coll.save(doc)
+
+    def test_save_no_id(self):
+        doc = {'x': 1}
+        self.bind.db.coll.save(doc)
+        assert isinstance(doc['_id'], bson.ObjectId)
+
     def test_unique_index_subdocument(self):
         coll = self.bind.db.coll
 
