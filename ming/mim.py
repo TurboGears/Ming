@@ -1066,6 +1066,8 @@ class Match(object):
         doc = self
         for step in path[:-1]:
             if isinstance(doc, MatchList):
+                if step == '$':
+                    return
                 step = int(step)
             if step not in doc._orig:
                 doc._orig[step] = doc._doc[step]._orig
