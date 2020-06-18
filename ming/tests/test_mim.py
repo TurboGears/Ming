@@ -186,16 +186,35 @@ class TestDottedOperators(TestCase):
              'x': {} })
         self.coll = self.bind.db.coll
 
-    def test_inc_dotted_dollar(self):
+    def test_inc_dotted_dollar_e1(self):
+        # match on e=1 and $inc
+        self.coll.update({'b.e': 1}, { '$inc': { 'b.e.$': 1 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
+        self.assertEqual(obj, { 'b': { 'e': [ 2,2,3 ] } })
+
+    def test_inc_dotted_dollar_e2(self):
+        # match on e=2 and $inc
         self.coll.update({'b.e': 2}, { '$inc': { 'b.e.$': 1 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
         self.assertEqual(obj, { 'b': { 'e': [ 1,3,3 ] } })
+
+    def test_inc_dotted_dollar_e3(self):
+        # match on e=3 and $inc
+        self.coll.update({'b.e': 3}, { '$inc': { 'b.e.$': 1 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
+        self.assertEqual(obj, { 'b': { 'e': [ 1,2,4 ] } })
 
     def test_inc_dotted_dollar_middle1(self):
         # match on g=1 and $inc by 10
         self.coll.update({'b.f.g': 1}, { '$inc': { 'b.f.$.g': 10 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
         self.assertEqual(obj, { 'b': { 'f': [ { 'g': 11 }, { 'g': 2 } ] }})
+
+    def test_inc_dotted_dollar_middle2(self):
+        # match on g=2 and $inc by 10
+        self.coll.update({'b.f.g': 2}, { '$inc': { 'b.f.$.g': 10 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
+        self.assertEqual(obj, { 'b': { 'f': [ { 'g': 1 }, { 'g': 12 } ] }})
 
     def test_find_dotted(self):
         self.assertEqual(self.coll.find({'b.c': 1}).count(), 1)
