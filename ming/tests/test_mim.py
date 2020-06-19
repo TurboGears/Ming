@@ -191,6 +191,12 @@ class TestDottedOperators(TestCase):
         obj = self.coll.find_one({}, { '_id': 0, 'b.e': 1 })
         self.assertEqual(obj, { 'b': { 'e': [ 1,3,3 ] } })
 
+    def test_inc_dotted_dollar_middle1(self):
+        # match on g=1 and $inc by 10
+        self.coll.update({'b.f.g': 1}, { '$inc': { 'b.f.$.g': 10 } })
+        obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
+        self.assertEqual(obj, { 'b': { 'f': [ { 'g': 11 }, { 'g': 2 } ] }})
+
     def test_find_dotted(self):
         self.assertEqual(self.coll.find({'b.c': 1}).count(), 1)
         self.assertEqual(self.coll.find({'b.c': 2}).count(), 0)
