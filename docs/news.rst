@@ -3,6 +3,11 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
 
+0.10.2 (Jun 19, 2020)
+---------------------
+* Fix error using save() and no _id
+* MIM: Avoid errors from _ensure_orig_key when positional $ is used
+
 0.10.1 (Jun 17, 2020)
 ---------------------
 * fix situation with gridfs indexes and MIM
