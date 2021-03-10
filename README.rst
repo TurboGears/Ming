@@ -1,8 +1,8 @@
 Ming
 ====
 
-.. image:: https://travis-ci.org/TurboGears/Ming.png
-    :target: https://travis-ci.org/TurboGears/Ming
+.. image:: https://travis-ci.com/TurboGears/Ming.png
+    :target: https://travis-ci.com/TurboGears/Ming
 
 .. image:: https://coveralls.io/repos/TurboGears/Ming/badge.png
     :target: https://coveralls.io/r/TurboGears/Ming
