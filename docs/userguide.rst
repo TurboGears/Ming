@@ -419,7 +419,7 @@ Now actually use these classes, we need to create some comments:
     :skip: 4
 
 And voilà, you have related objects. To get them back you can just use the
-``ReleationProperty`` available in the ``WikiPage`` as ``comments``:
+``RelationProperty`` available in the ``WikiPage`` as ``comments``:
 
 .. run-pysnippet:: ming_odm_relations snippet1_2
     :skip: 1
