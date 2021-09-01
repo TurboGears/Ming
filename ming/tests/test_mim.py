@@ -795,6 +795,33 @@ class TestCollection(TestCase):
         coll.insert({'x': {'y': 2}})
         self.assertRaises(DuplicateKeyError, coll.insert, {'x': {'y': 2}})
 
+    def test_unique_sparse_index_subdocument(self):
+        coll = self.bind.db.coll
+
+        coll.ensure_index([('x.y', 1)], unique=True, sparse=True)
+        coll.insert({'x': {'y': 1}})
+
+        # no duplicate key error on these:
+        coll.insert({'x': {'y': None}})
+        coll.insert({'x': {'y': None}})
+        coll.insert({'x': {'other': 'field'}})
+        coll.insert({'x': {'other': 'field'}})
+        # still errors on an existing duplication
+        self.assertRaises(DuplicateKeyError, coll.insert, {'x': {'y': 1}})
+
+    def test_unique_sparse_index_whole_sdoc(self):
+        coll = self.bind.db.coll
+
+        coll.ensure_index([('x', 1)], unique=True, sparse=True)
+        coll.insert({'x': {'y': 1}})
+        # no duplicate key error on these:
+        coll.insert({'x': None})
+        coll.insert({'x': None})
+        coll.insert({'other': 'field'})
+        coll.insert({'other': 'field'})
+        # still errors on an existing duplication
+        self.assertRaises(DuplicateKeyError, coll.insert, {'x': {'y': 1}})
+
     def test_delete_many(self):
         coll = self.bind.db.coll
 

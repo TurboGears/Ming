@@ -323,8 +323,8 @@ class Collection(collection.Collection):
         self._name = name
         self._database = database
         self._data = {}
-        self._unique_indexes = {}
-        self._indexes = {}
+        self._unique_indexes = {}  # name -> doc index {key_values -> _id}
+        self._indexes = {}  # name -> dict of details (including 'key' entry)
 
     def __repr__(self):
         return "mim.Collection(%r, %r)" % (self._database, self.__name)
@@ -568,10 +568,13 @@ class Collection(collection.Collection):
         self._indexes[index_name].update(kwargs)
         if not unique: return
         self._indexes[index_name]['unique'] = True
-        self._unique_indexes[keys] = index = {}
+        self._unique_indexes[index_name] = docindex = {}
+
+        # update the document index with any existing records
         for id, doc in six.iteritems(self._data):
             key_values = self._extract_index_key(doc, keys)
-            index[key_values] =id
+            docindex[key_values] = id
+
         return index_name
 
     # ensure_index is now deprecated.
@@ -584,10 +587,8 @@ class Collection(collection.Collection):
             for index_name, fields in six.iteritems(self._indexes))
 
     def drop_index(self, iname):
-        index = self._indexes.pop(iname, None)
-        if index is None: return
-        keys = tuple(i[0] for i in index)
-        self._unique_indexes.pop(keys, None)
+        self._indexes.pop(iname, None)
+        self._unique_indexes.pop(iname, None)
 
     def drop_indexes(self):
         for iname in list(self._indexes.keys()):
@@ -607,20 +608,26 @@ class Collection(collection.Collection):
             key_values.append(sub.get(key, None))
         return bson.BSON.encode({'k': key_values})
 
+    _null_index_key = bson.BSON.encode({'k': [None]})
+
     def _index(self, doc):
         if '_id' not in doc: return
-        for keys, index in six.iteritems(self._unique_indexes):
-            key_values = self._extract_index_key(doc, keys)
-            old_id = index.get(key_values, ())
+        for iname, docindex in six.iteritems(self._unique_indexes):
+            idx_info = self._indexes[iname]
+            key_values = self._extract_index_key(doc, idx_info['key'])
+            if idx_info.get('sparse') and key_values == self._null_index_key:
+                continue
+            old_id = docindex.get(key_values, ())
             if old_id == doc['_id']: continue
             if old_id in self._data:
-                raise DuplicateKeyError('%r: %s' % (self, keys))
-            index[key_values] = doc['_id']
+                raise DuplicateKeyError('%r: %s' % (self, idx_info))
+            docindex[key_values] = doc['_id']
 
     def _deindex(self, doc):
-        for keys, index in six.iteritems(self._unique_indexes):
+        for iname, docindex in six.iteritems(self._unique_indexes):
+            keys = self._indexes[iname]['key']
             key_values = self._extract_index_key(doc, keys)
-            index.pop(key_values, None)
+            docindex.pop(key_values, None)
 
     def map_reduce(self, map, reduce, out, full_response=False, **kwargs):
         if isinstance(out, six.string_types):
