@@ -5,6 +5,7 @@ import logging
 import six
 from six.moves import urllib
 from threading import Lock
+from typing import Union
 
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, InvalidURI
@@ -12,6 +13,8 @@ from pymongo.uri_parser import parse_uri
 
 from . import mim
 from . import exc
+
+Conn = Union[mim.Connection, MongoClient]
 
 
 def create_engine(*args, **kwargs):
@@ -120,7 +123,7 @@ class Engine(object):
         return self.conn[name]
 
     @property
-    def conn(self):
+    def conn(self) -> Conn:
         """This is the pymongo connection itself."""
         if self._conn is None: self.connect()
         return self._conn

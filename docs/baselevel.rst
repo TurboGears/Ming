@@ -100,11 +100,36 @@ to a *different* class attribute, we can do so using the following syntax::
 This is sometimes useful for "privatizing" document members that we wish to wrap
 in `@property` decorators or other access controls.
 
-.. sidebar:: Methods
+We can add our own methods to the WikiPage class, too.  However, the `make()`
+method is reserved for object construction and validation.
+See the `Bad Data`_ section.
 
-    We can add our own methods to the WikiPage class, too.  However, the `make()`
-    method is reserved for object construction and validation.
-    See the `Bad Data`_ section.
+Type Annotations
+================
+
+Some type annotations are in Ming, but you need to add a hint to each class to help.
+You must be using the "declarative" approach that inherits from `Document`.
+The primary goal so far is to improve IDE experience.  They may or may not work with
+mypy.  Add some imports and the `m:` line to your models like this:
+
+.. code-block:: python
+
+    import typing
+
+    if typing.TYPE_CHECKING:
+        from ming.metadata import Manager
+
+    ...
+
+    class WikiPage(Document):
+
+        class __mongometa__:
+            session = session
+            name = 'wiki_page'
+
+        m: 'Manager[WikiPage]'
+
+        ...
 
 Using Ming Objects to Represent Mongo Records
 =============================================

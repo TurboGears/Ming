@@ -1,10 +1,16 @@
 from copy import deepcopy
+import typing
+
+if typing.TYPE_CHECKING:
+    # avoid circular imports
+    from ming.odm import ODMSession
+
 
 def state(obj):
     """Gets the UnitOfWork state of a mapped object"""
     return obj.__ming__.state
 
-def session(v):
+def session(v) -> 'ODMSession':
     """Returns the ORMSession instance managing either a class or an object"""
     if isinstance(v, type):
         return v.query.mapper.session
