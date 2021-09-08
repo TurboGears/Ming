@@ -217,7 +217,7 @@ class ODMSession(object):
         Arguments are the same as :meth:`pymongo.collection.Collection.remove`.
         """
         m = mapper(cls)
-        m.remove(self, *args, **kwargs)
+        return m.remove(self, *args, **kwargs)
 
     def update(self, cls, spec, fields, **kwargs):
         """Updates one or more ``cls`` entries from the collection.
@@ -230,7 +230,7 @@ class ODMSession(object):
         Arguments are the same as :meth:`pymongo.collection.Collection.update`.
         """
         m = mapper(cls)
-        m.update_partial(self, spec, fields, **kwargs)
+        return m.update_partial(self, spec, fields, **kwargs)
 
     def update_if_not_modified(self, obj, fields, upsert=False):
         """Updates one entry unless it was modified since first queried.

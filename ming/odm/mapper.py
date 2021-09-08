@@ -68,8 +68,9 @@ class Mapper(object):
     @_with_hooks('insert')
     def insert(self, obj, state, session, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
-        session.impl.insert(doc, validate=False)
+        ret = session.impl.insert(doc, validate=False)
         state.status = state.clean
+        return ret
 
     @_with_hooks('update')
     def update(self, obj, state, session, **kwargs):
@@ -78,17 +79,18 @@ class Mapper(object):
             fields = ()
 
         doc = self.collection(state.document, skip_from_bson=True)
-        session.impl.save(doc, *fields, validate=False)
+        ret = session.impl.save(doc, *fields, validate=False)
         state.status = state.clean
+        return ret
 
     @_with_hooks('delete')
     def delete(self, obj, state, session, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
-        session.impl.delete(doc)
+        return session.impl.delete(doc)
 
     @_with_hooks('remove')
     def remove(self, session, *args, **kwargs):
-        session.impl.remove(self.collection, *args, **kwargs)
+        return session.impl.remove(self.collection, *args, **kwargs)
 
     def create(self, doc, options, remake=True):
         if remake is True or type(doc) is not self.collection:
@@ -242,7 +244,7 @@ class Mapper(object):
                     60,
                     indent_subsequent=2)
             def delete(self_):
-                self_.query.delete()
+                return self_.query.delete()
             def __getitem__(self_, name):
                 try:
                     return getattr(self_, name)
@@ -385,7 +387,7 @@ class _InstQuery(object):
         st.status = st.deleted
 
     def update(self, fields, **kwargs):
-        self.classquery.update(
+        return self.classquery.update(
             {'_id': self.instance._id },
             fields)
 
