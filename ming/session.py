@@ -95,7 +95,7 @@ class Session(object):
             if kwarg not in ('spec_or_id', 'w'):
                 raise ValueError("Unexpected kwarg %s.  Did you mean to pass a dict?  If only sent kwargs, pymongo's remove()"
                                  " would've emptied the whole collection.  Which we're pretty sure you don't want." % kwarg)
-        self._impl(cls).remove(*args, **kwargs)
+        return self._impl(cls).remove(*args, **kwargs)
 
     def find_by(self, cls, **kwargs):
         return self.find(cls, kwargs)
@@ -161,6 +161,7 @@ class Session(object):
             result = self._impl(doc).save(data, **fix_write_concern(kwargs))
         if result and '_id' not in doc:
             doc._id = result
+        return result
 
     @annotate_doc_failure
     def insert(self, doc, **kwargs):
@@ -168,19 +169,20 @@ class Session(object):
         bson = self._impl(doc).insert(data, **fix_write_concern(kwargs))
         if bson and '_id' not in doc:
             doc._id = bson
+        return bson
 
     @annotate_doc_failure
     def upsert(self, doc, spec_fields, **kwargs):
         self._prep_save(doc, kwargs.pop('validate', True))
         if type(spec_fields) != list:
             spec_fields = [spec_fields]
-        self._impl(doc).update(dict((k,doc[k]) for k in spec_fields),
+        return self._impl(doc).update(dict((k,doc[k]) for k in spec_fields),
                                doc,
                                upsert=True)
 
     @annotate_doc_failure
     def delete(self, doc):
-        self._impl(doc).remove({'_id':doc._id})
+        return self._impl(doc).remove({'_id':doc._id})
 
     def _set(self, doc, key_parts, value):
         if len(key_parts) == 0:
@@ -200,7 +202,7 @@ class Session(object):
         for k,v in six.iteritems(fields_values):
             self._set(doc, k.split('.'), v)
         impl = self._impl(doc)
-        impl.update({'_id':doc._id}, {'$set':fields_values})
+        return impl.update({'_id':doc._id}, {'$set':fields_values})
 
     @annotate_doc_failure
     def increase_field(self, doc, **kwargs):
