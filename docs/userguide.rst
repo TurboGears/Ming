@@ -199,6 +199,30 @@ to ensure that Ming has full information on all mapped classes:
    :start-after: #{compileall
    :end-before: #}
 
+Type Annotations
+----------------
+
+Some type annotations are in Ming, but you need to add a hint to each class to help.
+The primary goal so far is to improve IDE experience.  They may or may not work with
+mypy.  Add some imports and the `query:` line to your models like this:
+
+.. code-block:: python
+
+    import typing
+
+    if typing.TYPE_CHECKING:
+        from ming.odm.mapper import Query
+
+    ...
+
+    class WikiPage(MappedClass):
+        class __mongometa__:
+            session = session
+            name = 'wiki_page'
+
+        query: 'Query[WikiPage]'
+
+        ...
 
 Creating Objects
 ----------------
