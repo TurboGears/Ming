@@ -1,8 +1,8 @@
 Ming
 ====
 
-.. image:: https://api.travis-ci.com/TurboGears/Ming.svg
-    :target: https://app.travis-ci.com/github/TurboGears/Ming
+.. image:: https://github.com/TurboGears/Ming/actions/workflows/main.yml/badge.svg
+    :target: https://github.com/TurboGears/Ming/actions/workflows/main.yml
 
 .. image:: https://coveralls.io/repos/TurboGears/Ming/badge.png
     :target: https://coveralls.io/r/TurboGears/Ming
