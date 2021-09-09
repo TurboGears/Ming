@@ -24,6 +24,7 @@ setup(name='Ming',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
       ], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
+      python_requires='>=3.5',
       keywords='mongo, pymongo',
       author='Rick Copeland',
       author_email='rick@geek.net',
