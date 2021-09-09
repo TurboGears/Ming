@@ -5,7 +5,7 @@ import six
 
 
 class _DocumentMeta(type):
-    def __new__(meta, classname, bases, dct):
+    def __new__(meta, classname, bases, dct, **kwargs):
         mm = _build_mongometa(bases, dct)
         collection_name = mm.name
         session = mm.session
@@ -42,7 +42,7 @@ class _DocumentMeta(type):
             migrate = getattr(migrate, '__func__', migrate)
         if before_save:
             before_save = getattr(before_save, '__func__', before_save)
-        cls = type.__new__(meta, classname, bases, clsdct)
+        cls = type.__new__(meta, classname, bases, clsdct, **kwargs)
         m = _ClassManager(
             cls, collection_name, session, fields, indexes,
             polymorphic_on=polymorphic_on,
