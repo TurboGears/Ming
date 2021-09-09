@@ -1,0 +1,6 @@
+## This is a MANIFEST template file. Listed here are commands and patterns
+## matching files that would not get automatically included in a package.
+## https://packaging.python.org/guides/using-manifest-in/
+
+recursive-include ming *.pyi
+include ming/py.typed
