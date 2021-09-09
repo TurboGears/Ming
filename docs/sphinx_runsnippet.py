@@ -18,7 +18,7 @@ from sphinx.util import parselinenos
 
 def interact(mod, snippet_function):
     snippet_namespace = {}
-    exec ('from %s import *' % mod) in snippet_namespace, snippet_namespace
+    exec('from %s import *' % mod, snippet_namespace, snippet_namespace)
     script = extract_session(snippet_namespace, snippet_function)
     # Capture stdout, stderr
     old_stdin, old_stdout, old_stderr = sys.stdin, sys.stdout, sys.stderr
@@ -27,7 +27,8 @@ def interact(mod, snippet_function):
     console = code.InteractiveConsole(snippet_namespace)
     console.interact('')
     sys.stdin, sys.stdout, sys.stderr = old_stdin, old_stdout, old_stderr
-    return stdout.getvalue()[:-5]
+    console_exiting_msg = '>>> \nnow exiting InteractiveConsole...\n'
+    return stdout.getvalue()[:-len(console_exiting_msg)]
 
 
 def extract_session(namespace, func):
