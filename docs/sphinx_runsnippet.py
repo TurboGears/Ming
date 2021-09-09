@@ -10,7 +10,7 @@ import sys
 import code
 import inspect
 import textwrap
-from StringIO import StringIO
+from io import StringIO
 from docutils import nodes
 from docutils.parsers.rst import Directive, directives
 from sphinx.util import parselinenos
