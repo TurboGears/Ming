@@ -57,6 +57,7 @@ jobs:
 
       # https://coveralls-python.readthedocs.io/en/latest/usage/configuration.html#github-actions-support
       - name: Upload coverage data to coveralls.io
+        if: ${{ matrix.python-version != '2.7' }}
         run: coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
