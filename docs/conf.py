@@ -49,14 +49,14 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Ming'
-copyright = u'2009, Rick Copeland, Mark Ramm, Dave Brondsema, Jonathan Beard, Wolf'
+project = 'Ming'
+copyright = '2009, Rick Copeland, Mark Ramm, Dave Brondsema, Jonathan Beard, Wolf'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-exec open('../ming/version.py')
+exec(open('../ming/version.py').read())
 # The short X.Y version.
 version = __version__
 # The full version, including alpha/beta/rc tags.
@@ -185,8 +185,8 @@ htmlhelp_basename = 'Mingdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Ming.tex', u'Ming Documentation',
-   u'Rick Copeland, Mark Ramm, Dave Brondsema, Jonathan Beard, Wolf', 'manual'),
+  ('index', 'Ming.tex', 'Ming Documentation',
+   'Rick Copeland, Mark Ramm, Dave Brondsema, Jonathan Beard, Wolf', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
