@@ -4,8 +4,8 @@ Ming
 .. image:: https://github.com/TurboGears/Ming/actions/workflows/main.yml/badge.svg
     :target: https://github.com/TurboGears/Ming/actions/workflows/main.yml
 
-.. image:: https://coveralls.io/repos/TurboGears/Ming/badge.png
-    :target: https://coveralls.io/r/TurboGears/Ming
+.. image:: https://codecov.io/gh/TurboGears/Ming/branch/master/graph/badge.svg?token=Iy3CU62Ga5
+    :target: https://codecov.io/gh/TurboGears/Ming
 
 .. image:: https://img.shields.io/pypi/v/Ming.svg
    :target: https://pypi.python.org/pypi/Ming
