@@ -6,6 +6,7 @@
 *.swp
 */.coverage
 .coverage
+coverage.xml
 /cover/
 *~
 pyforge/docs/_build/*
