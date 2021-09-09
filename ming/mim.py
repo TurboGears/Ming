@@ -1354,7 +1354,7 @@ def validate(doc):
     for k,v in six.iteritems(doc):
         assert '$' not in k
         assert '.' not in k
-        if hasattr(v, 'iteritems'):
+        if hasattr(v, 'items'):
             validate(v)
 
 def bson_safe(obj):
