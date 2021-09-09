@@ -80,7 +80,19 @@ connection and Database object.
 (The actual Database object can always be accessed via the :attr:`.DataStore.db`
 property of the DataStore instance).
 
-.. run-pysnippet:: ming_odm_tutorial connecting_datastore
+.. code-block:: python
+
+    >>> from ming import create_datastore
+    >>>
+    >>> datastore = create_datastore('mongodb://localhost:27017/tutorial')
+    >>> datastore
+    <DataStore None>
+    >>> # The connection is actually performed lazily
+    >>> # the first time db is accessed
+    >>> datastore.db
+    Database(MongoClient(host=['localhost:27017'], document_class=dict, tz_aware=False, connect=True), 'tutorial')
+    >>> datastore
+    <DataStore Database(MongoClient(host=['localhost:27017'], document_class=dict, tz_aware=False, connect=True), 'tutorial')>
 
 .. note::
 

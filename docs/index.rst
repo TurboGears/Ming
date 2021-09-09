@@ -30,9 +30,14 @@ First thing needed to start using Ming is to tell it how to connect to our insta
 For this we use the :func:`.create_datastore` function, this function creates a connection
 to the MongoDB instance, replicaset or cluster specified by the given URL:
 
-.. literalinclude:: src/ming_welcome.py
-   :start-after: #{connect-imports
-   :end-before: #}
+.. code-block:: python
+
+    from ming import create_datastore
+    from ming.odm import ThreadLocalODMSession
+
+    session = ThreadLocalODMSession(
+        bind=create_datastore('mongodb://myuser:mypassword@localhost:27017/odm_welcome')
+    )
 
 The :class:`.ThreadLocalODMSession` is the object all your models will use to interact with
 MongoDB and can be directly used to perform low-level mongodb oprations.

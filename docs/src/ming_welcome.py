@@ -7,7 +7,7 @@ from ming import create_datastore
 from ming.odm import ThreadLocalODMSession
 
 session = ThreadLocalODMSession(
-    bind=create_datastore('odm_welcome')
+    bind=create_datastore('mim:///odm_welcome')
 )
 #}
 
