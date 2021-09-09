@@ -45,10 +45,6 @@ class TestObject(TestCase):
         c = [ 'foo', 1, 1.0, now,
               Decimal('0.3'), None, oid ]
 
-        if six.PY2:
-            c = [ 'foo', 1, long(1), 1.0, now,
-                  Decimal('0.3'), None, oid ]
-
         safe_obj = Object(
             a=[1,2,3],
             b=dict(a=12),

@@ -1,7 +1,7 @@
 Ming News / Release Notes
 =====================================
 
-The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2.  Both work on Python 2 and 3.
+The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2 and Python 2.
 
 0.10.2 (Jun 19, 2020)
 ---------------------

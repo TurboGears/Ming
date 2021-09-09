@@ -225,11 +225,7 @@ class Mapper(object):
         for k in ('__repr__', '__getitem__', '__setitem__', '__contains__',
                   'delete'):
             if getattr(self.mapped_class, k, ()) == getattr(object, k, ()):
-                if six.PY2:
-                    # im_func has been deprecated in Python 3
-                    setattr(self.mapped_class, k, getattr(inst, k).im_func)
-                else:
-                    setattr(self.mapped_class, k, getattr(inst, k))
+                setattr(self.mapped_class, k, getattr(inst, k))
 
     def _instrumentation(self):
         class _Instrumentation(object):

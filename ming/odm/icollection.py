@@ -162,20 +162,6 @@ class InstrumentedList(list):
             self._tracker.removed_item(self._impl[i])
             del self._impl[i]
 
-    def __setslice__(self, i, j, v):
-        """Removed in Python 3"""
-        v = list(map(deinstrument, v))
-        iv = (instrument(item, self._tracker) for item in v)
-        super(InstrumentedList, self).__getitem__(slice(i, j))
-        self._tracker.removed_items(self._impl[i:j])
-        self._impl[i:j] = v
-        self._tracker.added_items(v)
-
-    def __delslice__(self, i, j):
-        super(InstrumentedList, self).__delslice__(i, j)
-        self._tracker.removed_items(self._impl[i:j])
-        del self._impl[i:j]
-
     def __add__(self, y):
         return instrument(self._impl + y, self._tracker)
 
