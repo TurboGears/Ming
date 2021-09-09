@@ -3,6 +3,10 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2 and Python 2.
 
+0.11.1 (Sep 9, 2021)
+---------------------
+* Include py.typed and .pyi files in distribution
+
 0.11.0 (Sep 9, 2021)
 ---------------------
 * Drop support for Python 2.7, 3.3, and 3.4
