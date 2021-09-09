@@ -88,7 +88,7 @@ class TestMapping(TestCase):
 
 
 class TestMappingReal(TestMapping):
-    DATASTORE = "ming_tests"
+    DATASTORE = "mongodb://localhost/ming_tests?serverSelectionTimeoutMS=100"
 
         
 class TestRelation(TestCase):
@@ -208,7 +208,7 @@ class TestRelation(TestCase):
 
 
 class TestRealMongoRelation(TestRelation):
-    DATASTORE = "ming_tests"
+    DATASTORE = "mongodb://localhost/ming_tests?serverSelectionTimeoutMS=100"
 
 
 class TestManyToManyListRelation(TestCase):
@@ -706,7 +706,7 @@ class TestBasicMapping(TestCase):
 
 
 class TestRealBasicMapping(TestBasicMapping):
-    DATASTORE = "test_ming"
+    DATASTORE = "mongodb://localhost/test_ming?serverSelectionTimeoutMS=100"
 
 
 class TestPolymorphic(TestCase):
