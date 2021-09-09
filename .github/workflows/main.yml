@@ -54,3 +54,11 @@ jobs:
         #   run: tox --py current
         # sed is used to remove the '.' so '3.7' becomes '37' for tox (and pypy3 doesn't become pypypy3)
         run: tox -e py`echo ${{ matrix.python-version }} | sed s/\\\.// | sed s/pypy/py/`
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          fail_ci_if_error: true
+          flags: tests-${{ matrix.python-version }}
+          name: codecov-umbrella
+          verbose: true
