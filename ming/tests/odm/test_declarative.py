@@ -67,6 +67,25 @@ class TestMapping(TestCase):
         u2 = User.query.find({"username": "anonymous"}).first()
         assert u._id == u2._id
 
+    def test_with_init_subclass(self):
+        class User(MappedClass):
+            class __mongometa__:
+                name = "users_with_init_subclass"
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            username = FieldProperty(str)
+
+            def __init_subclass__(cls, constant=1, **kwargs):
+                super().__init_subclass__(**kwargs)
+                cls.prop = constant
+
+        class B(User, constant=2):
+            pass
+
+        b = B()
+        assert b.prop == 2
+
     def test_delete_super(self):
         class User(MappedClass):
             class __mongometa__:

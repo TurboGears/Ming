@@ -6,11 +6,11 @@ import six
 
 class _MappedClassMeta(type):
  
-    def __init__(cls, name, bases, dct):
+    def __init__(cls, name, bases, dct, **kwargs):
         cls._registry['%s.%s' % (cls.__module__, cls.__name__)] = mapper(cls)
         cls._compiled = False
 
-    def __new__(meta, name, bases, dct):
+    def __new__(meta, name, bases, dct, **kwargs):
         # Get the mapped base class(es)
         mapped_bases = [b for b in bases if hasattr(b, 'query')]
         doc_bases = [mapper(b).collection for b in mapped_bases]
@@ -42,7 +42,7 @@ class _MappedClassMeta(type):
                 properties[k] = v
             else:
                 clsdict[k] = v
-        cls = type.__new__(meta, name, bases, clsdict)
+        cls = type.__new__(meta, name, bases, clsdict, **kwargs)
         mapper(cls, collection_class, mm.session,
                properties=properties,
                include_properties=include_properties,
