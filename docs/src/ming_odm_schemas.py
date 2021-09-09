@@ -7,7 +7,7 @@ Mapper._mapper_by_classname.clear()
 
 from ming import create_datastore
 from ming.odm import ThreadLocalODMSession
-session = ThreadLocalODMSession(bind=create_datastore('odm_tutorial'))
+session = ThreadLocalODMSession(bind=create_datastore('mim:///odm_tutorial'))
 
 from ming import schema
 from ming.odm import MappedClass

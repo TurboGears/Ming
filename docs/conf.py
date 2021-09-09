@@ -209,6 +209,6 @@ latex_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None,
-                       'pymongo': ('http://api.mongodb.org/python/current/', None)}
+                       'pymongo': ('https://pymongo.readthedocs.io/en/stable/', None)}
 
 autoclass_content = 'both'

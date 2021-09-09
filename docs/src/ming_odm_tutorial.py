@@ -7,7 +7,7 @@ import re
 from ming import create_datastore
 from ming.odm import ThreadLocalODMSession
 
-session = ThreadLocalODMSession(bind=create_datastore('odm_tutorial'))
+session = ThreadLocalODMSession(bind=create_datastore('mim:///odm_tutorial'))
 #}
 
 #{odm-imports
@@ -198,23 +198,12 @@ def snippet8():
     wpm.metadata
 
 
-def connecting_datastore():
-    from ming import create_datastore
-
-    datastore = create_datastore('mongodb://localhost:27017/tutorial')
-    datastore
-    # The connection is actually performed lazily
-    # the first time db is accessed
-    datastore.db
-    datastore
-
-
 def connection_session():
     from ming import create_datastore
     from ming.odm import ThreadLocalODMSession
 
     session = ThreadLocalODMSession(
-        bind=create_datastore('mongodb://localhost:27017/tutorial')
+        bind=create_datastore('mim:///tutorial')
     )
     session
     # The database and datastore are still available
