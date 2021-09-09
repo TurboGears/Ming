@@ -3,6 +3,16 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2 and Python 2.
 
+0.11.0 (Sep 9, 2021)
+---------------------
+* Drop support for Python 2.7, 3.3, and 3.4
+* Support for Python 3.9
+* MIM: support sparse unique indexes
+* propagate return values from various update/delete/insert operations
+* Support __init_subclass__ arguments
+* validate() may not have been validating sub-documents
+* Add some type annotations
+
 0.10.2 (Jun 19, 2020)
 ---------------------
 * Fix error using save() and no _id
