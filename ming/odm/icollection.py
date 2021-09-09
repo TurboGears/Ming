@@ -163,7 +163,7 @@ class InstrumentedList(list):
             del self._impl[i]
 
     def __setslice__(self, i, j, v):
-        """Deprecated in Python 2.6"""
+        """Removed in Python 3"""
         v = list(map(deinstrument, v))
         iv = (instrument(item, self._tracker) for item in v)
         super(InstrumentedList, self).__getitem__(slice(i, j))
