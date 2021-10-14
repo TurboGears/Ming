@@ -684,6 +684,24 @@ class TestCollection(TestCase):
         result = self.bind.db.coll.distinct('a')
         self.assertEqual(result, ['A'])
 
+    def test_distinct_subkey(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id': str(i), 'a': {'b': 'A'}})
+        result = self.bind.db.coll.distinct('a.b')
+        self.assertEqual(result, ['A'])
+
+    def test_distinct_sublist(self):
+        for i in range(5):
+            self.bind.db.coll.insert({'_id': str(i),
+                                      'a': [{'b': 'A', 'z': 'z', 'f': {'f': 'F'}},
+                                            {'b': 'C', 'z': 'z', 'f': {'f': 'G'}}]})
+        result = self.bind.db.coll.distinct('a.b')
+        self.assertEqual(result, ['A', 'C'])
+        result = self.bind.db.coll.distinct('a.z')
+        self.assertEqual(result, ['z'])
+        result = self.bind.db.coll.distinct('a.f.f')
+        self.assertEqual(result, ['F', 'G'])
+
     def test_distinct_filtered(self):
         for i in range(5):
             self.bind.db.coll.insert({'_id': i, 'a': 'A'})
