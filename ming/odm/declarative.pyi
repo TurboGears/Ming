@@ -18,5 +18,9 @@ class MappedClass:
             m: 'Manager[WikiPage]'
     """
 
+    def __getitem__(self, item) -> Any: ...
+    def __setitem__(self, key, value): ...
+    def __delitem__(self, key): ...
+
 
 def __getattr__(name) -> Any: ...  # marks file as incomplete

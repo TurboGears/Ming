@@ -1,12 +1,14 @@
 from copy import deepcopy
 import typing
 
+
 if typing.TYPE_CHECKING:
     # avoid circular imports
     from ming.odm import ODMSession
+    from ming.odm.unit_of_work import ObjectState
 
 
-def state(obj):
+def state(obj) -> 'ObjectState':
     """Gets the UnitOfWork state of a mapped object"""
     return obj.__ming__.state
 
