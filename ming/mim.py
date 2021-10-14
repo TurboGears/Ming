@@ -5,6 +5,7 @@ import re
 import sys
 import time
 import itertools
+from itertools import chain
 import collections
 import logging
 import warnings
@@ -161,7 +162,8 @@ class Database(database.Database):
             collection = self._collections[command['distinct']]
             key = command['key']
             filter = command.get('filter')
-            return list(set(_lookup(d, key) for d in collection.find(filter=filter)))
+            all_vals = chain.from_iterable(_lookup(d, key) for d in collection.find(filter=filter))
+            return sorted(set(all_vals))
         elif 'getlasterror' in command:
             return dict(connectionId=None, err=None, n=0, ok=1.0)
         elif 'collstats' in command:
@@ -788,7 +790,8 @@ class Cursor(object):
         return self # I'd rather clone, but that's not what pymongo does here
 
     def distinct(self, key):
-        return list(set(_lookup(d, key) for d in self.all()))
+        all_vals = chain.from_iterable(_lookup(d, key) for d in self.all())
+        return sorted(set(all_vals))
 
     def hint(self, index):
         # checks indexes, but doesn't actually use hinting
@@ -818,8 +821,8 @@ class Cursor(object):
 def cursor_comparator(keys):
     def comparator(a, b):
         for k,d in keys:
-            x = _lookup(a, k, None)
-            y = _lookup(b, k, None)
+            x = list(_lookup(a, k, None))
+            y = list(_lookup(b, k, None))
             part = BsonArith.cmp(x, y)
             if part: return part * d
         return 0
@@ -1312,12 +1315,20 @@ def _part_match(op, value, key_parts, doc, allow_list_compare=True):
 
 def _lookup(doc, k, default=()):
     try:
-        for part in k.split('.'):
-            doc = doc[part]
+        k_parts = k.split('.')
+        for i, part in enumerate(k_parts):
+            if isinstance(doc, list):
+                for item in doc:
+                    remaining_parts = '.'.join(k_parts[i:])
+                    yield from _lookup(item, remaining_parts, default)
+                return
+            else:
+                doc = doc[part]
     except KeyError:
-        if default != (): return default
+        if default != ():
+            yield default
         raise
-    return doc
+    yield doc
 
 def compare(op, a, b):
     if op == '$gt': return BsonArith.cmp(a, b) > 0
