@@ -145,3 +145,16 @@ def fix_write_concern(kwargs):
         warnings.warn('safe option is now deprecated', DeprecationWarning)
         kwargs['w'] = int(kwargs.pop('safe'))
     return kwargs
+
+
+def to_hashable(v):
+    if isinstance(v, list):
+        return tuple((to_hashable(sv) for sv in v))
+    elif isinstance(v, dict):
+        return tuple(((to_hashable(k), to_hashable(sv))
+                      for k, sv in sorted(v.items())))
+    return v
+
+
+def doc_to_set(doc):
+    return set((k, to_hashable(v)) for k, v in doc.copy().items())
