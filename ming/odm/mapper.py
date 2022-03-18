@@ -61,6 +61,16 @@ class Mapper(object):
             raise TypeError('Unknown kwd args: %r' % kwargs)
         self._instrument_class(properties, include_properties, exclude_properties)
 
+    @classmethod
+    def replace_session(cls, session):
+        for _mapper in cls.all_mappers():
+            _mapper.session = session
+            _mapper.mapped_class.query.session = session
+            _mapper.mapped_class.__mongometa__.session = session
+            _mapper._compiled = False
+            _mapper.compile()
+            _mapper.session.ensure_indexes(_mapper.collection)
+
     def __repr__(self):
         return '<Mapper %s:%s>' % (
             self.mapped_class.__name__, self.collection.m.collection_name)
