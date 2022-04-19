@@ -264,7 +264,7 @@ class RelationProperty(ORMProperty):
         if self.fetch:
             st = state(instance)
             result = st.extra_state.get(self, ())
-            if result is ():
+            if result == ():
                 result = st.extra_state[self] = self.join.load(instance)
             return result
         else:

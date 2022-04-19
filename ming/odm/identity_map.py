@@ -11,7 +11,7 @@ class IdentityMap(object):
 
     def save(self, value):
         vid = getattr(value, '_id', ())
-        if vid is not ():
+        if vid != ():
             self._objects[value.__class__, vid] = value
 
     def clear(self):
@@ -19,7 +19,7 @@ class IdentityMap(object):
 
     def expunge(self, obj):
         vid = getattr(obj, '_id', ())
-        if vid is (): return
+        if vid == (): return
         try:
             del self._objects[(obj.__class__, vid)]
         except KeyError:

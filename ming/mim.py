@@ -852,7 +852,7 @@ class BsonArith(object):
 
     @classmethod
     def to_bson(cls, val):
-        if val is (): return val
+        if val == (): return val
         tp = cls.bson_type(val)
         return (tp, cls._types[tp][0](val))
 
