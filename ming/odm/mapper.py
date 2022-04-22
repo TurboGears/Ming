@@ -3,7 +3,7 @@ import warnings
 from copy import copy, deepcopy
 
 from ming.base import Object, NoDefault
-from ming.utils import wordwrap, doc_to_set
+from ming.utils import wordwrap
 
 from .base import ObjectState, state, _with_hooks
 from .property import FieldProperty
@@ -84,15 +84,8 @@ class Mapper(object):
 
     @_with_hooks('update')
     def update(self, obj, state, session, **kwargs):
-        fields = state.options.get('fields', None)
-        if fields is None:
-            # here we do a symmetric difference to see what fields did change
-            fields = tuple(set((k for k, v in
-                                doc_to_set(state.original_document)
-                                ^ doc_to_set(state.document))))
-
         doc = self.collection(state.document, skip_from_bson=True)
-        ret = session.impl.save(doc, *fields, validate=False)
+        ret = session.impl.save(doc, validate=False, state=state)
         state.status = state.clean
         return ret
 
