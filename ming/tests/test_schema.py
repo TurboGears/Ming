@@ -113,7 +113,7 @@ class TestSchemaItem(TestCase):
             {'a': str},
             {'a': [str], 'b': int},
             fixer)
-        self.assertRaisesRegexp(S.Invalid, 'int',
+        self.assertRaisesRegex(S.Invalid, 'int',
                                 lambda: si.validate(dict(a=['a'], b='b')))
 
     def test_none(self):

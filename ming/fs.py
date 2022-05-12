@@ -54,7 +54,7 @@ class _FSClassManager(_ClassManager):
         version_of=None, migrate=None,
         before_save=None):
         self.root_collection_name = root_collection_name
-        super(_FSClassManager, self).__init__(
+        super().__init__(
             cls, root_collection_name + '.files', session, fields, indexes,
             polymorphic_on, polymorphic_identity,
             polymorphic_registry, version_of, migrate, before_save)
@@ -93,7 +93,7 @@ class _FSClassManager(_ClassManager):
     def get_version(self, filename=None, version=-1, **kwargs):
         return self.fs.get_version(filename, version, **kwargs)
 
-class _ClosingProxy(object):
+class _ClosingProxy:
 
     def __init__(self, thing):
         self.thing = thing

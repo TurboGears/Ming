@@ -2,36 +2,36 @@ from ming.utils import indent
 from .base import state, ObjectState
 import six
 
-class UnitOfWork(object):
+class UnitOfWork:
 
     def __init__(self, session):
         self.session = session
         self._objects = {}
 
     def __iter__(self):
-        return six.itervalues(self._objects)
+        return iter(self._objects.values())
 
     def save(self, obj):
         self._objects[id(obj)] = obj
 
     @property
     def new(self):
-        return (obj for obj in six.itervalues(self._objects)
+        return (obj for obj in self._objects.values()
                 if state(obj).status == ObjectState.new)
 
     @property
     def clean(self):
-        return (obj for obj in six.itervalues(self._objects)
+        return (obj for obj in self._objects.values()
                 if state(obj).status == ObjectState.clean)
 
     @property
     def dirty(self):
-        return (obj for obj in six.itervalues(self._objects)
+        return (obj for obj in self._objects.values()
                 if state(obj).status == ObjectState.dirty)
 
     @property
     def deleted(self):
-        return (obj for obj in six.itervalues(self._objects)
+        return (obj for obj in self._objects.values()
                 if state(obj).status == ObjectState.deleted)
 
     def flush(self):
@@ -57,7 +57,7 @@ class UnitOfWork(object):
                 assert False, 'Unknown obj state: %s' % st.status
         self._objects = new_objs
         self.session.imap.clear()
-        for obj in six.itervalues(new_objs):
+        for obj in new_objs.values():
             self.session.imap.save(obj)
 
     def __repr__(self):

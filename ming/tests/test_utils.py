@@ -8,7 +8,7 @@ class TestUtils(TestCase):
 
     def test_lazy_property(self):
         counter = [ 0 ]
-        class MyClass(object):
+        class MyClass:
             @utils.LazyProperty
             def prop(self):
                 counter[0] += 1

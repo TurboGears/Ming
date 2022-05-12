@@ -1,7 +1,7 @@
 import sys
 from unittest import TestCase, main
 
-from mock import patch, Mock
+from unittest.mock import patch, Mock
 from pymongo.errors import ConnectionFailure
 
 import ming
@@ -12,7 +12,7 @@ from ming.datastore import Engine
 from ming.exc import MingConfigError
 
 
-class DummyConnection(object):
+class DummyConnection:
     def __init__(*args, **kwargs):
         pass
 

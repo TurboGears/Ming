@@ -1,7 +1,7 @@
 from unittest import TestCase
 from collections import defaultdict
 
-import mock
+from unittest import mock
 import pymongo
 import six
 from pymongo.errors import AutoReconnect
@@ -316,7 +316,7 @@ class TestCursor(TestCase):
         self.MockSession.db = mock.MagicMock()
         class IteratorMock(mock.Mock):
             def __init__(self, base_iter):
-                super(IteratorMock, self).__init__()
+                super().__init__()
                 self._base_iter = base_iter
             def __iter__(self):
                 return self

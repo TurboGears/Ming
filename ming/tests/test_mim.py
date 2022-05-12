@@ -6,7 +6,7 @@ import bson
 from ming import create_datastore, mim
 from pymongo import UpdateOne
 from pymongo.errors import OperationFailure, DuplicateKeyError
-from mock import patch
+from unittest.mock import patch
 
 
 class TestDatastore(TestCase):
@@ -219,22 +219,22 @@ class TestDottedOperators(TestCase):
              'x': {} })
         self.coll.update({'_id': 'foo2'}, {'$set': {'b.0': 4}})
         obj = self.coll.find_one({'_id': 'foo2'})
-        self.assertEqual(obj, {u'a': 2, u'x': {}, u'_id': u'foo2', u'b': [4, 2, 3]})
+        self.assertEqual(obj, {'a': 2, 'x': {}, '_id': 'foo2', 'b': [4, 2, 3]})
 
     def test_unset_dotted(self):
         self.coll.update({}, { '$unset': { 'b.f.1.g': 1 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
-        self.assertEqual(obj, { 'b': { 'f': [{u'g': 1}, {}] } })
+        self.assertEqual(obj, { 'b': { 'f': [{'g': 1}, {}] } })
 
         # Check that it even works for keys that are not there.
         self.coll.update({}, { '$unset': { 'b.this_does_not_exists': 1 } })
         obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
-        self.assertEqual(obj, { 'b': { 'f': [{u'g': 1}, {}] } })
+        self.assertEqual(obj, { 'b': { 'f': [{'g': 1}, {}] } })
 
         # Check that unsetting subkeys of a nonexisting subdocument has no side effect
         self.coll.update({}, {'$unset': {'this_does_not_exists.x.y.z': 1}})
         obj = self.coll.find_one({}, { '_id': 0, 'b.f': 1 })
-        self.assertEqual(obj, { 'b': { 'f': [{u'g': 1}, {}] } })
+        self.assertEqual(obj, { 'b': { 'f': [{'g': 1}, {}] } })
 
     def test_push_dotted(self):
         self.coll.update({}, { '$push': { 'b.e': 4 } })
@@ -335,7 +335,7 @@ class TestCommands(TestCase):
 class TestMRCommands(TestCommands):
 
     def setUp(self):
-        super(TestMRCommands, self).setUp()
+        super().setUp()
         if not self.bind.db._jsruntime:
             self.skipTest("Javascript Runtime Unavailable")
 
@@ -516,7 +516,7 @@ class TestMRCommands(TestCommands):
             reduce=self.first_js,
             out=dict(replace='coll'))
         self.assertEqual(result['result'], 'coll')
-        expected = [{u'_id': u'val', u'value': {u'1': 5}}]
+        expected = [{'_id': 'val', 'value': {'1': 5}}]
         self.assertEqual(
             list(self.bind.db.coll.find()),
             expected)
@@ -531,7 +531,7 @@ class TestMRCommands(TestCommands):
             map='function(){ var d = {}; d[new String(this.val.id)] = this.val.c; emit("val", d); }',
             reduce=self.first_js,
             out=dict(inline=1))
-        expected = [{'_id': u'val', 'value': {'1': 5}}]
+        expected = [{'_id': 'val', 'value': {'1': 5}}]
         self.assertEqual(result['results'], expected)
 
 

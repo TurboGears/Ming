@@ -1,4 +1,3 @@
-# coding=utf-8
 import time
 import logging
 import six
@@ -90,7 +89,7 @@ def create_datastore(uri, **kwargs):
     return DataStore(bind, database)
 
 
-class Engine(object):
+class Engine:
     """Engine represents the connection to a MongoDB (or in-memory database).
 
     The ``Engine`` class lazily creates the connection the firs time it's
@@ -133,7 +132,7 @@ class Engine(object):
         This is usually done automatically when accessing
         a database for the first time through the engine.
         """
-        for x in six.moves.xrange(self._connect_retry+1):
+        for x in range(self._connect_retry+1):
             try:
                 with self._lock:
                     if self._conn is None:
@@ -149,7 +148,7 @@ class Engine(object):
                     raise
 
 
-class DataStore(object):
+class DataStore:
     """Represents a Database on a specific MongoDB Instance.
 
     DataStore keeps track of a specific database on a

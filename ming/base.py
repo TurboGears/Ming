@@ -39,7 +39,7 @@ class Object(dict):
 
     def __setattr__(self, name, value):
         if name in self.__class__.__dict__:
-            super(Object, self).__setattr__(name, value)
+            super().__setattr__(name, value)
         else:
             self.__setitem__(name, value)
 
@@ -47,7 +47,7 @@ class Object(dict):
     def from_bson(cls, bson):
         if isinstance(bson, dict):
             return cls((k, cls.from_bson(v))
-                       for k,v in six.iteritems(bson))
+                       for k,v in bson.items())
         elif isinstance(bson, list):
             return [ cls.from_bson(v) for v in bson ]
         else:
@@ -61,7 +61,7 @@ class Object(dict):
         self.update(safe_self)
 
 
-class Cursor(object):
+class Cursor:
     '''Python class proxying a MongoDB cursor, constructing and validating
     objects that it tracks
     '''
@@ -147,8 +147,8 @@ def _safe_bson(obj, _no_warning=False):
     if isinstance(obj, list):
         return [ _safe_bson(o, True) for o in obj ]
     elif isinstance(obj, dict):
-        return Object((k, _safe_bson(v, True)) for k,v in six.iteritems(obj))
-    elif isinstance(obj, six.string_types + six.integer_types + (
+        return Object((k, _safe_bson(v, True)) for k,v in obj.items())
+    elif isinstance(obj, (str,) + (int,) + (
             float, datetime, NoneType,
             bson.ObjectId)):
         return obj
