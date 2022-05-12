@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # Clear the class names in case MappedClasses are declared in another example
 import re
 from ming.odm import Mapper

@@ -27,7 +27,7 @@ class InstrumentedObj(dict):
         self._tracker = tracker
         dict.update(
             self,
-            ((k,instrument(v, self._tracker)) for k,v in six.iteritems(impl)))
+            ((k,instrument(v, self._tracker)) for k,v in impl.items()))
 
     def _deinstrument(self):
         return self._impl
@@ -42,13 +42,13 @@ class InstrumentedObj(dict):
         v = deinstrument(v)
         iv = instrument(v, self._tracker)
         self.pop(k, None)
-        super(InstrumentedObj, self).__setitem__(k, iv)
+        super().__setitem__(k, iv)
         self._impl[k] = v
         self._tracker.added_item(v)
 
     def __setattr__(self, k, v):
         if hasattr(self.__class__, k):
-            super(InstrumentedObj, self).__setattr__(k, v)
+            super().__setattr__(k, v)
         else:
             self[k] = v
 
@@ -62,7 +62,7 @@ class InstrumentedObj(dict):
         return self._impl == deinstrument(y)
 
     def clear(self):
-        super(InstrumentedObj, self).clear()
+        super().clear()
         self._impl.clear()
         self._tracker.cleared()
 
@@ -76,12 +76,12 @@ class InstrumentedObj(dict):
     def pop(self, k, *args):
         value = self._impl.pop(k, *args)
         if k in self: self._tracker.removed_item(value)
-        super(InstrumentedObj, self).pop(k, *args)
+        super().pop(k, *args)
         return value
 
     def popitem(self):
         k,v = self._impl.popitem()
-        super(InstrumentedObj, self).popitem()
+        super().popitem()
         self._tracker.removed_item(v)
         return v
 
@@ -108,7 +108,7 @@ class InstrumentedObj(dict):
             else:
                 for k,v in E:
                     self[k] = v
-        for k,v in six.iteritems(kwargs):
+        for k,v in kwargs.items():
             self[k] = v
 
     def replace(self, v):
@@ -123,7 +123,7 @@ class InstrumentedList(list):
     def __init__(self, impl, tracker):
         self._impl = impl
         self._tracker = tracker
-        super(InstrumentedList, self).extend(
+        super().extend(
             instrument(item, self._tracker)
             for item in self._impl)
 
@@ -139,7 +139,7 @@ class InstrumentedList(list):
     def __setitem__(self, key, v):
         v = deinstrument(v)
         iv = instrument(v, self._tracker)
-        super(InstrumentedList, self).__setitem__(key, iv)
+        super().__setitem__(key, iv)
 
         if isinstance(key, slice):
             self._tracker.removed_items(self._impl[key.start:key.stop])
@@ -152,7 +152,7 @@ class InstrumentedList(list):
             self._tracker.added_item(self._impl[i])
 
     def __delitem__(self, key):
-        super(InstrumentedList, self).__delitem__(key)
+        super().__delitem__(key)
 
         if isinstance(key, slice):
             self._tracker.removed_items(self._impl[key.start:key.stop:key.step])
@@ -195,13 +195,13 @@ class InstrumentedList(list):
         v = deinstrument(v)
         iv =instrument(v, self._tracker)
         self._impl.append(v)
-        super(InstrumentedList, self).append(iv)
+        super().append(iv)
         self._tracker.added_item(v)
 
     def extend(self, iterable):
         new_items = list(map(deinstrument, iterable))
         self._impl.extend(new_items)
-        super(InstrumentedList, self).extend(
+        super().extend(
             instrument(item, self._tracker)
             for item in new_items)
         self._tracker.added_items(new_items)
@@ -209,13 +209,13 @@ class InstrumentedList(list):
     def insert(self, index, v):
         v = deinstrument(v)
         iv = instrument(v, self._tracker)
-        super(InstrumentedList, self).insert(index, iv)
+        super().insert(index, iv)
         self._impl.insert(index, v)
         self._tracker.added_item(v)
 
     def pop(self, pos=-1):
         v = self._impl.pop(pos)
-        super(InstrumentedList, self).pop(pos)
+        super().pop(pos)
         self._tracker.removed_item(v)
         return v
 

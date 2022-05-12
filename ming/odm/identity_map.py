@@ -1,7 +1,7 @@
 from ming.utils import indent
 import six
 
-class IdentityMap(object):
+class IdentityMap:
 
     def __init__(self):
         self._objects = {}
@@ -26,12 +26,12 @@ class IdentityMap(object):
             pass
 
     def __iter__(self):
-        for (cls,vid), value in six.iteritems(self._objects):
+        for (cls,vid), value in self._objects.items():
             yield cls, vid, value
 
     def __repr__(self):
         l = [ '<imap (%d)>' % len(self._objects) ]
-        for k,v in six.iteritems(self._objects):
+        for k,v in self._objects.items():
             l.append(indent('  %s : %s => %r'
                             % (k[0].__name__, k[1], v),
                             4))

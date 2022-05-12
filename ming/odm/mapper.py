@@ -14,14 +14,14 @@ def mapper(cls, collection=None, session=None, **kwargs):
     if collection is None and session is None:
         if isinstance(cls, type):
             return Mapper.by_class(cls)
-        elif isinstance(cls, six.string_types):
+        elif isinstance(cls, str):
             return Mapper.by_classname(cls)
         else:
             return Mapper._mapper_by_class[cls.__class__]
     return Mapper(cls, collection, session, **kwargs)
 
 
-class Mapper(object):
+class Mapper:
     """Keeps track of :class:`.MappedClass` subclasses.
 
      The Mapper is in charge of linking together the Ming Schema Validation layer,
@@ -46,7 +46,7 @@ class Mapper(object):
         self.session = session
         self.properties = []
         self.property_index = {}
-        classname = '{}.{}'.format(mapped_class.__module__, mapped_class.__name__)
+        classname = f'{mapped_class.__module__}.{mapped_class.__name__}'
         self._mapper_by_collection[collection] = self
         self._mapper_by_class[mapped_class] = self
         self._mapper_by_classname[classname] = self
@@ -141,7 +141,7 @@ class Mapper(object):
         try:
             return cls._mapper_by_classname[name]
         except KeyError:
-            for n, mapped_class in six.iteritems(cls._mapper_by_classname):
+            for n, mapped_class in cls._mapper_by_classname.items():
                 if n.endswith('.' + name): return mapped_class
             raise
 
@@ -224,7 +224,7 @@ class Mapper(object):
             properties = {k:properties[k] for k in include_properties}
         for k in exclude_properties:
             properties.pop(k, None)
-        for k,v in six.iteritems(properties):
+        for k,v in properties.items():
             v.name = k
             v.mapper = self
             setattr(self.mapped_class, k, v)
@@ -238,10 +238,10 @@ class Mapper(object):
                 setattr(self.mapped_class, k, getattr(inst, k))
 
     def _instrumentation(self):
-        class _Instrumentation(object):
+        class _Instrumentation:
             def __repr__(self_):
                 properties = [
-                    '{}={}'.format(prop.name, prop.repr(self_))
+                    f'{prop.name}={prop.repr(self_)}'
                     for prop in mapper(self_).properties
                     if prop.include_in_repr ]
                 return wordwrap(
@@ -263,7 +263,7 @@ class Mapper(object):
         return _Instrumentation
 
 
-class MapperExtension(object):
+class MapperExtension:
     """Base class that should be inherited to handle Mapper events."""
 
     def __init__(self, mapper):
@@ -299,7 +299,7 @@ class MapperExtension(object):
         """After a remove query is performed for this class"""
         pass
 
-class _ORMDecoration(object):
+class _ORMDecoration:
 
     def __init__(self, mapper, instance, options):
         self.mapper = mapper
@@ -308,7 +308,7 @@ class _ORMDecoration(object):
         self.state.document = Object()
         self.state.original_document = Object()
 
-class _QueryDescriptor(object):
+class _QueryDescriptor:
 
     def __init__(self, mapper):
         self.classquery = _ClassQuery(mapper)
@@ -317,7 +317,7 @@ class _QueryDescriptor(object):
         if instance is None: return self.classquery
         else: return _InstQuery(self.classquery, instance)
 
-class _ClassQuery(object):
+class _ClassQuery:
     """Provides ``.query`` attribute for :class:`MappedClass`."""
     _proxy_methods = (
         'find', 'find_and_modify', 'remove', 'update', 'group', 'distinct',
@@ -356,7 +356,7 @@ class _ClassQuery(object):
     def find_by(self, **kwargs):
         return self.find(kwargs)
 
-class _InstQuery(object):
+class _InstQuery:
     """Provides the ``.delete()`` method on :class:`MappedClass` instances.
 
     It also provides the ``.query`` property on instances, which acts the same
@@ -397,7 +397,7 @@ class _InstQuery(object):
             {'_id': self.instance._id },
             fields)
 
-class _InitDecorator(object):
+class _InitDecorator:
 
     def __init__(self, mapper, func):
         self.mapper = mapper
@@ -443,5 +443,5 @@ class _InitDecorator(object):
             mapped_class.__init__ = cls(mapper, old_init)
 
 def _basic_init(self_, **kwargs):
-    for k,v in six.iteritems(kwargs):
+    for k,v in kwargs.items():
         setattr(self_, k, v)

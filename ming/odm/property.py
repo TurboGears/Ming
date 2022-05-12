@@ -9,7 +9,7 @@ class ORMError(Exception): pass
 class AmbiguousJoin(ORMError): pass
 class NoJoin(ORMError): pass
 
-class ORMProperty(object):
+class ORMProperty:
     include_in_repr = True
 
     def __init__(self):
@@ -43,10 +43,10 @@ class FieldProperty(ORMProperty):
         if isinstance(field_type, Field):
             self.field = field_type
             if args or kwargs:
-                raise TypeError('Unexpected args: {!r}, {!r}'.format(args, kwargs))
+                raise TypeError(f'Unexpected args: {args!r}, {kwargs!r}')
         else:
             self.field = Field(field_type, *args, **kwargs)
-        if not isinstance(self.field.name, six.string_types + (type(None),)):
+        if not isinstance(self.field.name, (str,) + (type(None),)):
             raise TypeError('Field name must be string or None, not %r' % (
                 self.field.name))
         self.name = self.field.name
@@ -273,7 +273,7 @@ class RelationProperty(ORMProperty):
     def __set__(self, instance, value):
         self.join.set(instance, value)
 
-class ManyToOneJoin(object):
+class ManyToOneJoin:
 
     def __init__(self, own_cls, rel_cls, prop):
         self.own_cls, self.rel_cls, self.prop = own_cls, rel_cls, prop
@@ -295,7 +295,7 @@ class ManyToOneJoin(object):
             value = value._id
         self.prop.__set__(instance, value)
 
-class OneToManyJoin(object):
+class OneToManyJoin:
 
     def __init__(self, own_cls, rel_cls, prop):
         self.own_cls, self.rel_cls, self.prop = own_cls, rel_cls, prop
@@ -324,7 +324,7 @@ class OneToManyJoin(object):
             list_owner = self.rel_cls.query.get(_id=foreign_id_owner_id)
             setattr(list_owner, self.prop.name, instance._id)
 
-class OneToManyTracker(object):
+class OneToManyTracker:
     __slots__ = ('state',)
 
     def __init__(self, state):
@@ -338,7 +338,7 @@ class OneToManyTracker(object):
     removed_items = soil
     cleared = soil
 
-class ManyToManyListJoin(object):
+class ManyToManyListJoin:
 
     def __init__(self, own_cls, rel_cls, prop, detains_list):
         self.own_cls, self.rel_cls, self.prop = own_cls, rel_cls, prop

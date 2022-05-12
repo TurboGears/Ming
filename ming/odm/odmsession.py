@@ -9,7 +9,7 @@ from .mapper import mapper
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
 
-class ODMSession(object):
+class ODMSession:
     """Current Ming Session.
 
     Keeps track of active objects in the IdentityMap and UnitOfWork
@@ -302,7 +302,7 @@ class ODMSession(object):
         return self.impl.inline_map_reduce(m.collection, *args, **kwargs)
 
 
-class SessionExtension(object):
+class SessionExtension:
     """Base class that should be inherited to handle Session events."""
 
     def __init__(self, session):
@@ -372,7 +372,7 @@ class ThreadLocalODMSession(ThreadLocalProxy):
         ThreadLocalProxy.__init__(self, ODMSession, *args, **kwargs)
 
     def _get(self):
-        result = super(ThreadLocalODMSession, self)._get()
+        result = super()._get()
         self._session_registry.__setitem__(id(self), self)
         return result
 
@@ -381,7 +381,7 @@ class ThreadLocalODMSession(ThreadLocalProxy):
 
     def close(self):
         self._get().close()
-        super(ThreadLocalODMSession, self).close()
+        super().close()
 
     def mapper(self, cls, collection, **kwargs):
         return mapper(
@@ -432,7 +432,7 @@ class ContextualODMSession(ContextualProxy):
         self._context = context
 
     def _get(self):
-        result = super(ContextualODMSession, self)._get()
+        result = super()._get()
         self._session_registry[self._context()][id(self)] = self
         return result
 
@@ -442,7 +442,7 @@ class ContextualODMSession(ContextualProxy):
 
     def close(self):
         self._get().close()
-        super(ContextualODMSession, self).close()
+        super().close()
         self._session_registry[self._context()].pop(id(self), None)
 
     @classmethod
@@ -457,7 +457,7 @@ class ContextualODMSession(ContextualProxy):
         del cls._session_registry[context]
 
 
-class ODMCursor(object):
+class ODMCursor:
     """Represents the results of query.
 
     The cursors can be iterated over to retrieve the

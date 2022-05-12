@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Ming documentation build configuration file, created by
 # sphinx-quickstart on Thu Nov 19 19:51:17 2009.

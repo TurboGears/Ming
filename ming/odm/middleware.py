@@ -6,7 +6,7 @@ except ImportError:
 
 from ming.odm import ThreadLocalODMSession, ContextualODMSession
 
-class MingMiddleware(object):
+class MingMiddleware:
     """WSGI Middleware that automatically flushes and closes ODM Sessions.
 
     At the end of each WSGI request for ``app`` the middleware will
@@ -48,8 +48,7 @@ class MingMiddleware(object):
         ContextualODMSession.close_all(context)
 
     def _cleanup_iterator(self, result):
-        for x in result:
-            yield x
+        yield from result
         self._cleanup_request()
 
 

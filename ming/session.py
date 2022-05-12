@@ -29,7 +29,7 @@ def annotate_doc_failure(func):
     return update_wrapper(wrapper, func)
 
 
-class Session(object):
+class Session:
     _registry = {}
     _datastores = {}
 
@@ -198,7 +198,7 @@ class Session(object):
         immediately
         """
         fields_values = Object.from_bson(fields_values)
-        for k,v in six.iteritems(fields_values):
+        for k,v in fields_values.items():
             self._set(doc, k.split('.'), v)
         impl = self._impl(doc)
         return impl.update({'_id':doc._id}, {'$set':fields_values})
@@ -213,7 +213,7 @@ class Session(object):
         key = list(kwargs.keys())[0]
         value = kwargs[key]
         if value is None:
-            raise ValueError("{}={}".format(key, value))
+            raise ValueError(f"{key}={value}")
 
         if key not in doc:
             self._impl(doc).update(

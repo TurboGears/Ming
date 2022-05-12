@@ -14,7 +14,7 @@ from .exc import MongoGone
 
 log = logging.getLogger(__name__)
 
-class Field(object):
+class Field:
     """Represents a Field in a MongoDB Document
 
     It accepts one or two positional arguments and any number of
@@ -65,9 +65,9 @@ class Field(object):
             flags = 'index'
         else:
             flags = ''
-        return '<Field {}({}){}>'.format(self.name, self.schema, flags)
+        return f'<Field {self.name}({self.schema}){flags}>'
 
-class Index(object):
+class Index:
     """Represents a MongoDB Index of a field.
 
     """
@@ -95,7 +95,7 @@ class Index(object):
         try:
             return self.index_options[option_name]
         except KeyError:
-            raise AttributeError('Index {} has no option {}'.format(self.index_spec, option_name))
+            raise AttributeError(f'Index {self.index_spec} has no option {option_name}')
 
     def __eq__(self, o):
         return self.index_spec == o.index_spec and self.index_options == o.index_options
@@ -118,7 +118,7 @@ def collection(*args, **kwargs):
 def _process_collection_args(args, kwargs):
     if len(args) < 1:
         raise TypeError('collection() takes at least one argument')
-    if isinstance(args[0], six.string_types + (type(None),)):
+    if isinstance(args[0], (str,) + (type(None),)):
         if len(args) < 2:
             raise TypeError('collection(name, session) takes at least two arguments')
         collection_name = args[0]
@@ -152,7 +152,7 @@ def _process_collection_args(args, kwargs):
     for a in args:
         if isinstance(a, Field):
             if a.name is None:
-                raise ValueError("Field {} is missing a valid name".format(a))
+                raise ValueError(f"Field {a} is missing a valid name")
 
             field_index[a.name] = a
             if a.unique:
@@ -167,7 +167,7 @@ def _process_collection_args(args, kwargs):
         elif isinstance(a, Index):
             indexes.append(a)
         else:
-            raise TypeError("don't know what to do with {!r}".format(a))
+            raise TypeError(f"don't know what to do with {a!r}")
 
     return field_index.values(), indexes, collection_name, bases, session
 
@@ -192,8 +192,7 @@ class _CurriedProxyClass(type):
         cls = type.__new__(meta, name, bases, dct)
         return cls
 
-@six.add_metaclass(_CurriedProxyClass)
-class _InstanceManager(object):
+class _InstanceManager(metaclass=_CurriedProxyClass):
     _proxy_methods = (
         'save', 'insert', 'upsert', 'delete', 'set', 'increase_field')
     _proxy_on='session'
@@ -218,8 +217,7 @@ class _InstanceManager(object):
         for method_name in self._proxy_methods:
             setattr(self, method_name, _proxy(method_name))
 
-@six.add_metaclass(_CurriedProxyClass)
-class _ClassManager(object):
+class _ClassManager(metaclass=_CurriedProxyClass):
     _proxy_on='session'
     _proxy_args=('cls',)
     _proxy_methods = (
@@ -339,7 +337,7 @@ class _ClassManager(object):
             return self.cls(data)
 
 
-class _ManagerDescriptor(object):
+class _ManagerDescriptor:
 
     def __init__(self, manager):
         self.manager = manager
@@ -383,7 +381,7 @@ class _ManagerDescriptor(object):
             return self.manager.InstanceManagerClass(self.manager, inst)
 
 
-class _FieldDescriptor(object):
+class _FieldDescriptor:
 
     def __init__(self, field):
         self.field = field

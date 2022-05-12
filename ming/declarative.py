@@ -18,7 +18,7 @@ class _DocumentMeta(type):
             indexes += b.m.indexes
         # Set the names of the fields
         clsdct = {}
-        for k,v in six.iteritems(dct):
+        for k,v in dct.items():
             if isinstance(v, Field):
                 if v.name is None: v.name = k
                 fields.append(v)
@@ -67,8 +67,7 @@ def _build_mongometa(bases, dct):
     return type('__mongometa__', tuple(mm_bases), mm_dict)
 
 
-@six.add_metaclass(_DocumentMeta)
-class Document(_Document):
+class Document(_Document, metaclass=_DocumentMeta):
 
     class __mongometa__:
         name=None

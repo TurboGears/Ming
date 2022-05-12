@@ -1,7 +1,7 @@
 from collections import defaultdict
 from unittest import TestCase, main
 
-import mock
+from unittest import mock
 import bson
 import pymongo
 

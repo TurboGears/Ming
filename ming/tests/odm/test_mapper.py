@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from mock import Mock, patch
+from unittest.mock import Mock, patch
 
 from ming import create_datastore
 from ming import schema as S
@@ -18,7 +18,7 @@ class TestOrphanObjects(TestCase):
         session = Session(bind=self.datastore)
         self.session = ODMSession(session)
         basic = collection('basic', session)
-        class Basic(object):
+        class Basic:
             pass
         self.session.mapper(Basic, basic)
         self.basic = basic
@@ -43,7 +43,7 @@ class TestWithNoFields(TestCase):
         session = Session(bind=self.datastore)
         self.session = ODMSession(session)
         basic = collection('basic', session)
-        class Basic(object):
+        class Basic:
             pass
         self.session.mapper(Basic, basic)
         self.basic = basic
@@ -70,7 +70,7 @@ class TestBasicMapping(TestCase):
             Field('b', [int]),
             Field('c', dict(
                     d=int, e=int)))
-        class Basic(object):
+        class Basic:
             pass
         self.session.mapper(Basic, basic)
         self.basic = basic
@@ -112,7 +112,7 @@ class TestBasicMapping(TestCase):
             Field('b', [int]),
             Field('c', dict(
                     d=int, e=int)))
-        class Basic1(object):
+        class Basic1:
             pass
         self.session.mapper(Basic1, basic1, options=dict(instrument=False))
         # Put a doc in the DB
@@ -300,8 +300,8 @@ class TestRelation(TestCase):
         self.datastore = create_datastore('mim:///test_db')
         session = Session(bind=self.datastore)
         self.session = ODMSession(session)
-        class Parent(object): pass
-        class Child(object): pass
+        class Parent: pass
+        class Child: pass
         parent = collection(
             'parent', session,
             Field('_id', int))
@@ -355,7 +355,7 @@ class TestPolymorphic(TestCase):
             Field('type', str, if_missing='derived'),
             Field('b', int),
             polymorphic_identity='derived')
-        class Base(object): pass
+        class Base: pass
         class Derived(Base): pass
         mapper(Base, base, self.session)
         mapper(Derived, derived, self.session)

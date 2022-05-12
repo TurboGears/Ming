@@ -7,7 +7,7 @@ import six
 class _MappedClassMeta(type):
  
     def __init__(cls, name, bases, dct, **kwargs):
-        cls._registry['{}.{}'.format(cls.__module__, cls.__name__)] = mapper(cls)
+        cls._registry[f'{cls.__module__}.{cls.__name__}'] = mapper(cls)
         cls._compiled = False
 
     def __new__(meta, name, bases, dct, **kwargs):
@@ -36,7 +36,7 @@ class _MappedClassMeta(type):
         include_properties = getattr(mm, 'include_properties', [])
         exclude_properties = getattr(mm, 'exclude_properties', [])
         extensions = getattr(mm, 'extensions', [])
-        for k,v in six.iteritems(dct):
+        for k,v in dct.items():
             if isinstance(v, ORMProperty):
                 v.name = k
                 properties[k] = v
@@ -55,7 +55,7 @@ class _MappedClassMeta(type):
         fields = []
         indexes = []
         # Set the names of the fields
-        for k,v in six.iteritems(dct):
+        for k,v in dct.items():
             try:
                 field = getattr(v, 'field', None)
             except:
@@ -93,8 +93,7 @@ class _MappedClassMeta(type):
                 doc_bases, *(fields + indexes), **collection_kwargs)
         return collection_cls
 
-@six.add_metaclass(_MappedClassMeta)
-class MappedClass(object):
+class MappedClass(metaclass=_MappedClassMeta):
     """Declares a Ming Mapped Document.
 
     Mapped Documents provide a declarative interface to

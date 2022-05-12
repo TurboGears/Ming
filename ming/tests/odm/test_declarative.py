@@ -34,7 +34,7 @@ class TestMapping(TestCase):
         Mapper._mapper_by_classname.clear()
         self.datastore = create_datastore(self.DATASTORE)
         self.session = ODMSession(bind=self.datastore)
-        
+
     def tearDown(self):
         self.session.clear()
         try:
@@ -42,30 +42,30 @@ class TestMapping(TestCase):
         except TypeError:
             self.datastore.conn.drop_database(self.datastore.db)
         Mapper._mapper_by_classname.clear()
-      
+
     def test_with_mixins(self):
-        class Mixin1(object):
+        class Mixin1:
             def __init__(self):
                 pass
-            
+
             def dosomething(self):
                 pass
-            
-        class Mixin2(object):
+
+        class Mixin2:
             def domore(self):
                 pass
-        
+
         class User(MappedClass, Mixin1, Mixin2):
             class __mongometa__:
                 name = "userswithmixin"
                 session = self.session
-                
+
             _id = FieldProperty(S.ObjectId)
             username = FieldProperty(str)
-            
+
         u = User(_id=None, username="anonymous")
         self.session.flush()
-        
+
         u2 = User.query.find({"username": "anonymous"}).first()
         assert u._id == u2._id
 
@@ -99,9 +99,9 @@ class TestMapping(TestCase):
 
             _id = FieldProperty(S.ObjectId)
             username = FieldProperty(str)
-            
+
             def delete(self):
-                super(User, self).delete()
+                super().delete()
 
         u = User(_id=None, username="anonymous")
         self.session.flush()
@@ -114,7 +114,7 @@ class TestMapping(TestCase):
 class TestMappingReal(TestMapping):
     DATASTORE = "mongodb://localhost/ming_tests?serverSelectionTimeoutMS=100"
 
-        
+
 class TestRelation(TestCase):
     DATASTORE = 'mim:///test_db'
 
@@ -511,7 +511,7 @@ class TestRelationWithNone(TestCase):
 class ObjectIdRelationship(TestCase):
     def setUp(self):
         Mapper._mapper_by_classname.clear()
-        
+
         self.datastore = create_datastore('mim:///test_db')
         self.session = ODMSession(bind=self.datastore)
         class Parent(MappedClass):
@@ -535,7 +535,7 @@ class ObjectIdRelationship(TestCase):
                 Parent,
                 if_missing=lambda:bson.ObjectId('deadbeefdeadbeefdeadbeef'))
             field_with_default = RelationProperty('Parent', 'field_with_default_id')
-        
+
         Mapper.compile_all()
         self.Parent = Parent
         self.Child = Child

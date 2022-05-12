@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # Clear the class names in case MappedClasses are declared in another example
 from ming.odm import Mapper
 Mapper._mapper_by_classname.clear()
@@ -26,7 +25,7 @@ class Transport(MappedClass):
     _type = FieldProperty(schema.String(if_missing='base'))
 
     def move(self):
-        return 'moving from {} to {}'.format(self.origin, self.destination)
+        return f'moving from {self.origin} to {self.destination}'
 
 
 class Bus(Transport):
@@ -37,7 +36,7 @@ class Bus(Transport):
     passengers_count = FieldProperty(schema.Int(if_missing=0))
 
     def move(self):
-        return 'driving from {} to {}'.format(self.origin, self.destination)
+        return f'driving from {self.origin} to {self.destination}'
 
 class AirBus(Bus):
     class __mongometa__:
@@ -47,7 +46,7 @@ class AirBus(Bus):
     wings_count = FieldProperty(schema.Int(if_missing=2))
 
     def move(self):
-        return 'flying from {} to {}'.format(self.origin, self.destination)
+        return f'flying from {self.origin} to {self.destination}'
 
 Transport.query.remove({})
 

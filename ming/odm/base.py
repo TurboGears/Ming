@@ -23,7 +23,7 @@ def _call_hook(obj, hook_name, *args, **kw):
     for e in obj.extensions:
         getattr(e, hook_name)(*args, **kw)
 
-class _with_hooks(object):
+class _with_hooks:
     def __init__(self, hook_name):
         self.hook_name = hook_name
 
@@ -39,7 +39,7 @@ class _with_hooks(object):
         inner.__doc__ = func.__doc__
         return inner
 
-class ObjectState(object):
+class ObjectState:
     new, clean, dirty, deleted = 'new clean dirty deleted'.split()
 
     def __init__(self, options, session):
@@ -88,7 +88,7 @@ class ObjectState(object):
         del self.document[name]
         self.i_document.pop(name, None)
 
-class _DocumentTracker(object):
+class _DocumentTracker:
     __slots__ = ('state',)
 
     def __init__(self, state):

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # Clear the class names in case MappedClasses are declared in another example
 import re
 from ming.odm import Mapper
@@ -18,7 +17,7 @@ import hashlib
 class PasswordProperty(FieldProperty):
     def __init__(self):
         # Password is always a required string.
-        super(PasswordProperty, self).__init__(schema.String(required=True))
+        super().__init__(schema.String(required=True))
 
     def __get__(self, instance, cls=None):
         if instance is None: return self
@@ -32,11 +31,11 @@ class PasswordProperty(FieldProperty):
         # As we don't want to leak passwords we return an asterisked string
         # but the real value of the password will always be available as .raw_value
         # so we can check passwords when logging in.
-        return Password(super(PasswordProperty, self).__get__(instance, cls))
+        return Password(super().__get__(instance, cls))
 
     def __set__(self, instance, value):
         pwd = hashlib.md5(value).hexdigest()
-        super(PasswordProperty, self).__set__(instance, pwd)
+        super().__set__(instance, pwd)
 
 
 class User(MappedClass):

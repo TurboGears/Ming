@@ -39,7 +39,7 @@ def configure_from_nested_dict(config):
         tz_aware = validators.Bool(if_missing=False)
 
     datastores = {}
-    for name, datastore in six.iteritems(config):
+    for name, datastore in config.items():
         args = DatastoreSchema.to_python(datastore, None)
         database = args.pop("database", None)
         if database is None:
@@ -48,6 +48,6 @@ def configure_from_nested_dict(config):
             datastores[name] = create_datastore(database=database, **args)
     Session._datastores = datastores
     # bind any existing sessions
-    for name, session in six.iteritems(Session._registry):
+    for name, session in Session._registry.items():
         session.bind = datastores.get(name, None)
         session._name = name

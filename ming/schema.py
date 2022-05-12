@@ -75,7 +75,7 @@ class Invalid(Exception):
             return unicode(self.msg)
 
 
-class SchemaItem(object):
+class SchemaItem:
     """Basic Schema enforcement validation.
 
     The :meth:`.validate()` method is called when a record is loaded from the DB or saved to it.
@@ -192,12 +192,12 @@ class Migrate(SchemaItem):
         def migrate_scalars(value):
             return [
                 BaseObject({ key_name: k, value_name: v})
-                for k,v in six.iteritems(value) ]
+                for k,v in value.items() ]
 
         def migrate_objects(value):
             return [
                 BaseObject(dict(v, **{key_name:k}))
-                for k,v in six.iteritems(value) ]
+                for k,v in value.items() ]
 
         if value_name is None:
             return migrate_objects
@@ -234,7 +234,7 @@ class FancySchemaItem(SchemaItem):
             self.if_missing = if_missing
         if self.required:
             self.validate = self._validate_required
-        elif isinstance(self.if_missing, (NoneType,) + six.string_types + six.integer_types):
+        elif isinstance(self.if_missing, (NoneType,) + (str,) + (int,)):
             self.validate = self._validate_fast_missing
         else:
             self.validate = self._validate_optional
@@ -316,7 +316,7 @@ class Object(FancySchemaItem):
         if fields is None: fields = {}
         FancySchemaItem.__init__(self, required, if_missing)
         self.fields = {name: SchemaItem.make(field)
-                           for name, field in six.iteritems(fields)}
+                           for name, field in fields.items()}
         if len(self.fields) == 1:
             name, field = list(self.fields.items())[0]
             if not isinstance(name, str):
@@ -328,24 +328,24 @@ class Object(FancySchemaItem):
         return sorted(self.fields.items())
 
     def __repr__(self):
-        l = [ super(Object, self).__repr__() ]
-        for k,f in six.iteritems(self.fields):
+        l = [ super().__repr__() ]
+        for k,f in self.fields.items():
             l.append('  {}: {}'.format(k, repr(f).replace('\n', '\n    ')))
         return '\n'.join(l)
 
     def if_missing(self):
         return BaseObject(
             (k, v.validate(Missing))
-            for k,v in six.iteritems(self.fields)
-            if isinstance(k, six.string_types))
+            for k,v in self.fields.items()
+            if isinstance(k, str))
 
     def _validate_homogenous(self, name, field, d, **kw):
-        if not isinstance(d, dict): raise Invalid('notdict: {}'.format(d), d, None)
+        if not isinstance(d, dict): raise Invalid(f'notdict: {d}', d, None)
         l_Missing = Missing
         name_validator = SchemaItem.make(name)
         to_set = []
         errors = []
-        for k,v in six.iteritems(d):
+        for k,v in d.items():
             try:
                 k = name_validator.validate(k, **kw)
                 v = field.validate(v, **kw)
@@ -355,7 +355,7 @@ class Object(FancySchemaItem):
                 errors.append((name, inv))
         if errors:
             error_dict = dict(errors)
-            msg = '\n'.join('%s:%s' % t for t in six.iteritems(error_dict))
+            msg = '\n'.join('%s:%s' % t for t in error_dict.items())
             raise Invalid(msg, d, None, error_dict=error_dict)
         return BaseObject(to_set)
 
@@ -383,7 +383,7 @@ class Object(FancySchemaItem):
                 errors.append((name, inv))
 
     def _validate(self, d, allow_extra=False, strip_extra=False):
-        if not isinstance(d, dict): raise Invalid('notdict: {}'.format(d), d, None)
+        if not isinstance(d, dict): raise Invalid(f'notdict: {d}', d, None)
         if allow_extra and not strip_extra:
             to_set = list(d.items())
         else:
@@ -397,7 +397,7 @@ class Object(FancySchemaItem):
         result = BaseObject(to_set)
         if not allow_extra:
             try:
-                extra_keys = set(six.iterkeys(d)) - set(six.iterkeys(self.fields))
+                extra_keys = set(d.keys()) - set(self.fields.keys())
             except AttributeError as ae:
                 raise Invalid(str(ae), d, None)
             if extra_keys:
@@ -432,7 +432,7 @@ class Document(Object):
 
     def __init__(self, fields=None,
                  required=False, if_missing=NoDefault):
-        super(Document, self).__init__(fields, required, if_missing)
+        super().__init__(fields, required, if_missing)
         self.polymorphic_on = self.polymorphic_registry = None
         self.managed_class=None
 
@@ -451,7 +451,7 @@ class Document(Object):
 
     def validate(self, value, **kw):
         try:
-            return super(Document, self).validate(value, **kw)
+            return super().validate(value, **kw)
         except Invalid as inv:
             if self.managed_class:
                 inv.msg = '{}:\n    {}'.format(
@@ -463,7 +463,7 @@ class Document(Object):
         cls = self.get_polymorphic_cls(d)
         if cls is None or cls == self.managed_class:
             result = cls.__new__(cls)
-            result.update(super(Document, self)._validate(
+            result.update(super()._validate(
                     d, allow_extra=allow_extra, strip_extra=strip_extra))
             return result
         return cls.m.make(
@@ -507,7 +507,7 @@ class Array(FancySchemaItem):
             self._validate = self._full_validate
 
     def __repr__(self):
-        l = [ super(Array, self).__repr__() ]
+        l = [ super().__repr__() ]
         l.append('  ' + repr(self.field_type).replace('\n', '\n    '))
         return '\n'.join(l)
 
@@ -540,7 +540,7 @@ class Array(FancySchemaItem):
                 validate(value, **kw)
             except Invalid as inv:
                 error_list[i] = inv
-        msg = '\n'.join(('[{}]:{}'.format(i,v))
+        msg = '\n'.join((f'[{i}]:{v}')
                         for i,v in enumerate(error_list)
                         if v is not None)
         raise Invalid(msg, d, None, error_list=error_list)
@@ -573,12 +573,12 @@ class ParticularScalar(Scalar):
         self._allow_none = kw.pop('allow_none', True)
         if not self._allow_none:
             kw.setdefault('if_missing', Missing)
-        super(ParticularScalar, self).__init__(**kw)
+        super().__init__(**kw)
 
     def _validate(self, value, **kw):
         if self._allow_none and value is None: return value
         if not isinstance(value, self.type):
-            raise Invalid('{} is not a {!r}'.format(value, self.type),
+            raise Invalid(f'{value} is not a {self.type!r}',
                           value, None)
         return value
 
@@ -594,7 +594,7 @@ class OneOf(ParticularScalar):
 
     def _validate(self, value, **kw):
         if value not in self.options:
-            raise Invalid('{} is not in {!r}'.format(value, self.options),
+            raise Invalid(f'{value} is not in {self.options!r}',
                           value, None)
         return value
 
@@ -609,14 +609,14 @@ class Value(FancySchemaItem):
 
     def _validate(self, value, **kw):
         if value != self.value:
-            raise Invalid('{!r} != {!r}'.format(value, self.value),
+            raise Invalid(f'{value!r} != {self.value!r}',
                           value, None)
         return value
 
 
 class String(ParticularScalar):
     """Validates value is ``str`` or ``unicode`` string"""
-    type=six.string_types
+    type=(str,)
 
 
 class Int(ParticularScalar):
@@ -625,17 +625,17 @@ class Int(ParticularScalar):
     Also accepts float which represent integer numbers
     like ``10.0`` -> ``10``.
     """
-    type=six.integer_types
+    type=(int,)
 
     def _validate(self, value, **kw):
         if isinstance(value, float) and round(value) == value:
             value = int(value)
-        return super(Int, self)._validate(value, **kw)
+        return super()._validate(value, **kw)
 
 
 class Float(ParticularScalar):
     """Validates value is ``int`` or ``float``"""
-    type=(float,) + six.integer_types
+    type=(float,) + (int,)
 
 
 class DateTimeTZ(ParticularScalar):
@@ -656,7 +656,7 @@ class DateTime(DateTimeTZ):
         value = DateTimeTZ._validate(self, value, **kw)
         if value is None: return value
         if not isinstance(value, self.type):
-            raise Invalid('{} is not a {!r}'.format(value, self.type),
+            raise Invalid(f'{value} is not a {self.type!r}',
                           value, None)
         # Truncate microseconds and keep milliseconds only (mimics BSON datetime)
         value = value.replace(microsecond=(value.microsecond // 1000) * 1000)
@@ -701,7 +701,7 @@ class ObjectId(Scalar):
             value = Scalar._validate(self, value, **kw)
             if isinstance(value, bson.ObjectId):
                 return value
-            elif isinstance(value, six.string_types):
+            elif isinstance(value, str):
                 return bson.ObjectId(str(value))
             else:
                 raise Invalid('%s is not a bson.ObjectId' % value, value, None)
@@ -734,7 +734,7 @@ class NumberDecimal(ParticularScalar):
         rounding=ROUND_HALF_DOWN,
         **kwargs
     ):
-        super(NumberDecimal, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.precision = precision
         self.rounding = rounding
         self._context = Context(prec=34, rounding=rounding)  # Max Decimal128 precision
@@ -742,7 +742,7 @@ class NumberDecimal(ParticularScalar):
             self._quantizing = self._context.create_decimal(Decimal(str(10 ** -precision)))
 
     def _validate(self, value, **kw):
-        value = super(NumberDecimal, self)._validate(value, **kw)
+        value = super()._validate(value, **kw)
         if isinstance(value, Decimal128):
             value = value.to_decimal()
         value = self._context.create_decimal(value)

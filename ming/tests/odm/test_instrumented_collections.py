@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from mock import Mock
+from unittest.mock import Mock
 
 from ming.odm.icollection import instrument, deinstrument, InstrumentedObj
 

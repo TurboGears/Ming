@@ -5,9 +5,9 @@ from threading import local
 import warnings
 import pymongo
 
-class EmptyClass(object): pass
+class EmptyClass: pass
 
-class LazyProperty(object):
+class LazyProperty:
 
     def __init__(self, func):
         self._func = func
@@ -19,7 +19,7 @@ class LazyProperty(object):
         result = obj.__dict__[self.__name__] = self._func(obj)
         return result
 
-class ContextualProxy(object):
+class ContextualProxy:
 
     def __init__(self, cls, context, *args, **kwargs):
         self._cls = cls
@@ -50,7 +50,7 @@ class ContextualProxy(object):
         except AttributeError:
             pass
 
-class ThreadLocalProxy(object):
+class ThreadLocalProxy:
 
     def __init__(self, cls, *args, **kwargs):
         self._cls = cls
@@ -120,7 +120,7 @@ def indent(s, level=2):
 def fixup_index(index, direction=pymongo.ASCENDING):
 
     def _fixup(i):
-        if isinstance(i, six.string_types):
+        if isinstance(i, str):
             yield (i, direction)
         elif (isinstance(i, tuple)
               and len(i) == 2
@@ -136,7 +136,7 @@ def fixup_index(index, direction=pymongo.ASCENDING):
             yield i
         else:
             for key in i:
-                for x in _fixup(key): yield x
+                yield from _fixup(key)
 
     return list(_fixup(index))
 
