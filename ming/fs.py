@@ -13,7 +13,7 @@ from ming.metadata import _process_collection_args
 def filesystem(*args, **kwargs):
     fields, indexes, collection_name, bases, session = _process_collection_args(
         args, kwargs)
-    field_index = dict((f.name, f) for f in fields)
+    field_index = {f.name: f for f in fields}
     field_index.setdefault(
         'filename', Field('filename', str, index=True))
     field_index.setdefault(
@@ -23,7 +23,7 @@ def filesystem(*args, **kwargs):
     field_index.setdefault('length', Field('length', int))
     field_index.setdefault('md5', Field('md5', str))
     field_index.setdefault('uploadDate', Field('uploadDate', datetime))
-    dct = dict((k, _FieldDescriptor(f)) for k,f in field_index.items())
+    dct = {k: _FieldDescriptor(f) for k,f in field_index.items()}
 
     cls = type('Filesystem<%s>' % collection_name, bases, dct)
     fields = field_index.values()

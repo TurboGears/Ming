@@ -46,7 +46,7 @@ class Mapper(object):
         self.session = session
         self.properties = []
         self.property_index = {}
-        classname = '%s.%s' % (mapped_class.__module__, mapped_class.__name__)
+        classname = '{}.{}'.format(mapped_class.__module__, mapped_class.__name__)
         self._mapper_by_collection[collection] = self
         self._mapper_by_class[mapped_class] = self
         self._mapper_by_classname[classname] = self
@@ -62,7 +62,7 @@ class Mapper(object):
         self._instrument_class(properties, include_properties, exclude_properties)
 
     def __repr__(self):
-        return '<Mapper %s:%s>' % (
+        return '<Mapper {}:{}>'.format(
             self.mapped_class.__name__, self.collection.m.collection_name)
 
     @_with_hooks('insert')
@@ -211,7 +211,7 @@ class Mapper(object):
             properties.setdefault(fld.name, FieldProperty(fld))
         # Handle include/exclude_properties
         if include_properties:
-            properties = dict((k,properties[k]) for k in include_properties)
+            properties = {k:properties[k] for k in include_properties}
         for k in exclude_properties:
             properties.pop(k, None)
         for k,v in six.iteritems(properties):
@@ -231,7 +231,7 @@ class Mapper(object):
         class _Instrumentation(object):
             def __repr__(self_):
                 properties = [
-                    '%s=%s' % (prop.name, prop.repr(self_))
+                    '{}={}'.format(prop.name, prop.repr(self_))
                     for prop in mapper(self_).properties
                     if prop.include_in_repr ]
                 return wordwrap(

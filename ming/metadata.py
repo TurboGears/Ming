@@ -65,7 +65,7 @@ class Field(object):
             flags = 'index'
         else:
             flags = ''
-        return '<Field %s(%s)%s>' % (self.name, self.schema, flags)
+        return '<Field {}({}){}>'.format(self.name, self.schema, flags)
 
 class Index(object):
     """Represents a MongoDB Index of a field.
@@ -89,13 +89,13 @@ class Index(object):
 
     def __repr__(self):
         specs = [ '%s:%s' % t  for t in self.index_spec ]
-        return '<Index (%s) options=%s>' % (','.join(specs), self.index_options)
+        return '<Index ({}) options={}>'.format(','.join(specs), self.index_options)
 
     def __getattr__(self, option_name):
         try:
             return self.index_options[option_name]
         except KeyError:
-            raise AttributeError('Index %s has no option %s' % (self.index_spec, option_name))
+            raise AttributeError('Index {} has no option {}'.format(self.index_spec, option_name))
 
     def __eq__(self, o):
         return self.index_spec == o.index_spec and self.index_options == o.index_options
@@ -103,9 +103,9 @@ class Index(object):
 def collection(*args, **kwargs):
     fields, indexes, collection_name, bases, session = _process_collection_args(
         args, kwargs)
-    dct = dict((f.name, _FieldDescriptor(f)) for f in fields)
+    dct = {f.name: _FieldDescriptor(f) for f in fields}
     if 'polymorphic_identity' in kwargs:
-        clsname = 'Document<%s:%s>' % (
+        clsname = 'Document<{}:{}>'.format(
             collection_name, kwargs['polymorphic_identity'])
     else:
         clsname = 'Document<%s>' % collection_name
@@ -152,7 +152,7 @@ def _process_collection_args(args, kwargs):
     for a in args:
         if isinstance(a, Field):
             if a.name is None:
-                raise ValueError("Field %s is missing a valid name" % (a,))
+                raise ValueError("Field {} is missing a valid name".format(a))
 
             field_index[a.name] = a
             if a.unique:
@@ -167,7 +167,7 @@ def _process_collection_args(args, kwargs):
         elif isinstance(a, Index):
             indexes.append(a)
         else:
-            raise TypeError("don't know what to do with %r" % (a,))
+            raise TypeError("don't know what to do with {!r}".format(a))
 
     return field_index.values(), indexes, collection_name, bases, session
 
@@ -238,7 +238,7 @@ class _ClassManager(object):
         self.cls = cls
         self.collection_name = collection_name
         self.session = session
-        self.field_index = dict((f.name, f) for f in fields)
+        self.field_index = {f.name: f for f in fields}
         self.indexes = indexes
 
         if polymorphic_on and polymorphic_registry is None:

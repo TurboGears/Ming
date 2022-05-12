@@ -240,7 +240,7 @@ class FancySchemaItem(SchemaItem):
             self.validate = self._validate_optional
 
     def __repr__(self):
-        return '<%s required=%s if_missing=...>' % (
+        return '<{} required={} if_missing=...>'.format(
             self.__class__.__name__, self.required)
 
     @LazyProperty
@@ -315,8 +315,8 @@ class Object(FancySchemaItem):
     def __init__(self, fields=None, required=False, if_missing=NoDefault):
         if fields is None: fields = {}
         FancySchemaItem.__init__(self, required, if_missing)
-        self.fields = dict((name, SchemaItem.make(field))
-                           for name, field in six.iteritems(fields))
+        self.fields = {name: SchemaItem.make(field)
+                           for name, field in six.iteritems(fields)}
         if len(self.fields) == 1:
             name, field = list(self.fields.items())[0]
             if not isinstance(name, str):
@@ -330,7 +330,7 @@ class Object(FancySchemaItem):
     def __repr__(self):
         l = [ super(Object, self).__repr__() ]
         for k,f in six.iteritems(self.fields):
-            l.append('  %s: %s' % (k, repr(f).replace('\n', '\n    ')))
+            l.append('  {}: {}'.format(k, repr(f).replace('\n', '\n    ')))
         return '\n'.join(l)
 
     def if_missing(self):
@@ -340,7 +340,7 @@ class Object(FancySchemaItem):
             if isinstance(k, six.string_types))
 
     def _validate_homogenous(self, name, field, d, **kw):
-        if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
+        if not isinstance(d, dict): raise Invalid('notdict: {}'.format(d), d, None)
         l_Missing = Missing
         name_validator = SchemaItem.make(name)
         to_set = []
@@ -383,7 +383,7 @@ class Object(FancySchemaItem):
                 errors.append((name, inv))
 
     def _validate(self, d, allow_extra=False, strip_extra=False):
-        if not isinstance(d, dict): raise Invalid('notdict: %s' % (d,), d, None)
+        if not isinstance(d, dict): raise Invalid('notdict: {}'.format(d), d, None)
         if allow_extra and not strip_extra:
             to_set = list(d.items())
         else:
@@ -454,7 +454,7 @@ class Document(Object):
             return super(Document, self).validate(value, **kw)
         except Invalid as inv:
             if self.managed_class:
-                inv.msg = '%s:\n    %s' % (
+                inv.msg = '{}:\n    {}'.format(
                     self.managed_class,
                     inv.msg.replace('\n', '\n    '))
             raise
@@ -540,7 +540,7 @@ class Array(FancySchemaItem):
                 validate(value, **kw)
             except Invalid as inv:
                 error_list[i] = inv
-        msg = '\n'.join(('[%s]:%s' % (i,v))
+        msg = '\n'.join(('[{}]:{}'.format(i,v))
                         for i,v in enumerate(error_list)
                         if v is not None)
         raise Invalid(msg, d, None, error_list=error_list)
@@ -578,7 +578,7 @@ class ParticularScalar(Scalar):
     def _validate(self, value, **kw):
         if self._allow_none and value is None: return value
         if not isinstance(value, self.type):
-            raise Invalid('%s is not a %r' % (value, self.type),
+            raise Invalid('{} is not a {!r}'.format(value, self.type),
                           value, None)
         return value
 
@@ -594,7 +594,7 @@ class OneOf(ParticularScalar):
 
     def _validate(self, value, **kw):
         if value not in self.options:
-            raise Invalid('%s is not in %r' % (value, self.options),
+            raise Invalid('{} is not in {!r}'.format(value, self.options),
                           value, None)
         return value
 
@@ -609,7 +609,7 @@ class Value(FancySchemaItem):
 
     def _validate(self, value, **kw):
         if value != self.value:
-            raise Invalid('%r != %r' % (value, self.value),
+            raise Invalid('{!r} != {!r}'.format(value, self.value),
                           value, None)
         return value
 
@@ -656,7 +656,7 @@ class DateTime(DateTimeTZ):
         value = DateTimeTZ._validate(self, value, **kw)
         if value is None: return value
         if not isinstance(value, self.type):
-            raise Invalid('%s is not a %r' % (value, self.type),
+            raise Invalid('{} is not a {!r}'.format(value, self.type),
                           value, None)
         # Truncate microseconds and keep milliseconds only (mimics BSON datetime)
         value = value.replace(microsecond=(value.microsecond // 1000) * 1000)

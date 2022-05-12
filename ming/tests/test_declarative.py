@@ -178,7 +178,7 @@ class TestIndexes(TestCase):
             ( ( [ ('test8', pymongo.ASCENDING) ],),
               dict(unique=False, sparse=True, background=True) ) ]
         for i in indexes:
-            self.assert_(i in args, args)
+            self.assertTrue(i in args, args)
 
     def test_ensure_indexes_custom_options(self):
         self.MyDoc.m
@@ -191,12 +191,12 @@ class TestIndexes(TestCase):
             if index.name == 'TESTINDEX9':
                 custom_named_index = index
                 break
-        self.assert_(custom_named_index is not None, self.MyDoc.m.indexes)
+        self.assertTrue(custom_named_index is not None, self.MyDoc.m.indexes)
 
         custom_index = ( ([ ('test9', pymongo.ASCENDING) ],),
                          dict(unique=False, sparse=False, background=True,
                               expireAfterSeconds=5, name='TESTINDEX9') )
-        self.assert_(custom_index in args, args)
+        self.assertTrue(custom_index in args, args)
 
     def test_ensure_indexes_slave(self):
         # on a slave, an error will be thrown, but it should be swallowed

@@ -46,7 +46,7 @@ class TestSession(TestCase):
     def testByName(self):
         session0 = Session.by_name('foo')
         session1 = Session.by_name('foo')
-        self.assert_(session0 is session1)
+        self.assertTrue(session0 is session1)
 
     def test_base_session(self):
         impl = self.bind.db['test_doc']

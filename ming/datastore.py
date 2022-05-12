@@ -1,5 +1,4 @@
 # coding=utf-8
-from __future__ import with_statement
 import time
 import logging
 import six

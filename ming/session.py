@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import logging
 from functools import update_wrapper
 
@@ -154,7 +153,7 @@ class Session(object):
     def save(self, doc, *args, **kwargs):
         data = self._prep_save(doc, kwargs.pop('validate', True))
         if args:
-            values = dict((arg, data[arg]) for arg in args)
+            values = {arg: data[arg] for arg in args}
             result = self._impl(doc).update(
                 dict(_id=doc._id), {'$set': values}, **fix_write_concern(kwargs))
         else:
@@ -176,7 +175,7 @@ class Session(object):
         self._prep_save(doc, kwargs.pop('validate', True))
         if type(spec_fields) != list:
             spec_fields = [spec_fields]
-        return self._impl(doc).update(dict((k,doc[k]) for k in spec_fields),
+        return self._impl(doc).update({k:doc[k] for k in spec_fields},
                                doc,
                                upsert=True)
 
@@ -214,7 +213,7 @@ class Session(object):
         key = list(kwargs.keys())[0]
         value = kwargs[key]
         if value is None:
-            raise ValueError("%s=%s" % (key, value))
+            raise ValueError("{}={}".format(key, value))
 
         if key not in doc:
             self._impl(doc).update(

@@ -155,5 +155,5 @@ def _safe_bson(obj, _no_warning=False):
     elif isinstance(obj, decimal.Decimal):
         return Decimal128(obj)
     else:
-        assert False, '%s is not safe for bsonification: %r' % (
+        assert False, '{} is not safe for bsonification: {!r}'.format(
             type(obj), obj)

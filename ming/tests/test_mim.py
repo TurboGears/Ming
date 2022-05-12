@@ -365,7 +365,7 @@ class TestMRCommands(TestCommands):
             reduce=self.first_js,
             out=dict(inline=1))
         self.assertEqual(result['results'][0]['_id'], 1)
-        self.assert_(isinstance(result['results'][0]['value'], datetime))
+        self.assertTrue(isinstance(result['results'][0]['value'], datetime))
 
     # MAP_TIMESTAMP and REDUCE_MIN_MAX are based on the recipe
     # http://cookbook.mongodb.org/patterns/finding_max_and_min_values_for_a_key
@@ -1038,7 +1038,7 @@ class TestBulkOperations(TestCase):
             UpdateOne({'dme-o': 1}, {'$set': {'dme-o': 2}})
         ])
 
-        data = sorted([a['dme-o'] for a in coll.find({'dme-o': {'$exists': True}})])
+        data = sorted(a['dme-o'] for a in coll.find({'dme-o': {'$exists': True}}))
         self.assertEqual(data, [1, 2])
 
 
