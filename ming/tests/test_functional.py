@@ -115,7 +115,7 @@ class TestIndexes(TestCase):
             ( ([ ('test1', pymongo.ASCENDING) ], ),
               dict(unique=True, sparse=False, background=True) ), ]
         for i in indexes:
-            self.assert_(i in args, args)
+            self.assertTrue(i in args, args)
 
 
     @mock.patch('ming.session.Session.ensure_index')

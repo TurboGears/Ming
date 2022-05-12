@@ -81,9 +81,9 @@ class ThreadLocalProxy(object):
 def encode_keys(d):
     '''Encodes the unicode keys of d, making the result
     a valid kwargs argument'''
-    return dict(
-        (k.encode('utf-8'), v)
-        for k,v in d.iteritems())
+    return {
+        k.encode('utf-8'): v
+        for k,v in d.iteritems()}
 
 def all_class_properties(cls):
     'Find all properties of the class, including those inherited'

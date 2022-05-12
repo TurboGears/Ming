@@ -19,14 +19,14 @@ class ORMProperty(object):
         raise NotImplementedError('__get__')
 
     def __set__(self, instance, value):
-        raise TypeError('%r is a read-only property on %r' % (
+        raise TypeError('{!r} is a read-only property on {!r}'.format(
             self.name, self.mapper))
 
     def compile(self, mapper):
         pass
 
     def __repr__(self):
-        return '<%s %s>' % (
+        return '<{} {}>'.format(
             self.__class__.__name__, self.name)
 
 class FieldProperty(ORMProperty):
@@ -43,7 +43,7 @@ class FieldProperty(ORMProperty):
         if isinstance(field_type, Field):
             self.field = field_type
             if args or kwargs:
-                raise TypeError('Unexpected args: %r, %r' % (args, kwargs))
+                raise TypeError('Unexpected args: {!r}, {!r}'.format(args, kwargs))
         else:
             self.field = Field(field_type, *args, **kwargs)
         if not isinstance(self.field.name, six.string_types + (type(None),)):
@@ -250,7 +250,7 @@ class RelationProperty(ORMProperty):
                 'Ambiguous join, satisfying keys are %r' %
                 [ p.name for p in own_props + rel_props ])
         else:
-            raise NoJoin('No join keys found between %s and %s' % (
+            raise NoJoin('No join keys found between {} and {}'.format(
                 cls, rel))
 
     def repr(self, doc):

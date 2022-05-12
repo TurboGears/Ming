@@ -162,7 +162,7 @@ class TestBasicMapping(TestCase):
         doc['a'] = 5
         self.assertEqual(doc.a, doc['a'])
         self.assertEqual(doc.a, 5)
-        self.assert_('a' in doc)
+        self.assertTrue('a' in doc)
         doc.delete()
 
     def test_mapper(self):
@@ -189,7 +189,7 @@ class TestBasicMapping(TestCase):
         self.assertEqual(doc.query.find(dict(a=1)).count(), 0)
         self.assertEqual(doc.query.find(dict(b=doc.b)).count(), 1)
         doc = self.Basic.query.get(a=5)
-        self.assert_(doc is not None)
+        self.assertTrue(doc is not None)
         self.Basic.query.remove({})
         self.assertEqual(self.Basic.query.find().count(), 0)
 
@@ -239,10 +239,10 @@ class TestBasicMapping(TestCase):
         doc = self.Basic(a=1, b=[2,3], c=dict(d=4, e=5))
         self.session.flush()
         doc1 = self.Basic.query.get(_id=doc._id)
-        self.assert_(doc is doc1)
+        self.assertTrue(doc is doc1)
         self.session.expunge(doc)
         doc1 = self.Basic.query.get(_id=doc._id)
-        self.assert_(doc is not doc1)
+        self.assertTrue(doc is not doc1)
         self.session.expunge(doc)
         self.session.expunge(doc)
         self.session.expunge(doc)

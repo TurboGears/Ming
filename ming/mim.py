@@ -109,7 +109,7 @@ class Database(database.Database):
             self._jsruntime = None
 
     def __repr__(self):
-        return "mim.Database(%r, %r)" % (self.__client, self.__name)
+        return "mim.Database({!r}, {!r})".format(self.__client, self.__name)
 
     def with_options(self, codec_options=None, read_preference=None, write_concern=None, read_concern=None):
         # options have no meaning for MIM
@@ -175,7 +175,7 @@ class Database(database.Database):
             # as python stores references.
             first_object_size = len(pickle.dumps(next(iter(collection._data.values()), {})))
             return {
-                "ns": '%s.%s' % (collection.database.name, collection.name),
+                "ns": '{}.{}'.format(collection.database.name, collection.name),
                 "count": len(collection._data),
                 "size": first_object_size * len(collection._data),
                 "avgObjSize": first_object_size,
@@ -222,11 +222,11 @@ class Database(database.Database):
                     # mapping with multiple values.
                     # spidermonkey changes all js number strings to int/float
                     # changing back to string here for key protion, since bson requires it
-                    obj = dict((str(a), topy(obj[a])) for a in obj)
+                    obj = {str(a): topy(obj[a]) for a in obj}
                 else:
                     assert False, 'Cannot convert %s to Python' % (js_source)
             elif isinstance(obj, collections.Mapping):
-                return dict((k, topy(v)) for k,v in six.iteritems(obj))
+                return {k: topy(v) for k,v in six.iteritems(obj)}
             elif isinstance(obj, six.string_types):
                 return obj
             elif isinstance(obj, collections.Sequence):
@@ -240,7 +240,7 @@ class Database(database.Database):
                 ts += (obj.microsecond / 1000.)
                 return j.execute('new Date(%f)' % (ts))
             elif isinstance(obj, collections.Mapping):
-                return dict((k,tojs(v)) for k,v in six.iteritems(obj))
+                return {k:tojs(v) for k,v in six.iteritems(obj)}
             elif isinstance(obj, collections.Sequence):
                 result = j.execute('new Array()')
                 for v in obj:
@@ -251,14 +251,14 @@ class Database(database.Database):
             obj = tojs(obj)
             j.execute('map').apply(obj)
         # Run the reduce phase
-        reduced = topy(dict(
-            (k, j.execute('reduce')(k, tojs(values)))
-            for k, values in six.iteritems(temp_coll)))
+        reduced = topy({
+            k: j.execute('reduce')(k, tojs(values))
+            for k, values in six.iteritems(temp_coll)})
         # Run the finalize phase
         if finalize:
-            reduced = topy(dict(
-                (k, j.execute('finalize')(k, tojs(value)))
-                for k, value in six.iteritems(reduced)))
+            reduced = topy({
+                k: j.execute('finalize')(k, tojs(value))
+                for k, value in six.iteritems(reduced)})
         # Handle the output phase
         result = dict()
         assert len(out) == 1
@@ -329,7 +329,7 @@ class Collection(collection.Collection):
         self._indexes = {}  # name -> dict of details (including 'key' entry)
 
     def __repr__(self):
-        return "mim.Collection(%r, %r)" % (self._database, self.__name)
+        return "mim.Collection({!r}, {!r})".format(self._database, self.__name)
 
     def clear(self):
         self._data = {}
@@ -352,7 +352,7 @@ class Collection(collection.Collection):
         self._database.drop_collection(self._name)
 
     def __getattr__(self, name):
-        return self._database['%s.%s' % (self.name, name)]
+        return self._database['{}.{}'.format(self.name, name)]
 
     def _find(self, spec, sort=None, **kwargs):
         bson_safe(spec)
@@ -584,9 +584,9 @@ class Collection(collection.Collection):
         return self.ensure_index(keys, **kwargs)
 
     def index_information(self):
-        return dict(
-            (index_name, fields)
-            for index_name, fields in six.iteritems(self._indexes))
+        return {
+            index_name: fields
+            for index_name, fields in six.iteritems(self._indexes)}
 
     def drop_index(self, iname):
         self._indexes.pop(iname, None)
@@ -601,7 +601,7 @@ class Collection(collection.Collection):
         return {}
 
     def __repr__(self):
-        return 'mim.Collection(%r, %s)' % (self._database, self.name)
+        return 'mim.Collection({!r}, {})'.format(self._database, self.name)
 
     def _extract_index_key(self, doc, keys):
         key_values = list()
@@ -622,7 +622,7 @@ class Collection(collection.Collection):
             old_id = docindex.get(key_values, ())
             if old_id == doc['_id']: continue
             if old_id in self._data:
-                raise DuplicateKeyError('%r: %s' % (self, idx_info))
+                raise DuplicateKeyError('{!r}: {}'.format(self, idx_info))
             docindex[key_values] = doc['_id']
 
     def _deindex(self, doc):
@@ -683,7 +683,7 @@ class Cursor(object):
     def __init__(self, collection, _iterator_gen,
                  sort=None, skip=None, limit=None, projection=None):
         if isinstance(projection, (tuple, list)):
-            projection = dict((f, 1) for f in projection)
+            projection = {f: 1 for f in projection}
 
         self._collection = collection
         self._iterator_gen = _iterator_gen
@@ -882,7 +882,7 @@ class BsonArith(object):
         cls._types = [
             (lambda x:x, [ type(None) ]),
             (lambda x:x, [ int ] + list(six.integer_types)),
-            (lambda x:x, list(set([str, six.text_type]))),
+            (lambda x:x, list({str, six.text_type})),
             (lambda x:{k: cls.to_bson(v) for k, v in six.iteritems(x)}, [ dict, MatchDoc ]),
             (lambda x:list(cls.to_bson(i) for i in x), [ list, MatchList ]),
             (lambda x:x, [ tuple ]),
@@ -1195,7 +1195,7 @@ class MatchDoc(Match):
     def __hash__(self):
         return hash(self._doc)
     def __repr__(self):
-        return 'M%r' % (self._doc,)
+        return 'M{!r}'.format(self._doc)
     def __getitem__(self, key):
         return self._doc[key]
     def __delitem__(self, key):
@@ -1259,7 +1259,7 @@ class MatchList(Match):
     def __hash__(self):
         return hash(self._doc)
     def __repr__(self):
-        return 'M<%r>%r' % (self._pos, self._doc)
+        return 'M<{!r}>{!r}'.format(self._pos, self._doc)
     def __getitem__(self, key):
         try:
             if key == '$':
@@ -1381,9 +1381,9 @@ def bcopy(obj):
 
 def wrap_as_class(value, as_class):
     if isinstance(value, dict):
-        return as_class(dict(
-                (k, wrap_as_class(v, as_class))
-                for k,v in value.items()))
+        return as_class({
+                k: wrap_as_class(v, as_class)
+                for k,v in value.items()})
     elif isinstance(value, list):
         return [ wrap_as_class(v, as_class) for v in value ]
     else:
@@ -1455,7 +1455,7 @@ class Projection(object):
             try:
                 sub_result[key] = sub_doc[key]
             except KeyError:
-                log.debug("Field %s doesn't in %s, skip..." % (key, sub_doc.keys()))
+                log.debug("Field {} doesn't in {}, skip...".format(key, sub_doc.keys()))
                 pass
         return result
 

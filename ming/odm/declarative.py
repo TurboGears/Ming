@@ -7,7 +7,7 @@ import six
 class _MappedClassMeta(type):
  
     def __init__(cls, name, bases, dct, **kwargs):
-        cls._registry['%s.%s' % (cls.__module__, cls.__name__)] = mapper(cls)
+        cls._registry['{}.{}'.format(cls.__module__, cls.__name__)] = mapper(cls)
         cls._compiled = False
 
     def __new__(meta, name, bases, dct, **kwargs):
@@ -16,7 +16,7 @@ class _MappedClassMeta(type):
         doc_bases = [mapper(b).collection for b in mapped_bases]
         # Build up the mongometa class
         mm_bases = tuple(
-            (b.__mongometa__ for b in mapped_bases if hasattr(b, '__mongometa__'))
+            b.__mongometa__ for b in mapped_bases if hasattr(b, '__mongometa__')
         )
         if not mm_bases:
             mm_bases = (object,)
