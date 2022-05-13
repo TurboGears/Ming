@@ -1,4 +1,3 @@
-import six
 
 def instrument(obj, tracker):
     if isinstance(obj, (dict, list)):

@@ -1,5 +1,4 @@
 from ming.utils import indent
-import six
 
 class IdentityMap:
 

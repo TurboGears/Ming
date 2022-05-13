@@ -1,4 +1,3 @@
-import six
 
 from ming.exc import MingConfigError
 from ming.session import Session

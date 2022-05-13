@@ -4,7 +4,6 @@ from copy import copy
 from threading import Lock
 
 import pymongo
-import six
 from pymongo.errors import ConnectionFailure
 
 from . import schema as S

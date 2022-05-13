@@ -36,7 +36,6 @@ setup(name='Ming',
       install_requires=[
         "pymongo>=3.0,<3.12",
         "pytz",
-        "six>=1.6.1"
       ],
       tests_require=[
         "mock >=0.8.0",

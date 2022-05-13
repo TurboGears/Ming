@@ -5,7 +5,6 @@ import bson.errors
 
 import pymongo
 import pymongo.errors
-import six
 
 from .base import Cursor, Object
 from .utils import fixup_index, fix_write_concern

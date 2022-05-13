@@ -1,8 +1,6 @@
 from .metadata import Field, Index
 from .metadata import _Document, _FieldDescriptor, _ManagerDescriptor, _ClassManager
 
-import six
-
 
 class _DocumentMeta(type):
     def __new__(meta, classname, bases, dct, **kwargs):

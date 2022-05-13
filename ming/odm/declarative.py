@@ -2,10 +2,9 @@ from ming.metadata import collection, Index
 from .mapper import mapper
 from .property import ORMProperty
 
-import six
 
 class _MappedClassMeta(type):
- 
+
     def __init__(cls, name, bases, dct, **kwargs):
         cls._registry[f'{cls.__module__}.{cls.__name__}'] = mapper(cls)
         cls._compiled = False
