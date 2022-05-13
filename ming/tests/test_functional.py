@@ -7,7 +7,6 @@ from collections import defaultdict
 
 from unittest import mock
 import pymongo
-import six
 
 from ming import Session, Field, Index, Cursor, collection
 from ming import schema as S

@@ -6,7 +6,6 @@ from collections import defaultdict
 from datetime import datetime
 
 import bson
-import six
 from bson import Decimal128
 
 from ming.exc import MingException

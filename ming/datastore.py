@@ -1,10 +1,8 @@
 import time
 import logging
-import six
-from six.moves import urllib
 from threading import Lock
 from typing import Union
-
+import urllib
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, InvalidURI
 from pymongo.uri_parser import parse_uri

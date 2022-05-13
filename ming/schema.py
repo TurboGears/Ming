@@ -8,7 +8,6 @@ from decimal import Decimal, ROUND_HALF_DOWN, Context
 import bson
 import pymongo
 import pytz
-import six
 from bson import Decimal128
 
 from .utils import LazyProperty

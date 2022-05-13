@@ -1,6 +1,5 @@
 from ming.utils import indent
 from .base import state, ObjectState
-import six
 
 class UnitOfWork:
 

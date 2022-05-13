@@ -1,6 +1,4 @@
 import cgi
-import six
-from six.moves import urllib
 from threading import local
 import warnings
 import pymongo

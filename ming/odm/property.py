@@ -3,7 +3,6 @@ from ming.utils import LazyProperty
 from ming import schema as S
 from .base import session, state
 from .icollection import instrument, deinstrument
-import six
 
 class ORMError(Exception): pass
 class AmbiguousJoin(ORMError): pass

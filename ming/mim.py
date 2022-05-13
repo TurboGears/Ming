@@ -25,7 +25,6 @@ from ming import compat
 from ming.utils import LazyProperty
 
 import bson
-import six
 from pymongo import database, collection, ASCENDING, MongoClient, UpdateOne
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo.results import DeleteResult, UpdateResult, InsertManyResult, InsertOneResult

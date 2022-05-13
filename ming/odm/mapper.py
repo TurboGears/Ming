@@ -1,4 +1,3 @@
-import six
 import warnings
 from copy import copy
 
@@ -153,7 +152,7 @@ class Mapper:
         cls._mapper_by_classname.clear()
         cls._mapper_by_class.clear()
         cls._mapper_by_collection.clear()
-        
+
     @classmethod
     def ensure_all_indexes(cls):
         """Ensures indexes for each registered :class:`.MappedClass` subclass are created"""

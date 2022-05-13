@@ -2,7 +2,6 @@ from datetime import datetime
 from decimal import Decimal
 from unittest import TestCase, main
 import copy
-import six
 
 from bson import ObjectId
 

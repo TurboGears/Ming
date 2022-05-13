@@ -3,7 +3,6 @@ from collections import defaultdict
 
 from unittest import mock
 import pymongo
-import six
 from pymongo.errors import AutoReconnect
 
 from ming.base import Cursor
