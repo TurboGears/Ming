@@ -1,6 +1,7 @@
 import sys
 from collections import defaultdict
 from unittest import TestCase, SkipTest
+from unittest.mock import MagicMock
 
 from ming import schema as S
 from ming import create_datastore
@@ -811,3 +812,60 @@ class TestHooks(TestCase):
                          [
                              {'_id': doc._id, 'a': doc.a}
                          ])
+
+
+class TestReplacingSession(TestCase):
+
+    def setUp(self):
+        Mapper._mapper_by_classname.clear()
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+        class Basic(MappedClass):
+            class __mongometa__:
+                name = 'hook'
+                session = self.session
+            _id = FieldProperty(S.ObjectId)
+            a = FieldProperty(int)
+        Mapper.compile_all()
+        self.Basic = Basic
+        self.session.remove(self.Basic)
+
+    def test_hook_base(self):
+        assert id(self.Basic.query.session) == id(self.session)
+        session2 = MagicMock()
+        new_session = ODMSession(bind=session2)
+        Mapper.replace_session(new_session)
+        assert id(self.Basic.query.session) == id(new_session)
+        assert id(self.session) != id(new_session)
+
+class TestBeforeSave(TestCase):
+
+    def setUp(self):
+        Mapper._mapper_by_classname.clear()
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+        class Basic(MappedClass):
+            class __mongometa__:
+                name = 'hook'
+                session = self.session
+                def before_save(instance):
+                    instance.a = 9
+
+            _id = FieldProperty(S.ObjectId)
+            a = FieldProperty(int)
+        Mapper.compile_all()
+        self.Basic = Basic
+        self.session.remove(self.Basic)
+
+    def test_hook_base(self):
+        doc = self.Basic()
+        doc.a = 5
+        self.session.flush()  # first insert
+        self.session.close()
+        doc = self.Basic.query.get(doc._id)
+        assert doc.a == 9, doc.a
+        doc.a = 6 
+        self.session.flush()  # then save
+        self.session.close()
+        doc = self.Basic.query.get(doc._id)
+        assert doc.a == 9, doc.a

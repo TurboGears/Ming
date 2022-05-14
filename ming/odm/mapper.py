@@ -1,6 +1,6 @@
 import six
 import warnings
-from copy import copy
+from copy import copy, deepcopy
 
 from ming.base import Object, NoDefault
 from ming.utils import wordwrap
@@ -61,6 +61,16 @@ class Mapper(object):
             raise TypeError('Unknown kwd args: %r' % kwargs)
         self._instrument_class(properties, include_properties, exclude_properties)
 
+    @classmethod
+    def replace_session(cls, session):
+        for _mapper in cls.all_mappers():
+            _mapper.session = session
+            _mapper.mapped_class.query.session = session
+            _mapper.mapped_class.__mongometa__.session = session
+            _mapper._compiled = False
+            _mapper.compile()
+            _mapper.session.ensure_indexes(_mapper.collection)
+
     def __repr__(self):
         return '<Mapper %s:%s>' % (
             self.mapped_class.__name__, self.collection.m.collection_name)
@@ -74,13 +84,12 @@ class Mapper(object):
 
     @_with_hooks('update')
     def update(self, obj, state, session, **kwargs):
-        fields = state.options.get('fields', None)
-        if fields is None:
-            fields = ()
-
         doc = self.collection(state.document, skip_from_bson=True)
-        ret = session.impl.save(doc, *fields, validate=False)
+        ret = session.impl.save(doc, validate=False, state=state)
         state.status = state.clean
+        # Make sure that st.document is never the same as st.original_document
+        # otherwise mutating one mutates the other.
+        state.original_document = deepcopy(doc)
         return ret
 
     @_with_hooks('delete')
@@ -177,9 +186,7 @@ class Mapper(object):
 
         # Make sure that st.document is never the same as st.original_document
         # otherwise mutating one mutates the other.
-        # There is no need to deepcopy as nested mutable objects are already
-        # copied by InstrumentedList and InstrumentedObj to instrument them.
-        st.original_document = doc
+        st.original_document = deepcopy(doc)
 
         if validate is False:
             # .create calls this after it already created the document with the

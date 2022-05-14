@@ -9,10 +9,11 @@ import pymongo.errors
 import six
 
 from .base import Cursor, Object
-from .utils import fixup_index, fix_write_concern
+from .utils import fixup_index, fix_write_concern, doc_to_set
 from . import exc
 
 log = logging.getLogger(__name__)
+
 
 def annotate_doc_failure(func):
     '''Decorator to wrap a session operation so that any pymongo errors raised
@@ -30,7 +31,7 @@ def annotate_doc_failure(func):
     return update_wrapper(wrapper, func)
 
 
-class Session(object):
+class Session:
     _registry = {}
     _datastores = {}
 
@@ -139,7 +140,8 @@ class Session(object):
 
     def _prep_save(self, doc, validate):
         hook = doc.m.before_save
-        if hook: hook(doc)
+        if hook:
+            hook(doc)
         if validate:
             if doc.m.schema is None:
                 data = dict(doc)
@@ -151,8 +153,12 @@ class Session(object):
         return data
 
     @annotate_doc_failure
-    def save(self, doc, *args, **kwargs):
+    def save(self, doc, *args, state=None, **kwargs):
         data = self._prep_save(doc, kwargs.pop('validate', True))
+        if not args and state is not None and state.original_document:
+            args = tuple(set((k for k, v in
+                              doc_to_set(state.original_document)
+                              ^ doc_to_set(data))))
         if args:
             values = dict((arg, data[arg]) for arg in args)
             result = self._impl(doc).update(
