@@ -23,3 +23,5 @@ parsetab_*
 .tox
 .eggs/
 venv/
+.\#*
+\#*\#

@@ -14,6 +14,7 @@ from . import exc
 
 log = logging.getLogger(__name__)
 
+
 def annotate_doc_failure(func):
     '''Decorator to wrap a session operation so that any pymongo errors raised
     will note the document that caused the failure
@@ -30,7 +31,7 @@ def annotate_doc_failure(func):
     return update_wrapper(wrapper, func)
 
 
-class Session(object):
+class Session:
     _registry = {}
     _datastores = {}
 
@@ -152,15 +153,13 @@ class Session(object):
         return data
 
     @annotate_doc_failure
-    def save(self, doc, state=None, **kwargs):
-        # args was meant to be the list of changed fields
-        # but actually we ended up checking the differences here
+    def save(self, doc, *args, state=None, **kwargs):
         data = self._prep_save(doc, kwargs.pop('validate', True))
-        if state is not None and state.original_document:
-            if state is not None:
-                args = tuple(set((k for k, v in
-                                  doc_to_set(state.original_document)
-                                  ^ doc_to_set(data))))
+        if not args and state is not None and state.original_document:
+            args = tuple(set((k for k, v in
+                              doc_to_set(state.original_document)
+                              ^ doc_to_set(data))))
+        if args:
             values = dict((arg, data[arg]) for arg in args)
             result = self._impl(doc).update(
                 dict(_id=doc._id), {'$set': values}, **fix_write_concern(kwargs))

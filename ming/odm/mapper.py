@@ -87,6 +87,9 @@ class Mapper(object):
         doc = self.collection(state.document, skip_from_bson=True)
         ret = session.impl.save(doc, validate=False, state=state)
         state.status = state.clean
+        # Make sure that st.document is never the same as st.original_document
+        # otherwise mutating one mutates the other.
+        state.original_document = deepcopy(doc)
         return ret
 
     @_with_hooks('delete')
@@ -183,8 +186,6 @@ class Mapper(object):
 
         # Make sure that st.document is never the same as st.original_document
         # otherwise mutating one mutates the other.
-        # There is no need to deepcopy as nested mutable objects are already
-        # copied by InstrumentedList and InstrumentedObj to instrument them.
         st.original_document = deepcopy(doc)
 
         if validate is False:
