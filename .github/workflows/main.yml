@@ -22,7 +22,6 @@ jobs:
       matrix:
         python-version:
           # - 3.4 not in github x64
-          - 3.5
           - 3.6
           - 3.7
           - 3.8
