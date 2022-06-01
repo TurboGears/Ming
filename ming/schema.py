@@ -233,7 +233,7 @@ class FancySchemaItem(SchemaItem):
             self.if_missing = if_missing
         if self.required:
             self.validate = self._validate_required
-        elif isinstance(self.if_missing, (NoneType,) + (str,) + (int,)):
+        elif isinstance(self.if_missing, (NoneType, str, int)):
             self.validate = self._validate_fast_missing
         else:
             self.validate = self._validate_optional
@@ -615,7 +615,7 @@ class Value(FancySchemaItem):
 
 class String(ParticularScalar):
     """Validates value is ``str`` or ``unicode`` string"""
-    type=(str,)
+    type = (str,)
 
 
 class Int(ParticularScalar):
@@ -624,7 +624,7 @@ class Int(ParticularScalar):
     Also accepts float which represent integer numbers
     like ``10.0`` -> ``10``.
     """
-    type=(int,)
+    type = (int,)
 
     def _validate(self, value, **kw):
         if isinstance(value, float) and round(value) == value:
@@ -634,12 +634,12 @@ class Int(ParticularScalar):
 
 class Float(ParticularScalar):
     """Validates value is ``int`` or ``float``"""
-    type=(float,) + (int,)
+    type = (float, int)
 
 
 class DateTimeTZ(ParticularScalar):
     """Validates value is a ``datetime``."""
-    type=datetime
+    type = datetime
 
 
 class DateTime(DateTimeTZ):

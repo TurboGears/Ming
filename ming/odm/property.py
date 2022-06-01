@@ -45,7 +45,7 @@ class FieldProperty(ORMProperty):
                 raise TypeError(f'Unexpected args: {args!r}, {kwargs!r}')
         else:
             self.field = Field(field_type, *args, **kwargs)
-        if not isinstance(self.field.name, (str,) + (type(None),)):
+        if not isinstance(self.field.name, (str, type(None))):
             raise TypeError('Field name must be string or None, not %r' % (
                 self.field.name))
         self.name = self.field.name

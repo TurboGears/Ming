@@ -879,18 +879,18 @@ class BsonArith:
     def _build_types(cls):
         # this is a list of conversion functions, and the types they apply to
         cls._types = [
-            (lambda x:x, [ type(None) ]),
-            (lambda x:x, [ int ] + list((int,))),
+            (lambda x:x, [type(None)]),
+            (lambda x:x, [int, int]),
             (lambda x:x, list({str, str})),
-            (lambda x:{k: cls.to_bson(v) for k, v in x.items()}, [ dict, MatchDoc ]),
-            (lambda x:list(cls.to_bson(i) for i in x), [ list, MatchList ]),
-            (lambda x:x, [ tuple ]),
-            (lambda x:x, [ bson.Binary ]),
-            (lambda x:x, [ bson.ObjectId ]),
-            (lambda x:x, [ bool ]),
-            (lambda x:x, [ datetime ]),
-            (lambda x:x, [ bson.Regex ] ),
-            (lambda x:x, [ float ]),
+            (lambda x: {k: cls.to_bson(v) for k, v in x.items()}, [dict, MatchDoc]),
+            (lambda x:list(cls.to_bson(i) for i in x), [list, MatchList]),
+            (lambda x:x, [tuple]),
+            (lambda x:x, [bson.Binary]),
+            (lambda x:x, [bson.ObjectId]),
+            (lambda x:x, [bool]),
+            (lambda x:x, [datetime]),
+            (lambda x:x, [bson.Regex]),
+            (lambda x:x, [float]),
         ]
 
 
