@@ -147,9 +147,7 @@ def _safe_bson(obj, _no_warning=False):
         return [ _safe_bson(o, True) for o in obj ]
     elif isinstance(obj, dict):
         return Object((k, _safe_bson(v, True)) for k,v in obj.items())
-    elif isinstance(obj, (str,) + (int,) + (
-            float, datetime, NoneType,
-            bson.ObjectId)):
+    elif isinstance(obj, (str, int, float, datetime, NoneType, bson.ObjectId)):
         return obj
     elif isinstance(obj, decimal.Decimal):
         return Decimal128(obj)

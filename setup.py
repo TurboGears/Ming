@@ -37,7 +37,6 @@ setup(name='Ming',
         "pytz",
       ],
       tests_require=[
-        "mock >=0.8.0",
         "pytz",
         "WebOb",
         "webtest",

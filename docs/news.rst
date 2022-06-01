@@ -3,6 +3,10 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2 and Python 2.
 
+0.12.0 (Jun 1, 2022)
+---------------------
+* Remove support for python < 3.6
+
 0.11.2 (Oct 15, 2021)
 ---------------------
 * MIM: support distinct() usage on fields that are lists

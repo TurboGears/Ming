@@ -117,7 +117,7 @@ def collection(*args, **kwargs):
 def _process_collection_args(args, kwargs):
     if len(args) < 1:
         raise TypeError('collection() takes at least one argument')
-    if isinstance(args[0], (str,) + (type(None),)):
+    if isinstance(args[0], (str, type(None))):
         if len(args) < 2:
             raise TypeError('collection(name, session) takes at least two arguments')
         collection_name = args[0]
