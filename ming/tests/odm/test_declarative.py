@@ -837,3 +837,36 @@ class TestReplacingSession(TestCase):
         Mapper.replace_session(new_session)
         assert id(self.Basic.query.session) == id(new_session)
         assert id(self.session) != id(new_session)
+
+
+class TestBeforeSave(TestCase):
+
+    def setUp(self):
+        Mapper._mapper_by_classname.clear()
+        self.datastore = create_datastore('mim:///test_db')
+        self.session = ODMSession(bind=self.datastore)
+        class Basic(MappedClass):
+            class __mongometa__:
+                name = 'hook'
+                session = self.session
+                def before_save(instance):
+                    instance.a = 9
+
+            _id = FieldProperty(S.ObjectId)
+            a = FieldProperty(int)
+        Mapper.compile_all()
+        self.Basic = Basic
+        self.session.remove(self.Basic)
+
+    def test_hook_base(self):
+        doc = self.Basic()
+        doc.a = 5
+        self.session.flush()  # first insert
+        self.session.close()
+        doc = self.Basic.query.get(doc._id)
+        assert doc.a == 9, doc.a
+        doc.a = 6
+        self.session.flush()  # then save
+        self.session.close()
+        doc = self.Basic.query.get(doc._id)
+        assert doc.a == 9, doc.a

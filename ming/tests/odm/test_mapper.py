@@ -277,6 +277,23 @@ class TestBasicMapping(TestCase):
         self.Basic.query.group()
         assert pymongo_group.called
 
+    def test_multiple_update_flushes(self):
+        initial_doc = self.Basic()
+        initial_doc.a = 1
+        self.session.flush()
+        self.session.close()
+
+        doc_updating = self.Basic.query.get(_id=initial_doc._id)
+        doc_updating.a = 2
+        self.session.flush()
+        doc_updating.a = 1  # back to "initial" value
+        doc_updating.e = 'foo'  # change something else too
+        self.session.flush()
+        self.session.close()
+
+        doc_after_updates = self.Basic.query.get(_id=doc_updating._id)
+        assert doc_after_updates.a == 1
+
 
 class TestRelation(TestCase):
     def setUp(self):

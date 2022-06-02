@@ -81,7 +81,7 @@ class TestSession(TestCase):
         doc = self.TestDocNoSchema({'_id':5, 'a':5})
         sess.save(doc)
         impl.save.assert_called_with(dict(_id=5, a=5))
-        doc = self.TestDocNoSchema({'_id':5, 'a':5})
+        doc = self.TestDocNoSchema({'_id':5, 'a':5, 'b': 6})
         sess.save(doc, 'a')
         impl.update.assert_called_with(dict(_id=5), {'$set':dict(a=5)})
         doc = self.TestDocNoSchema({'_id':5, 'a':5})
