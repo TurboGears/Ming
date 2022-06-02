@@ -70,9 +70,6 @@ class TestMapping(TestCase):
         assert u._id == u2._id
 
     def test_with_init_subclass(self):
-        if sys.version_info[0:2] < (3, 6):
-            raise SkipTest('__init_subclass__ not supported before python 3.6')
-
         class User(MappedClass):
             class __mongometa__:
                 name = "users_with_init_subclass"

@@ -880,8 +880,8 @@ class BsonArith:
         # this is a list of conversion functions, and the types they apply to
         cls._types = [
             (lambda x:x, [type(None)]),
-            (lambda x:x, [int, int]),
-            (lambda x:x, list({str, str})),
+            (lambda x:x, [int]),
+            (lambda x:x, [str]),
             (lambda x: {k: cls.to_bson(v) for k, v in x.items()}, [dict, MatchDoc]),
             (lambda x:list(cls.to_bson(i) for i in x), [list, MatchList]),
             (lambda x:x, [tuple]),

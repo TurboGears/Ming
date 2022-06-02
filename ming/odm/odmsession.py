@@ -465,7 +465,6 @@ class ODMCursor:
     """
     def __bool__(self):
         raise MingException('Cannot evaluate ODMCursor to a boolean')
-    __nonzero__ = __bool__  # python 2
 
     def __init__(self, session, cls, ming_cursor, refresh=False, decorate=None, fields=None):
         self.session = session

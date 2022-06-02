@@ -67,7 +67,6 @@ class Cursor:
 
     def __bool__(self):
         raise MingException('Cannot evaluate Cursor to a boolean')
-    __nonzero__ = __bool__  # python 2
 
     def __init__(self, cls, cursor, allow_extra=True, strip_extra=True):
         self.cls = cls
