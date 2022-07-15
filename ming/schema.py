@@ -65,14 +65,6 @@ class Invalid(Exception):
         #    val += " (value: %s)" % repr(self.value)
         return val
 
-    def __unicode__(self):
-        if isinstance(self.msg, unicode):
-            return self.msg
-        elif isinstance(self.msg, str):
-            return self.msg.decode('utf8')
-        else:
-            return unicode(self.msg)
-
 
 class SchemaItem:
     """Basic Schema enforcement validation.
