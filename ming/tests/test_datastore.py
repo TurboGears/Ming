@@ -70,7 +70,7 @@ class TestReplicaSet(TestCase):
 
 class TestDatastore(TestCase):
     def setUp(self):
-        self.patcher_conn = patch('ming.datastore.MongoClient')
+        self.patcher_conn = patch('ming.datastore.MongoClient', autospec=True)
         self.MockConn = self.patcher_conn.start()
 
     def tearDown(self):
@@ -91,17 +91,13 @@ class TestDatastore(TestCase):
             create_datastore('test_db'),
             'test_db')
 
-    @patch('ming.datastore.MongoClient', spec=True)
-    def test_replica_set(self, MockConn):
-        from pymongo import MongoClient
+    def test_replica_set(self):
         result = create_datastore(
             'mongodb://localhost:23,localhost:27017,localhost:999/test_db',
             replicaSet='foo')
-        print(result.bind._conn_args[0])
         assert result.bind._conn_args[0].startswith('mongodb://localhost:23,localhost:27017,localhost:999')
 
-    @patch('ming.datastore.MongoClient', spec=True)
-    def test_configure_no_formencode(self, Connection):
+    def test_configure_no_formencode(self):
         with patch.dict(sys.modules, {"formencode": None}):
             self.assertRaises(
                 MingConfigError,
@@ -113,8 +109,7 @@ class TestDatastore(TestCase):
                 }
             )
 
-    @patch('ming.datastore.MongoClient', spec=True)
-    def test_configure_no_formencode_variabledecode(self, Connection):
+    def test_configure_no_formencode_variabledecode(self):
         with patch.dict(sys.modules, {"formencode.variabledecode": None}):
             self.assertRaises(
                 MingConfigError,
@@ -126,10 +121,9 @@ class TestDatastore(TestCase):
                 }
             )
 
-    @patch('ming.datastore.MongoClient', spec=True)
-    def test_configure(self, Connection):
+    def test_configure(self):
         ming.configure(**{
-                'ming.main.uri':'mongodb://localhost:27017/test_db',
+                'ming.main.uri': 'mongodb://localhost:27017/test_db',
                 'ming.main.connect_retry': 1,
                 'ming.main.tz_aware': False,
                 })
@@ -137,11 +131,10 @@ class TestDatastore(TestCase):
         assert session.bind.conn is not None
         assert session.bind.db is not None
         assert session.bind.bind._auto_ensure_indexes
-        args, kwargs = Connection.call_args
+        args, kwargs = self.MockConn.call_args
         assert 'database' not in kwargs
 
-    @patch('ming.datastore.MongoClient', spec=True)
-    def test_configure_with_database(self, Connection):
+    def test_configure_with_database(self):
         ming.configure(
             **{
                 "ming.main.uri": "mongodb://localhost:27017/test_db",
@@ -154,13 +147,12 @@ class TestDatastore(TestCase):
         assert session.bind.conn is not None
         assert session.bind.db is not None
         assert session.bind.bind._auto_ensure_indexes
-        args, kwargs = Connection.call_args
+        args, kwargs = self.MockConn.call_args
         assert "database" in kwargs
 
-    @patch('ming.datastore.MongoClient', spec=True)
-    def test_configure_auto_ensure_indexes(self, Connection):
+    def test_configure_auto_ensure_indexes(self):
         ming.configure(**{
-                'ming.main.uri':'mongodb://localhost:27017/test_db',
+                'ming.main.uri': 'mongodb://localhost:27017/test_db',
                 'ming.main.connect_retry': 1,
                 'ming.main.tz_aware': False,
                 'ming.main.auto_ensure_indexes': 'False',
@@ -169,13 +161,12 @@ class TestDatastore(TestCase):
         assert session.bind.conn is not None
         assert session.bind.db is not None
         assert not session.bind.bind._auto_ensure_indexes
-        args, kwargs = Connection.call_args
+        args, kwargs = self.MockConn.call_args
         assert 'database' not in kwargs
 
-    @patch('ming.datastore.MongoClient', spec=True)
-    def test_configure_optional_params(self, Connection):
+    def test_configure_optional_params(self):
         ming.configure(**{
-                'ming.main.uri':'mongodb://localhost:27017/test_db',
+                'ming.main.uri': 'mongodb://localhost:27017/test_db',
                 'ming.main.replicaSet': 'foobar',
                 'ming.main.w': 2,
                 'ming.main.ssl': True,
