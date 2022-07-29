@@ -22,6 +22,8 @@ setup(name='Ming',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
       ], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       python_requires='>=3.6',
       keywords='mongo, pymongo',

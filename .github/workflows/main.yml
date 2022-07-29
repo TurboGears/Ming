@@ -19,14 +19,16 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         python-version:
-          # - 3.4 not in github x64
           - 3.6
           - 3.7
           - 3.8
           - 3.9
-          - pypy3
+          - '3.10'
+          - '3.11-dev'
+          - pypy3.9
 
     services:
       mongodb:
@@ -36,9 +38,9 @@ jobs:
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -48,10 +50,9 @@ jobs:
           python -m pip install --upgrade tox
 
       - name: Run tox targets for ${{ matrix.python-version }}
-        # could do this if we install tox-py, but it doesn't support 3.5
-        #   run: tox --py current
         # sed is used to remove the '.' so '3.7' becomes '37' for tox (and pypy3 doesn't become pypypy3)
-        run: tox -e py`echo ${{ matrix.python-version }} | sed s/\\\.// | sed s/pypy/py/`
+        # and drop the '-dev' from any prerelease version
+        run: tox --skip-missing-interpreters false -e py`echo ${{ matrix.python-version }} | sed s/\\\.// | sed s/pypy/py/ | sed s/-dev//`
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
