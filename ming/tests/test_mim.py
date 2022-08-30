@@ -164,6 +164,13 @@ class TestDatastore(TestCase):
         cursor.close()
         self.assertRaises(StopIteration, cursor.next)
 
+    def test_cursor_context_manager(self):
+        collection = self.bind.db.coll
+        collection.insert({'a': 'b'})
+        with collection.find() as cursor:
+            pass
+        self.assertRaises(StopIteration, cursor.next)
+
     def test_search(self):
         conn = mim.Connection().get()
         coll = conn.searchdatabase.coll
