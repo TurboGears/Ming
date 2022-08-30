@@ -2,6 +2,7 @@ from decimal import Decimal, ROUND_DOWN, ROUND_HALF_DOWN
 from unittest import TestCase, main
 from datetime import datetime, date
 
+import bson
 from bson import Decimal128
 
 import ming.datastore
@@ -164,6 +165,18 @@ class TestSchemaItem(TestCase):
 
     def test_nodefault(self):
         self.assertEqual(repr(S.NoDefault), '<NoDefault>')
+
+    def test_binary(self):
+        si = S.SchemaItem.make(S.Binary)
+        self.assertEqual(si.validate(b'asdf'), b'asdf')
+        self.assertEqual(si.validate(bson.Binary(b'foo')), bson.Binary(b'foo'))
+        self.assertEqual(si.validate(bson.Binary(b'foo', subtype=80)), bson.Binary(b'foo', subtype=80))
+        self.assertEqual(si.validate(None), None)
+        self.assertRaises(S.Invalid, si.validate, 'string')
+
+    def test_bytes(self):
+        si = S.SchemaItem.make(bytes)
+        self.assertEqual(si.validate(b'asdf'), b'asdf')
 
 
 class TestNumberDecimal(TestCase):

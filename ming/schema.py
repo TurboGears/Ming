@@ -746,6 +746,7 @@ class NumberDecimal(ParticularScalar):
 SHORTHAND = {
     int: Int,
     str: String,
+    bytes: Binary,
     float: Float,
     bool: Bool,
     datetime: DateTime,
