@@ -1,3 +1,4 @@
+import os
 import sys
 from collections import defaultdict
 from unittest import TestCase, SkipTest
@@ -109,7 +110,7 @@ class TestMapping(TestCase):
 
 
 class TestMappingReal(TestMapping):
-    DATASTORE = "mongodb://localhost/ming_tests?serverSelectionTimeoutMS=100"
+    DATASTORE = f"mongodb://localhost/test_ming_TestMappingReal_{os.getpid()}?serverSelectionTimeoutMS=100"
 
 
 class TestRelation(TestCase):
@@ -229,7 +230,7 @@ class TestRelation(TestCase):
 
 
 class TestRealMongoRelation(TestRelation):
-    DATASTORE = "mongodb://localhost/ming_tests?serverSelectionTimeoutMS=100"
+    DATASTORE = f"mongodb://localhost/test_ming_TestRealMongoRelation_{os.getpid()}?serverSelectionTimeoutMS=100"
 
 
 class TestManyToManyListRelation(TestCase):
@@ -727,7 +728,7 @@ class TestBasicMapping(TestCase):
 
 
 class TestRealBasicMapping(TestBasicMapping):
-    DATASTORE = "mongodb://localhost/test_ming?serverSelectionTimeoutMS=100"
+    DATASTORE = f"mongodb://localhost/test_ming_TestRealBasicMapping_{os.getpid()}?serverSelectionTimeoutMS=100"
 
 
 class TestPolymorphic(TestCase):
