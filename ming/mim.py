@@ -25,6 +25,7 @@ from ming import compat
 from ming.utils import LazyProperty
 
 import bson
+from bson.raw_bson import RawBSONDocument
 from pymongo import database, collection, ASCENDING, MongoClient, UpdateOne
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo.results import DeleteResult, UpdateResult, InsertManyResult, InsertOneResult
@@ -357,7 +358,7 @@ class Collection(collection.Collection):
         bson_safe(spec)
         def _gen():
             for doc in self._data.values():
-                mspec = match(spec, doc)
+                mspec = match(dict(spec), doc)  # spec could be RawBSONDocument which needs to be converted to dict
                 if mspec is not None: yield doc, mspec
         return _gen()
 
@@ -372,7 +373,7 @@ class Collection(collection.Collection):
         return cur
 
     def find_one(self, filter_or_id=None, *args, **kwargs):
-        if filter_or_id is not None and not isinstance(filter_or_id, dict):
+        if filter_or_id is not None and not isinstance(filter_or_id, (dict, RawBSONDocument)):
             filter_or_id = {"_id": filter_or_id}
         for result in self.find(filter_or_id, *args, **kwargs):
             return result
