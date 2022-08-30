@@ -3,6 +3,8 @@ from datetime import datetime
 from unittest import TestCase
 
 import bson
+from bson.raw_bson import RawBSONDocument
+
 from ming import create_datastore, mim
 from pymongo import UpdateOne
 from pymongo.errors import OperationFailure, DuplicateKeyError
@@ -892,6 +894,20 @@ class TestCollection(TestCase):
         self.assertIsNone(coll.find_one({'x': b'woah'}))
         self.assertIsNone(coll.find_one({'x': bson.Binary(b'woah')}))
         self.assertIsNotNone(coll.find_one({'x': bson.Binary(b'woah', bson.binary.USER_DEFINED_SUBTYPE)}))
+
+    def test_find_RawBSONDocument(self):
+        coll = self.bind.db.coll
+        coll.insert({'x': 5})
+        # real simple filter
+        result = coll.find_one(RawBSONDocument(bson.encode({
+            'x': 5
+        })))
+        self.assertIsNotNone(result)
+        # nested filter
+        result = coll.find_one(RawBSONDocument(bson.encode({
+            '$or': [{'x': 5}, {'y': 7}]
+        })))
+        self.assertIsNotNone(result)
 
 
 class TestBsonCompare(TestCase):
