@@ -759,6 +759,12 @@ class Cursor:
 
     __next__ = next
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def sort(self, key_or_list, direction=ASCENDING):
         if not self._safe_to_chain:
             raise InvalidOperation('cannot set options after executing query')
