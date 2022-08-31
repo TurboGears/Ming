@@ -4,6 +4,7 @@ from threading import Lock
 from typing import Union
 import urllib
 from pymongo import MongoClient
+from pymongo.database import Database
 from pymongo.errors import ConnectionFailure, InvalidURI
 from pymongo.uri_parser import parse_uri
 
@@ -174,11 +175,11 @@ class DataStore:
         return getattr(self.db, name)
 
     @property
-    def conn(self):
+    def conn(self) -> Conn:
         return self.bind.conn
 
     @property
-    def db(self):
+    def db(self) -> Database:
         """This is the database on MongoDB.
 
         Accessing this property returns the pymongo db,
