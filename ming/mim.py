@@ -892,6 +892,7 @@ class BsonArith:
             (lambda x:list(cls.to_bson(i) for i in x), [list, MatchList]),
             (lambda x:x, [tuple]),
             (lambda x:x, [bson.Binary]),
+            (lambda x:x, [bytes]),
             (lambda x:x, [bson.ObjectId]),
             (lambda x:x, [bool]),
             (lambda x:x, [datetime]),

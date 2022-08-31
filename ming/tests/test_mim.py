@@ -875,6 +875,24 @@ class TestCollection(TestCase):
         coll.find_one_and_delete({'dme-o': 1})
         self.assertEqual(len(list(coll.find({'dme-o': {'$exists': True}}))), 2)
 
+    def test_find_bytes(self):
+        coll = self.bind.db.coll
+        # bytes
+        coll.insert({'x': b'foo'})
+        self.assertIsNotNone(coll.find_one({'x': b'foo'}))
+        self.assertIsNotNone(coll.find_one({'x': bson.Binary(b'foo')}))
+
+        # Binary, same as bytes
+        coll.insert({'x': bson.Binary(b'bar')})
+        self.assertIsNotNone(coll.find_one({'x': b'bar'}))
+        self.assertIsNotNone(coll.find_one({'x': bson.Binary(b'bar')}))
+
+        # Binary with different subtype, NOT like bytes
+        coll.insert({'x': bson.Binary(b'woah', bson.binary.USER_DEFINED_SUBTYPE)})
+        self.assertIsNone(coll.find_one({'x': b'woah'}))
+        self.assertIsNone(coll.find_one({'x': bson.Binary(b'woah')}))
+        self.assertIsNotNone(coll.find_one({'x': bson.Binary(b'woah', bson.binary.USER_DEFINED_SUBTYPE)}))
+
 
 class TestBsonCompare(TestCase):
 
