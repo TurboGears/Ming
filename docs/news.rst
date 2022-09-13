@@ -3,6 +3,18 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2 and Python 2.
 
+0.12.1 (Sep 13, 2022)
+---------------------
+* allow Field(bytes) to work like Field(S.Binary)
+* handle rare race condition exception
+* MIM: support cursor/find as context manager
+* MIM: handle bytes & Binary in queries
+* MIM: handle queries given as RawBSONDocument
+* improve type hints
+* run tests on 3.10 and 3.11
+* test fix for python 3.11
+* test suite can be run in parallel (tox -p auto)
+
 0.12.0 (Jun 2, 2022)
 ---------------------
 * Remove support for python < 3.6
