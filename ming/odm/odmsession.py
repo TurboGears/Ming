@@ -454,7 +454,13 @@ class ContextualODMSession(ContextualProxy):
     def close_all(cls, context):
         for sess in cls._session_registry[context].values():
             sess.close()
-        del cls._session_registry[context]
+        try:
+            del cls._session_registry[context]
+        except KeyError:
+            # since _session_registry is a defaultdict, we don't expect this to fail, but in a multithreaded
+            # environment it can.  Apparently if another thread deletes the entry in between this code accessing it
+            # with [] and deleting it with del, then a KeyError is raised.  So we ignore it
+            pass
 
 
 class ODMCursor:
