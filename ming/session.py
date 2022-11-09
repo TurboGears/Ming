@@ -5,8 +5,10 @@ import bson.errors
 
 import pymongo
 import pymongo.errors
+from pymongo.database import Database
 
 from .base import Cursor, Object
+from .datastore import DataStore
 from .utils import fixup_index, fix_write_concern
 from . import exc
 
@@ -32,7 +34,7 @@ class Session:
     _registry = {}
     _datastores = {}
 
-    def __init__(self, bind=None):
+    def __init__(self, bind: DataStore = None):
         '''
         bind may be a lazy parameter, established later with ming.configure
         '''
@@ -53,7 +55,7 @@ class Session:
             raise exc.MongoGone('MongoDB is not connected')
 
     @property
-    def db(self):
+    def db(self) -> Database:
         if not self.bind:
             raise exc.MongoGone('No MongoDB connection for "%s"' % getattr(self, '_name', 'unknown connection'))
         return self.bind.db

@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from pymongo.database import Database
+
 from ming.session import Session
 from ming.utils import ThreadLocalProxy, ContextualProxy, indent
 from ming.base import Object
@@ -8,6 +10,8 @@ from .base import state, ObjectState, session, _with_hooks, _call_hook
 from .mapper import mapper
 from .unit_of_work import UnitOfWork
 from .identity_map import IdentityMap
+from ..datastore import DataStore
+
 
 class ODMSession:
     """Current Ming Session.
@@ -19,7 +23,7 @@ class ODMSession:
     """
     _registry = {}
 
-    def __init__(self, doc_session=None, bind=None, extensions=None,
+    def __init__(self, doc_session: Session = None, bind: DataStore = None, extensions=None,
                  autoflush=False):
         if doc_session is None:
             doc_session = Session(bind)
@@ -34,11 +38,11 @@ class ODMSession:
         self.extensions.append(extension(self))
 
     @property
-    def bind(self):
+    def bind(self) -> DataStore:
         return self.impl.bind
 
     @property
-    def db(self):
+    def db(self) -> Database:
         """Access the low-level pymongo database"""
         return self.impl.db
 
@@ -416,9 +420,9 @@ class ThreadLocalODMSession(ThreadLocalProxy):
 
     @classmethod
     def close_all(cls):
-        """Closes all the ODMSessions registered in current thread.
+        """Closes all the ODMSessions registered in current thread, which clears their objects tracked in memory.
 
-        Usually is not necessary as only one session is registered per-thread.
+        Does not close connections.
         """
         for sess in cls._session_registry.values():
             sess.close()
