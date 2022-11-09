@@ -810,7 +810,7 @@ class Cursor:
             if index not in self._collection._indexes.keys():
                 raise OperationFailure('database error: bad hint. Valid values: %s'
                         % self._collection._indexes.keys())
-        elif index == None:
+        elif index is None:
             pass
         else:
             raise TypeError('hint index should be string, list of tuples, or None, but was %s' % type(index))
