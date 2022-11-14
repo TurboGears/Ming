@@ -5,6 +5,7 @@ import re
 import sys
 import time
 import itertools
+import uuid
 from itertools import chain
 import collections
 import logging
@@ -885,6 +886,7 @@ class BsonArith:
     @classmethod
     def _build_types(cls):
         # this is a list of conversion functions, and the types they apply to
+        # see also bson._ENCODERS for what pymongo itself handles
         cls._types = [
             (lambda x:x, [type(None)]),
             (lambda x:x, [int]),
@@ -899,6 +901,7 @@ class BsonArith:
             (lambda x:x, [datetime]),
             (lambda x:x, [bson.Regex]),
             (lambda x:x, [float]),
+            (lambda x:x, [uuid.UUID]),
         ]
 
 

@@ -1,4 +1,5 @@
 import re
+import uuid
 from datetime import datetime
 from unittest import TestCase
 
@@ -1063,6 +1064,14 @@ class TestMatch(TestCase):
     def test_traverse_none(self):
         doc = {'a': None}
         self.assertIsNone(mim.match({'a.b.c': 1}, doc))
+
+    def test_uuid_match(self):
+        uu = uuid.UUID('{12345678-1234-5678-1234-567812345678}')
+        uu_same = uuid.UUID('{12345678-1234-5678-1234-567812345678}')
+        uu_diff = uuid.UUID('{12345678-1234-5678-1234-567812345670}')
+        doc = {'a': uu}
+        self.assertIsNotNone(mim.match({'a': uu_same}, doc))
+        self.assertIsNone(mim.match({'a': uu_diff}, doc))
 
 
 class TestBulkOperations(TestCase):
