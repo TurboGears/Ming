@@ -3,6 +3,11 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2 and Python 2.
 
+0.12.2 (Nov 15, 2022)
+---------------------
+* MIM: add support for UUID types
+* improve type hints
+
 0.12.1 (Sep 13, 2022)
 ---------------------
 * allow Field(bytes) to work like Field(S.Binary)
