@@ -203,7 +203,7 @@ class Mapper:
                 "no schema. While this will work, please note that it's not "
                 "too useful, since no schema means that there are no fields "
                 "mapped from the database document onto the object.",
-                UserWarning)
+                UserWarning, stacklevel=2)
             st.document = copy(doc)
         st.status = st.new
         return obj
