@@ -411,7 +411,7 @@ class Collection(collection.Collection):
     def find_and_modify(self, query=None, update=None, fields=None,
                         upsert=False, remove=False, **kwargs):
         warnings.warn('find_and_modify is now deprecated, please use find_one_and_delete, '
-                      'find_one_and_replace, find_one_and_update)', DeprecationWarning)
+                      'find_one_and_replace, find_one_and_update)', DeprecationWarning, stacklevel=2)
         return self.__find_and_modify(query, update, fields, upsert, remove, **kwargs)
 
     def find_one_and_delete(self, filter, projection=None, sort=None, **kwargs):
@@ -455,7 +455,7 @@ class Collection(collection.Collection):
         return result
 
     def insert(self, doc_or_docs, manipulate=True, **kwargs):
-        warnings.warn('insert is now deprecated, please use insert_one or insert_many', DeprecationWarning)
+        warnings.warn('insert is now deprecated, please use insert_one or insert_many', DeprecationWarning, stacklevel=2)
         return self.__insert(doc_or_docs, manipulate, **kwargs)
 
     def insert_one(self, document, session=None):
@@ -469,7 +469,7 @@ class Collection(collection.Collection):
         return InsertManyResult(result, True)
 
     def save(self, doc, **kwargs):
-        warnings.warn('save is now deprecated, please use insert_one or replace_one', DeprecationWarning)
+        warnings.warn('save is now deprecated, please use insert_one or replace_one', DeprecationWarning, stacklevel=2)
         _id = doc.get('_id', ())
         if _id == ():
             return self.__insert(doc)
@@ -517,7 +517,7 @@ class Collection(collection.Collection):
             return result
 
     def update(self, spec, updates, upsert=False, multi=False):
-        warnings.warn('update is now deprecated, please use update_many or update_one', DeprecationWarning)
+        warnings.warn('update is now deprecated, please use update_many or update_one', DeprecationWarning, stacklevel=2)
         return self.__update(spec, updates, upsert, multi)
 
     def update_many(self, filter, update, upsert=False):
@@ -543,7 +543,7 @@ class Collection(collection.Collection):
         return result
 
     def remove(self, spec=None, **kwargs):
-        warnings.warn('remove is now deprecated, please use delete_many or delete_one', DeprecationWarning)
+        warnings.warn('remove is now deprecated, please use delete_many or delete_one', DeprecationWarning, stacklevel=2)
         self.__remove(spec, **kwargs)
 
     def delete_one(self, filter, session=None):

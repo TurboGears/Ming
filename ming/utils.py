@@ -140,6 +140,6 @@ def fixup_index(index, direction=pymongo.ASCENDING):
 
 def fix_write_concern(kwargs):
     if 'safe' in kwargs:
-        warnings.warn('safe option is now deprecated', DeprecationWarning)
+        warnings.warn('safe option is now deprecated', DeprecationWarning, stacklevel=2)
         kwargs['w'] = int(kwargs.pop('safe'))
     return kwargs

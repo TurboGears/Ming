@@ -55,7 +55,8 @@ class Object(dict):
     def make_safe(self):
         warnings.warn("make_safe is now deprecated. "
                       "If your code relies on make_safe for validation, "
-                      "you should consider adding your own layer of validation", DeprecationWarning)
+                      "you should consider adding your own layer of validation",
+                      DeprecationWarning, stacklevel=2)
         safe_self = _safe_bson(self)
         self.update(safe_self)
 
@@ -141,7 +142,8 @@ def _safe_bson(obj, _no_warning=False):
     if not _no_warning:
         warnings.warn("_safe_bson is now deprecated. "
                       "If your code relies on _safe_bson for validation, "
-                      "you should consider adding your own layer of validation", DeprecationWarning)
+                      "you should consider adding your own layer of validation",
+                      DeprecationWarning, stacklevel=2)
     if isinstance(obj, list):
         return [ _safe_bson(o, True) for o in obj ]
     elif isinstance(obj, dict):
