@@ -28,10 +28,16 @@ from ming.utils import LazyProperty
 import bson
 from bson.raw_bson import RawBSONDocument
 from pymongo import database, collection, ASCENDING, MongoClient, UpdateOne
+from pymongo.cursor import Cursor as PymongoCursor
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo.results import DeleteResult, UpdateResult, InsertManyResult, InsertOneResult
 
 log = logging.getLogger(__name__)
+
+
+class PymongoCursorNoCleanup(PymongoCursor):
+    def __del__(self):
+        pass
 
 
 class Connection:
@@ -366,6 +372,7 @@ class Collection(collection.Collection):
     def find(self, filter=None, projection=None, skip=0, limit=0, **kwargs):
         if filter is None:
             filter = {}
+        PymongoCursorNoCleanup(collection=self, **kwargs)  # use this to raise any errors on invalid kwargs
         cur = Cursor(collection=self, projection=projection, limit=limit, skip=skip,
                      _iterator_gen=lambda: self._find(filter, **kwargs))
         sort = kwargs.get('sort')
