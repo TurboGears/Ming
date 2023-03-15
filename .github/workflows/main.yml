@@ -54,9 +54,10 @@ jobs:
         run: tox --skip-missing-interpreters false -e py`echo ${{ matrix.python-version }} | sed s/\\\.// | sed s/pypy/py/ | sed s/-dev//`
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
           flags: tests-${{ matrix.python-version }}
           name: codecov-umbrella
           verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
