@@ -150,6 +150,12 @@ class TestDatastore(TestCase):
         assert o['c'] == [1, 2, 3]
         assert o['score'] == 1.0  # MIM currently always reports 1 as the score.
 
+    def test_find_with_invalid_kwargs(self):
+        self.assertRaises(TypeError, self.bind.db.coll.find, foo=123)
+        self.assertRaises(TypeError, self.bind.db.coll.find, {'a': 2}, foo=123)
+        self.assertRaises(TypeError, self.bind.db.coll.find_one, foo=123)
+        self.bind.db.coll.find(allow_disk_use=True)  # kwargs that pymongo knows are ok
+
     def test_rewind(self):
         collection = self.bind.db.coll
         collection.insert({'a':'b'}, safe=True)
