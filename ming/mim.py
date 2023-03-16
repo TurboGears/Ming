@@ -103,6 +103,10 @@ class Connection:
     def _is_writable(self):
         return True
 
+    @property
+    def is_mongos(self):
+        return False
+
 
 class Database(database.Database):
     def __init__(self, client, name, **__):
