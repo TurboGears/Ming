@@ -7,7 +7,7 @@ import bson
 from bson.raw_bson import RawBSONDocument
 
 from ming import create_datastore, mim
-from pymongo import UpdateOne
+from pymongo import UpdateOne, CursorType
 from pymongo.errors import OperationFailure, DuplicateKeyError
 from unittest.mock import patch
 
@@ -155,6 +155,7 @@ class TestDatastore(TestCase):
         self.assertRaises(TypeError, self.bind.db.coll.find, {'a': 2}, foo=123)
         self.assertRaises(TypeError, self.bind.db.coll.find_one, foo=123)
         self.bind.db.coll.find(allow_disk_use=True)  # kwargs that pymongo knows are ok
+        self.bind.db.coll.find(cursor_type=CursorType.EXHAUST)
 
     def test_rewind(self):
         collection = self.bind.db.coll
