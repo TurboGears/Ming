@@ -3,6 +3,12 @@ Ming News / Release Notes
 
 The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2 and Python 2.
 
+0.13.0 (Mar 16, 2023)
+---------------------
+* remove Python 3.6 support
+* set all DeprecationWarning's stacklevel=2 to show caller
+* MIM: verify kwargs in find/find_one
+
 0.12.2 (Nov 15, 2022)
 ---------------------
 * MIM: add support for UUID types
