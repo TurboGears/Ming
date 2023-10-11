@@ -1,3 +1,4 @@
+import cgi
 from threading import local
 import warnings
 import pymongo
