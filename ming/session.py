@@ -166,7 +166,7 @@ class Session:
     @annotate_doc_failure
     def insert(self, doc, **kwargs):
         data = self._prep_save(doc, kwargs.pop('validate', True))
-        bson = self._impl(doc).insert(data, **fix_write_concern(kwargs))
+        bson = self._impl(doc).insert_one(data, **fix_write_concern(kwargs))
         if bson and '_id' not in doc:
             doc._id = bson
         return bson
