@@ -15,7 +15,7 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   tests:
-    name: Python ${{ matrix.python-version }}
+    name: Python ${{ matrix.python-version }}-${{ matrix.pymongo-version }}
     runs-on: ubuntu-latest
 
     strategy:
@@ -28,6 +28,9 @@ jobs:
           - '3.11'
           - '3.12'
           - pypy3.9
+        pymongo-version:
+          - pymongo3
+          - pymongo4
 
     services:
       mongodb:
@@ -52,7 +55,9 @@ jobs:
       - name: Run tox targets for ${{ matrix.python-version }}
         # sed is used to remove the '.' so '3.7' becomes '37' for tox (and pypy3 doesn't become pypypy3)
         # and drop the '-dev' from any prerelease version
-        run: tox --skip-missing-interpreters false -e py`echo ${{ matrix.python-version }} | sed s/\\\.// | sed s/pypy/py/ | sed s/-dev//`
+        run: |
+          export PY_VER=`echo ${{ matrix.python-version }} | sed s/\\\.// | sed s/pypy/py/ | sed s/-dev//`
+          tox --skip-missing-interpreters false -e "py$PY_VER-${{ matrix.pymongo-version }}"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

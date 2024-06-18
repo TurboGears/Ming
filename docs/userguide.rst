@@ -288,7 +288,7 @@ Querying Objects
 Once we have a `WikiPage` in the database, we can retrieve it using the `.query`
 attribute. The query attribute is a proxy to the Session query features which expose
 three methods that make possible to query objects :meth:`._ClassQuery.get`,
-:meth:`.ODMSession.find` and :meth:`.ODMSession.find_and_modify`:
+:meth:`.ODMSession.find` and :meth:`.ODMSession.find_one_and_update`:
 
 .. run-pysnippet:: ming_odm_tutorial snippet2
 
@@ -340,7 +340,7 @@ will track that the object needs to be updated:
     :skip: 1
     :emphasize-lines: 17
 
-Another option to edit an object is to actually rely on :meth:`.ODMSession.find_and_modify`
+Another option to edit an object is to actually rely on :meth:`.ODMSession.find_one_and_update`
 method which will query the object and update it atomically:
 
 .. run-pysnippet:: ming_odm_tutorial snippet5_3
@@ -349,7 +349,7 @@ This is often used to increment counters or acquire global locks in mongodb
 
 .. note::
 
-    ``find_and_modify`` always refreshes the object in the IdentityMap, so the object
+    ``find_one_and_update`` always refreshes the object in the IdentityMap, so the object
     in your IdentityMap will always get replaced with the newly retrieved value. Make
     sure you properly flushed any previous change to the object and use the ``new`` option
     to avoid retrieving a stale version of the object if you plan to modify it.

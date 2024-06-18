@@ -74,8 +74,8 @@ def snippet1_2():
 
 def snippet1_3():
     Contact.query.remove({})
-    session.db.contact.insert(dict(name='Invalid Contact',
-                                   email='this-is-invalid'))
+    session.db.contact.insert_one(dict(name='Invalid Contact',
+                                       email='this-is-invalid'))
 
     try:
         c1 = Contact.query.find().first()

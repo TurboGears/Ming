@@ -1,3 +1,4 @@
+import os
 from unittest import TestCase
 from collections import defaultdict
 
@@ -6,9 +7,11 @@ import pymongo
 from pymongo.errors import AutoReconnect
 
 from ming.base import Cursor
+from ming.datastore import create_datastore
 from ming.declarative import Document
 from ming.metadata import Field, Index
 from ming import schema as S
+from ming.odm.odmsession import ODMSession, ThreadLocalODMSession
 from ming.session import Session
 from ming.exc import MingException
 
@@ -128,6 +131,45 @@ class TestDocument(TestCase):
         self.MockSession.find.assert_called_with(self.TestDoc)
         self.MockSession.save.assert_called_with(doc)
 
+class TestDocumentReal(TestCase):
+    DATASTORE = f"mongodb://localhost/test_ming_TestDocumentReal_{os.getpid()}?serverSelectionTimeoutMS=100"
+
+    def setUp(self):
+        self.datastore = create_datastore(self.DATASTORE)
+        self.session = Session(bind=self.datastore)
+
+        class TestDoc(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.session
+                indexes = [ ('a',) ]
+            _id = Field(S.Anything)
+            a=Field(S.Int, if_missing=None)
+            b=Field(S.Object(dict(a=S.Int(if_missing=None))))
+        class TestDocNoSchema(Document):
+            class __mongometa__:
+                name='test_doc'
+                session = self.session
+        self.TestDoc = TestDoc
+        self.TestDocNoSchema = TestDocNoSchema
+    def tearDown(self):
+        self.TestDoc.m.remove()
+        self.TestDocNoSchema.m.remove()
+
+    def test_field(self):
+        doc = self.TestDoc(dict(_id=1, a=1, b=dict(a=5)))
+        doc.m.save()
+
+        self.assertEqual(doc.a, 1)
+        self.assertEqual(doc.b, dict(a=5))
+        doc.a = 5
+        self.assertEqual(doc, dict(_id=1, a=5, b=dict(a=5)))
+        del doc.a
+        self.assertEqual(doc, dict(_id=1, b=dict(a=5)))
+        self.assertRaises(AttributeError, getattr, doc, 'c')
+        self.assertRaises(AttributeError, getattr, doc, 'a')
+        self.assertEqual(self.session.count(self.TestDoc), 1)
+
 class TestIndexes(TestCase):
 
     def setUp(self):
@@ -160,11 +202,11 @@ class TestIndexes(TestCase):
         self.MyDoc = MyDoc
 
     def test_ensure_indexes(self):
-        # make sure the manager constructor calls ensure_index with the right stuff
+        # make sure the manager constructor calls create_index with the right stuff
         self.MyDoc.m
         collection = self.MockSession.db[self.MyDoc.m.collection_name]
-        ensure_index = collection.ensure_index
-        args = ensure_index.call_args_list
+        create_index = collection.create_index
+        args = create_index.call_args_list
         for a in args:
             print(a)
         indexes = [
@@ -182,8 +224,8 @@ class TestIndexes(TestCase):
     def test_ensure_indexes_custom_options(self):
         self.MyDoc.m
         collection = self.MockSession.db[self.MyDoc.m.collection_name]
-        ensure_index = collection.ensure_index
-        args = ensure_index.call_args_list
+        create_index = collection.create_index
+        args = create_index.call_args_list
 
         custom_named_index = None
         for index in self.MyDoc.m.indexes:
@@ -200,29 +242,29 @@ class TestIndexes(TestCase):
     def test_ensure_indexes_slave(self):
         # on a slave, an error will be thrown, but it should be swallowed
         collection = self.MockSession.db[self.MyDoc.__mongometa__.name]
-        ensure_index = collection.ensure_index
-        ensure_index.side_effect = AutoReconnect('not master')
+        create_index = collection.create_index
+        create_index.side_effect = AutoReconnect('not master')
         self.MyDoc.m
-        assert ensure_index.called
+        assert create_index.called
 
         # don't keep trying after it failed once
         self.MyDoc.m
-        assert ensure_index.call_count == 1, ensure_index.call_args_list
+        assert create_index.call_count == 1, create_index.call_args_list
 
     def test_auto_ensure_indexes_option(self):
-        ensure_index = self.MockSession.db[self.MyDoc.__mongometa__.name].ensure_index
+        create_index = self.MockSession.db[self.MyDoc.__mongometa__.name].create_index
         self.MockSession.bind.bind._auto_ensure_indexes = False
         self.MyDoc.m
-        assert not ensure_index.called
+        assert not create_index.called
 
     def test_ensure_indexes_other_error(self):
         # same as above, but no swallowing
         collection = self.MockSession.db[self.MyDoc.__mongometa__.name]
-        ensure_index = collection.ensure_index
-        ensure_index.side_effect = AutoReconnect('blah blah')
+        create_index = collection.create_index
+        create_index.side_effect = AutoReconnect('blah blah')
 
         self.assertRaises(AutoReconnect, lambda: self.MyDoc.m)
-        assert ensure_index.called
+        assert create_index.called
 
     def test_index_inheritance_child_none(self):
         class MyChild(self.MyDoc):
@@ -330,7 +372,8 @@ class TestCursor(TestCase):
             b=Field(S.Object(dict(a=int)))
         self.TestDoc = TestDoc
         mongo_cursor = IteratorMock(iter([ {}, {}, {} ]))
-        mongo_cursor.count = mock.Mock(return_value=3)
+        mongo_cursor.collection = mock.Mock()
+        mongo_cursor.collection.count_documents = mock.Mock(return_value=3)
         mongo_cursor.limit = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.hint = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.skip = mock.Mock(return_value=mongo_cursor)

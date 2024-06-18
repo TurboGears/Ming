@@ -15,7 +15,7 @@ class TestQuerySafety(TestCase):
     def setUp(self):
         self.bind = ming.create_datastore('mim:///datastore')
         self.bind.conn.drop_all()
-        self.bind.db.coll.insert({'_id':'foo', 'a':2, 'b':3})
+        self.bind.db.coll.insert_one({'_id':'foo', 'a':2, 'b':3})
         self.session = ming.Session(self.bind)
         class Doc(Document):
             class __mongometa__:

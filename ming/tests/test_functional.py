@@ -100,14 +100,14 @@ class TestIndexes(TestCase):
             Index('test2'),
             Index('test1', 'test2', direction=pymongo.DESCENDING))
 
-    @mock.patch('ming.session.Session.ensure_index')
-    def test_ensure_indexes(self, ensure_index):
-        # make sure the manager constructor calls ensure_index with the right
+    @mock.patch('ming.session.Session.create_index')
+    def test_ensure_indexes(self, create_index):
+        # make sure the manager constructor calls create_index with the right
         # stuff
         self.MyDoc.m
         collection = self.MockSession.db[self.MyDoc.m.collection_name]
-        ensure_index = collection.ensure_index
-        args = ensure_index.call_args_list
+        create_index = collection.create_index
+        args = create_index.call_args_list
         indexes = [
             ( ([ ('test1', pymongo.DESCENDING), ('test2', pymongo.DESCENDING) ],),
               dict(unique=False, sparse=False, background=True) ),
@@ -117,13 +117,13 @@ class TestIndexes(TestCase):
             self.assertTrue(i in args, args)
 
 
-    @mock.patch('ming.session.Session.ensure_index')
-    def test_ensure_indexes_slave(self, ensure_index):
+    @mock.patch('ming.session.Session.create_index')
+    def test_ensure_indexes_slave(self, create_index):
         # on a slave, an error will be thrown, but it should be swallowed
         self.MyDoc.m
         collection = self.MockSession.db[self.MyDoc.m.collection_name]
-        ensure_index = collection.ensure_index
-        assert ensure_index.called
+        create_index = collection.create_index
+        assert create_index.called
 
     def test_index_inheritance_child_none(self):
         MyChild = collection(self.MyDoc, collection_name='my_child')
@@ -201,7 +201,8 @@ class TestCursor(TestCase):
             Field('b', dict(a=int)))
 
         mongo_cursor = IteratorMock(iter([ {}, {}, {} ]))
-        mongo_cursor.count = mock.Mock(return_value=3)
+        mongo_cursor.collection = mock.Mock()
+        mongo_cursor.collection.count_documents = mock.Mock(return_value=3)
         mongo_cursor.limit = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.hint = mock.Mock(return_value=mongo_cursor)
         mongo_cursor.skip = mock.Mock(return_value=mongo_cursor)

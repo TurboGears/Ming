@@ -98,6 +98,6 @@ class TestFS(TestCase):
             'jumped over the lazy dog')
 
     def test_custom_index(self):
-        self.ds.db[f'{self.fs_coll}.files'].ensure_index('custom_fld')
+        self.ds.db[f'{self.fs_coll}.files'].create_index('custom_fld')
         with self.TestFS.m.new_file('test.txt') as fp:
             fp.write('The quick brown fox')

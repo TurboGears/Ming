@@ -118,9 +118,9 @@ def snippet5_1():
     session.flush()
 
 def snippet5_3():
-    WikiPage.query.find_and_modify({'title': 'MyFirstPage'},
-                                   update={'$set': {'text': 'This is my first page'}},
-                                   new=True)
+    WikiPage.query.find_one_and_update({'title': 'MyFirstPage'},
+                                       update={'$set': {'text': 'This is my first page'}},
+                                       upsert=True)
 
 def snippet5_4():
     wp = WikiPage.query.get(title='MyFirstPage')

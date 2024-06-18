@@ -109,7 +109,7 @@ def snippet1():
     TAGS = ['foo', 'bar', 'snafu', 'mongodb']
 
     # Insert the documents through PyMongo so that Ming is not involved
-    session.db.wiki_page.insert([
+    session.db.wiki_page.insert_many([
         dict(title='Page %s' % idx, text='Text of Page %s' %idx, tags=random.sample(TAGS, 2)) for idx in range(10)
     ])
 
@@ -134,7 +134,7 @@ def snippet5():
     next(session.db.wiki_page.find()).get('metadata')
 
 def snippet6():
-    session.db.mymodel.insert(dict(name='desrever'))
+    session.db.mymodel.insert_one(dict(name='desrever'))
     session.db.mymodel.find_one()
 
     # Apply migration to version 1 and then to version 2

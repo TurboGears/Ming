@@ -221,8 +221,9 @@ class _ClassManager(metaclass=_CurriedProxyClass):
     _proxy_args=('cls',)
     _proxy_methods = (
         'get', 'find', 'find_by', 'remove', 'count', 'update_partial',
-        'group', 'ensure_index', 'ensure_indexes', 'index_information',  'drop_indexes',
-        'find_and_modify', 'aggregate', 'distinct', 'map_reduce', 'inline_map_reduce',
+        'create_index', 'ensure_index', 'ensure_indexes', 'index_information',  'drop_indexes',
+        'find_one_and_update', 'find_one_and_replace', 'find_one_and_delete',
+        'aggregate', 'distinct',
         )
     InstanceManagerClass=_InstanceManager
 
@@ -358,7 +359,7 @@ class _ManagerDescriptor:
         try:
             with self._lock:
                 for idx in self.manager.indexes:
-                    collection.ensure_index(idx.index_spec, background=True,
+                    collection.create_index(idx.index_spec, background=True,
                                             **idx.index_options)
         except (MongoGone, ConnectionFailure) as e:
             if e.args[0] == 'not master':
