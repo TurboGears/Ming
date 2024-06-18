@@ -36,8 +36,8 @@ WikiPage.query.remove({})
 
 
 def snippet1():
-    session.db.wiki_page.insert({'title': 'FirstPage',
-                                 'text': 'This is my first page'})
+    session.db.wiki_page.insert_one({'title': 'FirstPage',
+                                     'text': 'This is my first page'})
     session.db.wiki_page.find_one({'title': 'FirstPage'})
 
 

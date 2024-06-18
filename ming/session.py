@@ -5,7 +5,8 @@ import bson.errors
 
 import pymongo
 import pymongo.errors
-from pymongo.database import Database
+import pymongo.collection
+import pymongo.database
 
 from .base import Cursor, Object
 from .datastore import DataStore
@@ -48,14 +49,14 @@ class Session:
             result = cls._registry[name] = cls(cls._datastores.get(name))
         return result
 
-    def _impl(self, cls):
+    def _impl(self, cls) -> pymongo.collection.Collection:
         try:
             return self.db[cls.m.collection_name]
         except TypeError:
             raise exc.MongoGone('MongoDB is not connected')
 
     @property
-    def db(self) -> Database:
+    def db(self) -> pymongo.database.Database:
         if not self.bind:
             raise exc.MongoGone('No MongoDB connection for "%s"' % getattr(self, '_name', 'unknown connection'))
         return self.bind.db
@@ -82,60 +83,61 @@ class Session:
         collection = self._impl(cls)
         cursor = collection.find(*args, **kwargs)
 
+        find_spec = kwargs.get('filter', None) or args[0] if args else {}
+
         if not validate:
             return (cls(o, skip_from_bson=True) for o in cursor)
 
         return Cursor(cls, cursor,
                       allow_extra=allow_extra,
-                      strip_extra=strip_extra)
+                      strip_extra=strip_extra,
+                      find_spec=find_spec)
 
-    def remove(self, cls, *args, **kwargs):
+    def remove(self, cls, filter={}, *args, **kwargs):
         fix_write_concern(kwargs)
         for kwarg in kwargs:
             if kwarg not in ('spec_or_id', 'w'):
                 raise ValueError("Unexpected kwarg %s.  Did you mean to pass a dict?  If only sent kwargs, pymongo's remove()"
                                  " would've emptied the whole collection.  Which we're pretty sure you don't want." % kwarg)
-        return self._impl(cls).remove(*args, **kwargs)
+        return self._impl(cls).delete_many(filter, *args, **kwargs)
 
     def find_by(self, cls, **kwargs):
         return self.find(cls, kwargs)
 
     def count(self, cls):
-        return self._impl(cls).count()
+        return self._impl(cls).estimated_document_count()
+
+    def create_index(self, cls, fields, **kwargs):
+        index_fields = fixup_index(fields)
+        return self._impl(cls).create_index(index_fields, **kwargs)
 
     def ensure_index(self, cls, fields, **kwargs):
-        index_fields = fixup_index(fields)
-        return self._impl(cls).ensure_index(index_fields, **kwargs), fields
+        return self.create_index(cls, fields, **kwargs)
 
     def ensure_indexes(self, cls):
         for idx in cls.m.indexes:
-            self.ensure_index(cls, idx.index_spec, background=True, **idx.index_options)
-
-    def group(self, cls, *args, **kwargs):
-        return self._impl(cls).group(*args, **kwargs)
+            self.create_index(cls, idx.index_spec, background=True, **idx.index_options)
 
     def aggregate(self, cls, *args, **kwargs):
         return self._impl(cls).aggregate(*args, **kwargs)
-
-    def map_reduce(self, cls, *args, **kwargs):
-        return self._impl(cls).map_reduce(*args, **kwargs)
-
-    def inline_map_reduce(self, cls, *args, **kwargs):
-        return self._impl(cls).inline_map_reduce(*args, **kwargs)
 
     def distinct(self, cls, *args, **kwargs):
         return self._impl(cls).distinct(*args, **kwargs)
 
     def update_partial(self, cls, spec, fields, upsert=False, **kw):
-        return self._impl(cls).update(spec, fields, upsert, **kw)
+        multi = kw.pop('multi', False)
+        if multi is True:
+            return self._impl(cls).update_many(spec, fields, upsert, **kw)
+        return self._impl(cls).update_one(spec, fields, upsert, **kw)
 
-    def find_and_modify(self, cls, query=None, sort=None, new=False, **kw):
-        if query is None: query = {}
-        if sort is None: sort = {}
-        options = dict(kw, query=query, sort=sort, new=new)
-        bson = self._impl(cls).find_and_modify(**options)
-        if bson is None: return None
-        return cls.make(bson)
+    def find_one_and_update(self, cls, *args, **kwargs):
+        return self._impl(cls).find_one_and_update(*args, **kwargs)
+
+    def find_one_and_replace(self, cls, *args, **kwargs):
+        return self._impl(cls).find_one_and_replace(*args, **kwargs)
+
+    def find_one_and_delete(self, cls, *args, **kwargs):
+        return self._impl(cls).find_one_and_delete(*args, **kwargs)
 
     def _prep_save(self, doc, validate):
         hook = doc.m.before_save
@@ -151,16 +153,48 @@ class Session:
         return data
 
     @annotate_doc_failure
-    def save(self, doc, *args, **kwargs):
+    def save(self, doc, *args, **kwargs) -> bson.ObjectId:
+        """
+        Can either
+
+            args
+                   N            Y   
+           |---------------------------|
+   _id  N  |   insert     |   raise    |
+           |---------------------------|
+        Y  |   replace    |   update   |
+           |---------------------------|
+        """
         data = self._prep_save(doc, kwargs.pop('validate', True))
+
+        # if _id is None:
+        #     doc.pop('_id', None)
+
+        new_id = None
         if args:
-            values = {arg: data[arg] for arg in args}
-            result = self._impl(doc).update(
-                dict(_id=doc._id), {'$set': values}, **fix_write_concern(kwargs))
+            if '_id' in doc:
+                arg_data = {arg: data[arg] for arg in args}
+                result = self._impl(doc).update_one(
+                    dict(_id=doc._id), {'$set': arg_data},
+                    **fix_write_concern(kwargs)
+                )
+            else:
+                raise ValueError('Cannot save a subset without an _id')
         else:
-            result = self._impl(doc).save(data, **fix_write_concern(kwargs))
-        if result and '_id' not in doc:
-            doc._id = result
+            if '_id' in doc:
+                result = self._impl(doc).replace_one(
+                    dict(_id=doc._id), data,
+                    upsert=True, **fix_write_concern(kwargs)
+                )
+                new_id = result.upserted_id
+            else:
+                result = self._impl(doc).insert_one(
+                    data, **fix_write_concern(kwargs)
+                )
+                new_id = result.inserted_id
+            if result and ('_id' not in doc) and (new_id is not None):
+                doc._id = new_id
+
         return result
 
     @annotate_doc_failure
@@ -176,13 +210,13 @@ class Session:
         self._prep_save(doc, kwargs.pop('validate', True))
         if type(spec_fields) != list:
             spec_fields = [spec_fields]
-        return self._impl(doc).update({k:doc[k] for k in spec_fields},
-                               doc,
+        return self._impl(doc).update_one({k:doc[k] for k in spec_fields},
+                               {'$set': doc},
                                upsert=True)
 
     @annotate_doc_failure
     def delete(self, doc):
-        return self._impl(doc).remove({'_id':doc._id})
+        return self._impl(doc).delete_one({'_id':doc._id})
 
     def _set(self, doc, key_parts, value):
         if len(key_parts) == 0:
@@ -202,7 +236,7 @@ class Session:
         for k,v in fields_values.items():
             self._set(doc, k.split('.'), v)
         impl = self._impl(doc)
-        return impl.update({'_id':doc._id}, {'$set':fields_values})
+        return impl.update_one({'_id':doc._id}, {'$set':fields_values})
 
     @annotate_doc_failure
     def increase_field(self, doc, **kwargs):
@@ -217,11 +251,11 @@ class Session:
             raise ValueError(f"{key}={value}")
 
         if key not in doc:
-            self._impl(doc).update(
+            self._impl(doc).update_one(
                 {'_id': doc._id, key: None},
                 {'$set': {key: value}}
             )
-        self._impl(doc).update(
+        self._impl(doc).update_one(
             {'_id': doc._id, key: {'$lt': value}},
             # failed attempt at doing it all in one operation
             #{'$where': "this._id == '%s' && (!(%s in this) || this.%s < '%s')"

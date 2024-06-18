@@ -168,7 +168,7 @@ class TestBasicMapping(TestCase):
     def test_mapper(self):
         m = mapper(self.Basic)
         assert repr(m) == '<Mapper Basic:basic>'
-        self.datastore.db.basic.insert(dict(
+        self.datastore.db.basic.insert_one(dict(
                 a=1, b=[2,3], c=dict(d=4, e=5), f='unknown'))
         obj = self.Basic.query.find().options(instrument=False).first()
         q = self.Basic.query.find()
@@ -252,11 +252,6 @@ class TestBasicMapping(TestCase):
         self.Basic.query.aggregate([])
         assert pymongo_aggregate.called
 
-    @patch('ming.mim.Collection.map_reduce')
-    def test_map_reduce(self, mim_map_reduce):
-        self.Basic.query.map_reduce('...', '...', {})
-        assert mim_map_reduce.called
-
     @patch('ming.mim.Collection.distinct')
     def test_distinct(self, mim_distinct):
         self.Basic.query.distinct('field')
@@ -266,16 +261,6 @@ class TestBasicMapping(TestCase):
     def test_cursor_distinct(self, mim_distinct):
         self.Basic.query.find({'a': 'b'}).distinct('field')
         assert mim_distinct.called
-
-    @patch('pymongo.collection.Collection.inline_map_reduce')
-    def test_inline_map_reduce(self, pymongo_inline_map_reduce):
-        self.Basic.query.inline_map_reduce()
-        assert pymongo_inline_map_reduce.called
-
-    @patch('pymongo.collection.Collection.group')
-    def test_group(self, pymongo_group):
-        self.Basic.query.group()
-        assert pymongo_group.called
 
     def test_multiple_update_flushes(self):
         initial_doc = self.Basic()

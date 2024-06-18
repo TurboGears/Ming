@@ -1,12 +1,18 @@
+from __future__ import annotations
+
+import typing
 import warnings
 from copy import copy
 
 from ming.base import Object, NoDefault
 from ming.utils import wordwrap
 
-from .base import ObjectState, state, _with_hooks
+from .base import ObjectState, ObjectState, state, _with_hooks
 from .property import FieldProperty
 
+if typing.TYPE_CHECKING:
+    # from ming.odm import ODMSession
+    from . import ODMSession, MappedClass
 
 def mapper(cls, collection=None, session=None, **kwargs):
     """Gets or creates the mapper for the given ``cls`` :class:`.MappedClass`"""
@@ -75,14 +81,14 @@ class Mapper:
             self.mapped_class.__name__, self.collection.m.collection_name)
 
     @_with_hooks('insert')
-    def insert(self, obj, state, session, **kwargs):
+    def insert(self, obj: MappedClass, state: ObjectState, session: ODMSession, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
         ret = session.impl.insert(doc, validate=False)
         state.status = state.clean
         return ret
 
     @_with_hooks('update')
-    def update(self, obj, state, session, **kwargs):
+    def update(self, obj: MappedClass, state: ObjectState, session: ODMSession, **kwargs):
         fields = state.options.get('fields', None)
         if fields is None:
             fields = ()
@@ -93,12 +99,12 @@ class Mapper:
         return ret
 
     @_with_hooks('delete')
-    def delete(self, obj, state, session, **kwargs):
+    def delete(self, obj: MappedClass, state: ObjectState, session: ODMSession, **kwargs):
         doc = self.collection(state.document, skip_from_bson=True)
         return session.impl.delete(doc)
 
     @_with_hooks('remove')
-    def remove(self, session, *args, **kwargs):
+    def remove(self, session: ODMSession, *args, **kwargs):
         return session.impl.remove(self.collection, *args, **kwargs)
 
     def create(self, doc, options, remake=True):
@@ -176,7 +182,7 @@ class Mapper:
         for p in self.properties:
             p.compile(self)
 
-    def update_partial(self, session, *args, **kwargs):
+    def update_partial(self, session: ODMSession, *args, **kwargs):
         return session.impl.update_partial(self.collection, *args, **kwargs)
 
     def _from_doc(self, doc, options, validate=True):
@@ -319,8 +325,9 @@ class _QueryDescriptor:
 class _ClassQuery:
     """Provides ``.query`` attribute for :class:`MappedClass`."""
     _proxy_methods = (
-        'find', 'find_and_modify', 'remove', 'update', 'group', 'distinct',
-        'aggregate', 'map_reduce', 'inline_map_reduce')
+        'find', 'remove', 'update', 'distinct',
+        'find_one_and_update', 'find_one_and_replace', 'find_one_and_delete', 
+        'aggregate',)
 
     def __init__(self, mapper):
         self.mapper = mapper

@@ -19,14 +19,14 @@ page = dict(
 
 pages = db.pages
 
-pages.insert(page)
+pages.insert_one(page)
 
-db.collection_names()
+db.list_collection_names()
 
 page = pages.find_one()
 
 page['author'] = 'Rick Copeland'
 
-pages.save(page)
+pages.replace_one(dict(_id=page._id), page)
 
 pages.find_one()

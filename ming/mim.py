@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import bson.codec_options
+
 '''mim.py - Mongo In Memory - stripped-down version of mongo that is
 non-persistent and hopefully much, much faster
 '''
@@ -8,11 +12,13 @@ import itertools
 import uuid
 from itertools import chain
 import collections
+import collections.abc
 import logging
 import warnings
 from datetime import datetime
 from hashlib import md5
 from functools import cmp_to_key
+from enum import Enum
 
 import pickle
 
@@ -26,13 +32,18 @@ from ming import compat
 from ming.utils import LazyProperty
 
 import bson
+from bson.binary import UuidRepresentation, Binary
+from bson.codec_options import CodecOptions
 from bson.raw_bson import RawBSONDocument
 from pymongo import database, collection, ASCENDING, MongoClient, UpdateOne
 from pymongo.cursor import Cursor as PymongoCursor
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
-from pymongo.results import DeleteResult, UpdateResult, InsertManyResult, InsertOneResult
+from pymongo.results import DeleteResult, UpdateResult, InsertManyResult, InsertOneResult, BulkWriteResult
 
 log = logging.getLogger(__name__)
+
+UUID_REPRESENTATION = UuidRepresentation.PYTHON_LEGACY
+UUID_REPRESENTATION_STR = 'pythonLegacy'
 
 
 class PymongoCursorNoCleanup(PymongoCursor):
@@ -53,7 +64,8 @@ class Connection:
         self._databases = {}
 
         # Clone defaults from a MongoClient instance.
-        mongoclient = MongoClient()
+        mongoclient = MongoClient(uuidRepresentation=UUID_REPRESENTATION_STR)
+        self.options = mongoclient.options
         self.read_preference = mongoclient.read_preference
         self.write_concern = mongoclient.write_concern
         self.codec_options = mongoclient.codec_options
@@ -83,7 +95,7 @@ class Connection:
             db = self._databases[name] = Database(self, name)
             return db
 
-    def database_names(self):
+    def list_database_names(self):
         return self._databases.keys()
 
     def drop_database(self, name):
@@ -162,7 +174,7 @@ class Database(database.Database):
                     coll.insert(before)
                 else:
                     raise OperationFailure('No matching object found')
-            coll.update(command['query'], command['update'])
+            coll.update_many(command['query'], command['update'])
             if command.get('new', False) or upsert:
                 return dict(value=coll.find_one(dict(_id=before['_id'])))
             return dict(value=before)
@@ -319,7 +331,7 @@ class Database(database.Database):
     def __repr__(self):
         return 'mim.Database(%s)' % self.name
 
-    def collection_names(self):
+    def list_collection_names(self):
         return self._collections.keys()
 
     def drop_collection(self, name):
@@ -328,6 +340,12 @@ class Database(database.Database):
     def clear(self):
         for coll in self._collections.values():
             coll.clear()
+
+
+class ModifyOperation(Enum):
+    UPDATE = 1
+    REPLACE = 2
+    DELETE = 3
 
 
 class Collection(collection.Collection):
@@ -391,8 +409,8 @@ class Collection(collection.Collection):
             return result
         return None
 
-    def __find_and_modify(self, query=None, update=None, fields=None,
-                          upsert=False, remove=False, **kwargs):
+    def __find_and_modify(self, query=None, update=None, projection=None,
+                          upsert=False, operation=ModifyOperation.UPDATE, **kwargs):
         if query is None: query = {}
         before = self.find_one(query, sort=kwargs.get('sort'))
         upserted = False
@@ -400,58 +418,72 @@ class Collection(collection.Collection):
             upserted = True
             if upsert:
                 result = self.__update(query, update, upsert=True)
-                query = {'_id': result['upserted']}
+                query = {'_id': result.upserted_id}
             else:
                 return None
 
         before = self.find_one(query, sort=kwargs.get('sort'))
 
-        if remove:
+        if operation == ModifyOperation.DELETE:
             self.__remove({'_id': before['_id']})
-        elif not upserted:
-            self.__update({'_id': before['_id']}, update)
+        else:
+            if operation == ModifyOperation.REPLACE:
+                if any(k.startswith('$') for k in update.keys()):
+                    raise ValueError('replacement can not include $ operators')
+                # FIXME: shouldn't have to do this to mimic mongodb behavior.
+                # But this is all internal, so who cares?
+                update['_id'] = before['_id']
+                self.__update({'_id': before['_id']}, update)
+            elif operation == ModifyOperation.UPDATE:
+                if not all(k.startswith('$') for k in update.keys()):
+                    raise ValueError('update only works with $ operators')
+                if not upserted:
+                    self.__update({'_id': before['_id']}, update)
 
-        return_new = kwargs.get('new', False)
-        if return_new:
-            return self.find_one(dict(_id=before['_id']), fields)
+        return_document = kwargs.pop('return_document', None)
+        return_new = kwargs.pop('new', None)
+        if return_new is not None:
+            warnings.warn('The kwarg new=True is now deprecated. Please use return_document=True instead.', DeprecationWarning, stacklevel=2)
+            if return_document is None:
+                return_document = return_new
+
+        if return_document:
+            return self.find_one(dict(_id=before['_id']), projection)
         elif upserted:
             return None
         else:
-            return Projection(fields).apply(before)
-
-    def find_and_modify(self, query=None, update=None, fields=None,
-                        upsert=False, remove=False, **kwargs):
-        warnings.warn('find_and_modify is now deprecated, please use find_one_and_delete, '
-                      'find_one_and_replace, find_one_and_update)', DeprecationWarning, stacklevel=2)
-        return self.__find_and_modify(query, update, fields, upsert, remove, **kwargs)
+            return Projection(projection).apply(before)
 
     def find_one_and_delete(self, filter, projection=None, sort=None, **kwargs):
-        return self.__find_and_modify(filter, fields=projection, remove=True, sort=sort, **kwargs)
+        return self.__find_and_modify(filter, projection=projection, operation=ModifyOperation.DELETE, sort=sort, **kwargs)
 
-    def find_one_and_replace(self, filter, replacement, projection=None, sort=None,
-                             return_document=False, **kwargs):
-        # ReturnDocument.BEFORE -> False
-        # ReturnDocument.AFTER -> True
-        return self.__find_and_modify(filter, update=replacement, fields=projection,
-                                      sort=sort, new=return_document, **kwargs)
+    def find_one_and_replace(self, filter, replacement, projection=None, sort=None, upsert=False,
+                             return_document=None, **kwargs):
+        # pymongo.collection.ReturnDocument.BEFORE -> False
+        # pymongo.collection.ReturnDocument.AFTER -> True
+        return self.__find_and_modify(filter, update=replacement, projection=projection,
+                                      sort=sort, upsert=upsert, return_document=return_document, 
+                                      operation=ModifyOperation.REPLACE, **kwargs)
 
-    def find_one_and_update(self, filter, update, projection=None, sort=None,
-                            return_document=False, **kwargs):
-        # ReturnDocument.BEFORE -> False
-        # ReturnDocument.AFTER -> True
-        return self.__find_and_modify(filter, update=update, fields=projection,
-                                      sort=sort, new=return_document, **kwargs)
+    def find_one_and_update(self, filter, update, projection=None, sort=None, upsert=False,
+                            return_document=None, **kwargs):
+        # pymongo.collection.ReturnDocument.BEFORE -> False
+        # pymongo.collection.ReturnDocument.AFTER -> True
+        return self.__find_and_modify(filter, update=update, projection=projection,
+                                      sort=sort, upsert=upsert, return_document=return_document,
+                                      operation=ModifyOperation.UPDATE, **kwargs)
 
-    def count(self, filter=None, **kwargs):
-        return self.find(filter, **kwargs).count()
+    def estimated_document_count(self, **kwargs):
+        return self.find({}, **kwargs)._count()
 
-    def __insert(self, doc_or_docs, manipulate=True, **kwargs):
+    def count_documents(self, filter=None, **kwargs):
+        return self.find(filter, **kwargs)._count()
+
+    def __insert(self, doc_or_docs, **kwargs) -> InsertOneResult | InsertManyResult:
         result = []
         if not isinstance(doc_or_docs, list):
             doc_or_docs = [ doc_or_docs ]
         for doc in doc_or_docs:
-            if not manipulate:
-                doc = bcopy(doc)
             bson_safe(doc)
             _id = doc.get('_id', ())
             if _id == ():
@@ -463,55 +495,41 @@ class Collection(collection.Collection):
                 continue
             self._index(doc)
             self._data[_id] = bcopy(doc)
-        return result
-
-    def insert(self, doc_or_docs, manipulate=True, **kwargs):
-        warnings.warn('insert is now deprecated, please use insert_one or insert_many', DeprecationWarning, stacklevel=2)
-        return self.__insert(doc_or_docs, manipulate, **kwargs)
-
-    def insert_one(self, document, session=None):
-        result = self.__insert(document)
-        if result:
-            result = result[0]
-        return InsertOneResult(result or None, True)
-
-    def insert_many(self, documents, ordered=True, session=None):
-        result = self.__insert(documents)
-        return InsertManyResult(result, True)
-
-    def save(self, doc, **kwargs):
-        warnings.warn('save is now deprecated, please use insert_one or replace_one', DeprecationWarning, stacklevel=2)
-        _id = doc.get('_id', ())
-        if _id == ():
-            return self.__insert(doc)
+        if len(result) > 1:
+            return InsertManyResult(result, True)
         else:
-            self.__update({'_id':_id}, doc, upsert=True)
-            return _id
+            return InsertOneResult(result, True)
+
+    def insert_one(self, document, session=None) -> InsertOneResult:
+        return self.__insert(document)
+
+    def insert_many(self, documents, ordered=True, session=None) -> InsertManyResult:
+        return self.__insert(documents)
 
     def replace_one(self, filter, replacement, upsert=False):
         return self.__update(filter, replacement, upsert)
 
-    def __update(self, spec, updates, upsert=False, multi=False):
+    def __update(self, spec, updates, upsert=False, multi=False) -> UpdateResult:
         bson_safe(spec)
         bson_safe(updates)
-        result = dict(
-            connectionId=None,
-            updatedExisting=False,
-            err=None,
-            ok=1.0,
+
+        # https://pymongo.readthedocs.io/en/stable/api/pymongo/results.html#pymongo.results.UpdateResult
+        # TODO: SF-9544 - likely needs update in pymongo4
+        raw_result = dict(
             n=0,
-            nModified=0
+            nModified=0,
+            upserted=None,
         )
         for doc, mspec in self._find(spec):
             self._deindex(doc)
             mspec.update(updates)
             self._index(doc)
-            result['n'] += 1
-            result['nModified'] += 1
-            if not multi: break
-        if result['n']:
-            result['updatedExisting'] = True
-            return result
+            raw_result['n'] += 1
+            raw_result['nModified'] += 1
+            if not multi:
+                break
+        if raw_result['n']:
+            return UpdateResult(raw_result, True)
         if upsert:
             doc = dict(spec)
             MatchDoc(doc).update(updates, upserted=upsert)
@@ -522,25 +540,22 @@ class Collection(collection.Collection):
                 raise DuplicateKeyError('duplicate ID on upsert')
             self._index(doc)
             self._data[_id] = bcopy(doc)
-            result['upserted'] = _id
-            return result
+            raw_result['upserted'] = _id
+            return UpdateResult(raw_result, True)
         else:
-            return result
-
-    def update(self, spec, updates, upsert=False, multi=False):
-        warnings.warn('update is now deprecated, please use update_many or update_one', DeprecationWarning, stacklevel=2)
-        return self.__update(spec, updates, upsert, multi)
+            return UpdateResult(raw_result, True)
 
     def update_many(self, filter, update, upsert=False):
-        result = self.__update(filter, update, upsert, multi=True)
-        return UpdateResult(result, True)
+        return self.__update(filter, update, upsert, multi=True)
 
     def update_one(self, filter, update, upsert=False):
-        result = self.__update(filter, update, upsert, multi=False)
-        return UpdateResult(result, True)
+        return self.__update(filter, update, upsert, multi=False)
 
     def __remove(self, spec=None, **kwargs):
-        result = dict(n=0)
+        # TODO: SF-9544 - likely needs update in pymongo4
+        result = dict(
+            n=0,
+        )
         multi = kwargs.get('multi', True)
         if spec is None: spec = {}
         new_data = {}
@@ -551,26 +566,20 @@ class Collection(collection.Collection):
             else:
                 new_data[id] = doc
         self._data = new_data
-        return result
-
-    def remove(self, spec=None, **kwargs):
-        warnings.warn('remove is now deprecated, please use delete_many or delete_one', DeprecationWarning, stacklevel=2)
-        self.__remove(spec, **kwargs)
+        return DeleteResult(result, True)
 
     def delete_one(self, filter, session=None):
-        res = self.__remove(filter, multi=False)
-        return DeleteResult(res, True)
+        return self.__remove(filter, multi=False)
 
     def delete_many(self, filter, session=None):
-        res = self.__remove(filter, multi=True)
-        return DeleteResult(res, True)
+        return self.__remove(filter, multi=True)
 
     def list_indexes(self, session=None):
         return Cursor(self, lambda: self._indexes.values())
 
-    def ensure_index(self, key_or_list, unique=False, cache_for=300,
+    def create_index(self, key_or_list, unique=False, cache_for=300,
                      name=None, **kwargs):
-        if isinstance(key_or_list, list):
+        if isinstance(key_or_list, (list, collections.abc.ItemsView)):
             keys = tuple(tuple(k) for k in key_or_list)
         else:
             keys = ([key_or_list, ASCENDING],)
@@ -590,10 +599,6 @@ class Collection(collection.Collection):
             docindex[key_values] = id
 
         return index_name
-
-    # ensure_index is now deprecated.
-    def create_index(self, keys, **kwargs):
-        return self.ensure_index(keys, **kwargs)
 
     def index_information(self):
         return {
@@ -643,27 +648,16 @@ class Collection(collection.Collection):
             key_values = self._extract_index_key(doc, keys)
             docindex.pop(key_values, None)
 
-    def map_reduce(self, map, reduce, out, full_response=False, **kwargs):
-        if isinstance(out, str):
-            out = { 'replace':out }
-        cmd_args = {'mapreduce': self.name,
-                    'map': map,
-                    'reduce': reduce,
-                    'out': out,
-                    }
-        cmd_args.update(kwargs)
-        return self.database.command(cmd_args)
-
     def distinct(self, key, filter=None, **kwargs):
         return self.database.command({'distinct': self.name,
                                       'key': key,
                                       'filter': filter})
 
     def bulk_write(self, requests, ordered=True,
-                   bypass_document_validation=False):
+                   bypass_document_validation=False) -> BulkWriteResult:
         for step in requests:
             if isinstance(step, UpdateOne):
-                self.update_one(step._filter, step._doc, upsert=step._upsert)
+                return self.update_one(step._filter, step._doc, upsert=step._upsert)
             else:
                 raise NotImplementedError(
                     "MIM currently doesn't support %s operations" % type(step)
@@ -697,7 +691,7 @@ class Cursor:
         if isinstance(projection, (tuple, list)):
             projection = {f: 1 for f in projection}
 
-        self._collection = collection
+        self.collection = collection
         self._iterator_gen = _iterator_gen
         self._sort = sort
         self._skip = skip or None    # cope with 0 being passed.
@@ -722,7 +716,7 @@ class Cursor:
 
     def clone(self, **overrides):
         result = Cursor(
-            collection=self._collection,
+            collection=self.collection,
             _iterator_gen=self._iterator_gen,
             sort=self._sort,
             skip=self._skip,
@@ -738,7 +732,10 @@ class Cursor:
             del self.iterator
             self._safe_to_chain = True
 
-    def count(self):
+    def _count(self):
+        """
+        An internal method to count the number of documents in the cursor.
+        """
         return sum(1 for x in self._iterator_gen())
 
     def __getitem__(self, key):
@@ -768,7 +765,7 @@ class Cursor:
 
         # mim doesn't currently do anything with codec_options, so this doesn't do anything currently
         # but leaving it here as a placeholder for the future - otherwise we should delete wrap_as_class()
-        return wrap_as_class(value, self._collection.codec_options.document_class)
+        return wrap_as_class(value, self.collection.codec_options.document_class)
 
     __next__ = next
 
@@ -815,13 +812,13 @@ class Cursor:
         # checks indexes, but doesn't actually use hinting
         if type(index) == list:
             test_idx = [(i, direction) for i, direction in index if i != '$natural']
-            values = [[k for k in i["key"]] for i in self._collection._indexes.values()]
+            values = [[k for k in i["key"]] for i in self.collection._indexes.values()]
             if test_idx and test_idx not in values:
                 raise OperationFailure('database error: bad hint. Valid values: %s' % values)
         elif isinstance(index, str):
-            if index not in self._collection._indexes.keys():
+            if index not in self.collection._indexes.keys():
                 raise OperationFailure('database error: bad hint. Valid values: %s'
-                        % self._collection._indexes.keys())
+                        % self.collection._indexes.keys())
         elif index is None:
             pass
         else:
@@ -898,6 +895,13 @@ class BsonArith:
     def _build_types(cls):
         # this is a list of conversion functions, and the types they apply to
         # see also bson._ENCODERS for what pymongo itself handles
+
+        def handle_binary(val):
+            """Treat UUIDs as binary."""
+            if isinstance(val, uuid.UUID):
+                val = Binary.from_uuid(val, uuid_representation=UUID_REPRESENTATION)
+            return val
+        
         cls._types = [
             (lambda x:x, [type(None)]),
             (lambda x:x, [int]),
@@ -905,14 +909,13 @@ class BsonArith:
             (lambda x: {k: cls.to_bson(v) for k, v in x.items()}, [dict, MatchDoc]),
             (lambda x:list(cls.to_bson(i) for i in x), [list, MatchList]),
             (lambda x:x, [tuple]),
-            (lambda x:x, [bson.Binary]),
+            (lambda x:handle_binary(x), [bson.Binary, uuid.UUID]),
             (lambda x:x, [bytes]),
             (lambda x:x, [bson.ObjectId]),
             (lambda x:x, [bool]),
             (lambda x:x, [datetime]),
             (lambda x:x, [bson.Regex]),
             (lambda x:x, [float]),
-            (lambda x:x, [uuid.UUID]),
         ]
 
 
@@ -1390,11 +1393,12 @@ def validate(doc):
             validate(v)
 
 def bson_safe(obj):
-    bson.BSON.encode(obj)
+    codec_options = CodecOptions(uuid_representation=UUID_REPRESENTATION)
+    return bson.BSON.encode(obj, codec_options=codec_options)
 
 def bcopy(obj):
     if isinstance(obj, dict):
-        return bson.BSON.encode(obj).decode()
+        return bson_safe(obj).decode()
     elif isinstance(obj, list):
         return list(map(bcopy, obj))
     else:

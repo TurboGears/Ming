@@ -1,5 +1,7 @@
 from collections import defaultdict
+import warnings
 
+from pymongo.collection import ReturnDocument
 from pymongo.database import Database
 
 from ming.session import Session
@@ -188,10 +190,10 @@ class ODMSession:
         _call_hook(self, 'cursor_created', odm_cursor, 'find', cls, *args, **kwargs)
         return odm_cursor
 
-    def find_and_modify(self, cls, *args, **kwargs):
+    def __find_and_modify(self, cls, operation: str, *args, **kwargs):
         """Finds and updates ``cls``.
 
-        Arguments are the same as :meth:`pymongo.collection.Collection.find_and_modify`.
+        Arguments are the same as :meth:`pymongo.collection.Collection.find_one_and_update`.
 
         If the session has ``autoflush`` option, the session
         if flushed before performing the query.
@@ -203,12 +205,22 @@ class ODMSession:
         if self.autoflush:
             self.flush()
         m = mapper(cls)
-        obj = self.impl.find_and_modify(m.collection, *args, **kwargs)
+        fn = getattr(self.impl, operation)
+        obj = fn(m.collection, *args, **kwargs)
         if obj is None: return None
         cursor = ODMCursor(self, cls, iter([ obj ]), refresh=True, decorate=decorate)
         result = cursor.first()
         state(result).status = ObjectState.clean
         return result
+
+    def find_one_and_update(self, cls, *args, **kwargs):
+        return self.__find_and_modify(cls, 'find_one_and_update', *args, **kwargs)
+
+    def find_one_and_replace(self, cls, *args, **kwargs):
+        return self.__find_and_modify(cls, 'find_one_and_replace', *args, **kwargs)
+
+    def find_one_and_delete(self, cls, *args, **kwargs):
+        return self.__find_and_modify(cls, 'find_one_and_delete', *args, **kwargs)
 
     @_with_hooks('remove')
     def remove(self, cls, *args, **kwargs):
@@ -265,14 +277,6 @@ class ODMSession:
         """Drop all indexes declared in ``cls``"""
         return self.impl.drop_indexes(cls)
 
-    def group(self, cls, *args, **kwargs):
-        """Runs a grouping on the model collection.
-
-        Arguments are the same as  :meth:`pymongo.collection.Collection.group`.
-        """
-        m = mapper(cls)
-        return self.impl.group(m.collection, *args, **kwargs)
-
     def aggregate(self, cls, *args, **kwargs):
         """Runs an aggregation pipeline on the given collection.
 
@@ -288,22 +292,6 @@ class ODMSession:
         """
         m = mapper(cls)
         return self.impl.distinct(m.collection, *args, **kwargs)
-
-    def map_reduce(self, cls, *args, **kwargs):
-        """Runs a MapReduce job and stores results in a collection.
-
-        Arguments are the same as  :meth:`pymongo.collection.Collection.map_reduce`.
-        """
-        m = mapper(cls)
-        return self.impl.map_reduce(m.collection, *args, **kwargs)
-
-    def inline_map_reduce(self, cls, *args, **kwargs):
-        """Runs a MapReduce job and keeps results in-memory.
-
-        Arguments are the same as  :meth:`pymongo.collection.Collection.inline_map_reduce`.
-        """
-        m = mapper(cls)
-        return self.impl.inline_map_reduce(m.collection, *args, **kwargs)
 
 
 class SessionExtension:
