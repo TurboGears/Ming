@@ -489,7 +489,7 @@ class Collection(collection.Collection):
             return _id
 
     def replace_one(self, filter, replacement, upsert=False):
-        return self._update(filter, replacement, upsert)
+        return self.__update(filter, replacement, upsert)
 
     def __update(self, spec, updates, upsert=False, multi=False):
         bson_safe(spec)
