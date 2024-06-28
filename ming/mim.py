@@ -968,7 +968,7 @@ class Match:
             # $options is currently only correlated to $regex and is not a standalone operator
             # always True to prevent code that use for example case insensitive regex from failing
             # tests without any reason
-            log.warn('$options not implemented')
+            log.warning('$options not implemented')
             return True
         if op == '$ne': return BsonArith.cmp(val, value) != 0
         if op == '$gt': return BsonArith.cmp(val, value) > 0
