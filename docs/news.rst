@@ -1,11 +1,13 @@
 Ming News / Release Notes
 =====================================
 
-The latest releases support PyMongo 3.  The older 0.5.x releases support PyMongo 2 and Python 2.
+The latest releases support PyMongo v3 and v4
 
-Pre-Release
----------------------
-* Prepare for PyMongo 4.0 support
+0.14.0 (Aug 1, 2024)
+--------------------
+
+Support PyMongo 4.x (3.x should still work too).  There are several breaking changes, whether you update pymongo or not:
+
 * Replace ``find_and_modify()`` session methods with ``find_one_and_update()``, ``find_one_and_replace()``, 
   and ``find_one_and_delete()`` to closer match pymongo4's API
 * Remove ``group()`` session methods as they are unsupported in pymongo4. Use the aggregation pipeline.
