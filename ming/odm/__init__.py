@@ -2,7 +2,7 @@ from ming.odm.base import state, session
 from ming.odm.mapper import mapper, Mapper, MapperExtension
 
 from ming.odm.property import RelationProperty, ForeignIdProperty
-from ming.odm.property import FieldProperty, FieldPropertyWithMissingNone
+from ming.odm.property import FieldProperty, FieldPropertyWithMissingNone, DecryptedProperty
 
 from ming.odm.odmsession import ODMSession, ThreadLocalODMSession, SessionExtension
 from ming.odm.odmsession import ContextualODMSession
@@ -14,6 +14,6 @@ ThreadLocalORMSession=ThreadLocalODMSession
 ContextualORMSession=ContextualODMSession
 
 __all__ = ('state', 'session', 'mapper', 'Mapper', 'MapperExtension',
-           'RelationProperty', 'ForeignIdProperty', 'FieldProperty',
+           'RelationProperty', 'ForeignIdProperty', 'FieldProperty', 'DecryptedProperty',
            'FieldPropertyWithMissingNone', 'ODMSession', 'ThreadLocalODMSession',
            'SessionExtension', 'MappedClass', 'ContextualODMSession')

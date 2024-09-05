@@ -5,14 +5,16 @@ import warnings
 from copy import copy
 
 from ming.base import Object, NoDefault
+from ming.session import Session
 from ming.utils import wordwrap
 
-from .base import ObjectState, ObjectState, state, _with_hooks
+from .base import ObjectState, state, _with_hooks
 from .property import FieldProperty
 
 if typing.TYPE_CHECKING:
     # from ming.odm import ODMSession
     from . import ODMSession, MappedClass
+    from ming.declarative import Document
 
 def mapper(cls, collection=None, session=None, **kwargs):
     """Gets or creates the mapper for the given ``cls`` :class:`.MappedClass`"""
@@ -45,7 +47,7 @@ class Mapper:
     _all_mappers = []
     _compiled = False
 
-    def __init__(self, mapped_class, collection, session, **kwargs):
+    def __init__(self, mapped_class: type[MappedClass], collection: type[Document], session: Session, **kwargs):
         self.mapped_class = mapped_class
         self.collection = collection
         self.session = session
@@ -315,7 +317,7 @@ class _ORMDecoration:
 
 class _QueryDescriptor:
 
-    def __init__(self, mapper):
+    def __init__(self, mapper: Mapper):
         self.classquery = _ClassQuery(mapper)
 
     def __get__(self, instance, cls=None):
@@ -329,7 +331,7 @@ class _ClassQuery:
         'find_one_and_update', 'find_one_and_replace', 'find_one_and_delete', 
         'aggregate',)
 
-    def __init__(self, mapper):
+    def __init__(self, mapper: Mapper):
         self.mapper = mapper
         self.session = self.mapper.session
         self.mapped_class = self.mapper.mapped_class
@@ -437,9 +439,11 @@ class _InitDecorator:
             return self.saving_init(self_)
         else:
             return self.nonsaving_init(self_)
+    
+    __call__ = __get__
 
     @classmethod
-    def decorate(cls, mapped_class, mapper):
+    def decorate(cls, mapped_class: type[MappedClass], mapper: Mapper):
         old_init = mapped_class.__init__
         if isinstance(old_init, cls):
             mapped_class.__init__ = cls(mapper, old_init.func)

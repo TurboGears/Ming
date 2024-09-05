@@ -3,15 +3,15 @@ import sys
 from contextlib import redirect_stderr
 from unittest import TestCase, main
 
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from pymongo.errors import ConnectionFailure
 
 import ming
 from ming import Session
 from ming import mim
 from ming import create_datastore, create_engine
-from ming.datastore import Engine
 from ming.exc import MingConfigError
+from ming.datastore import Engine
 
 
 class DummyConnection:

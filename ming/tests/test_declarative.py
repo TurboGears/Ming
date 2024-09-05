@@ -11,9 +11,9 @@ from ming.datastore import create_datastore
 from ming.declarative import Document
 from ming.metadata import Field, Index
 from ming import schema as S
-from ming.odm.odmsession import ODMSession, ThreadLocalODMSession
 from ming.session import Session
 from ming.exc import MingException
+
 
 def mock_datastore():
     def mock_collection():
@@ -169,6 +169,7 @@ class TestDocumentReal(TestCase):
         self.assertRaises(AttributeError, getattr, doc, 'c')
         self.assertRaises(AttributeError, getattr, doc, 'a')
         self.assertEqual(self.session.count(self.TestDoc), 1)
+
 
 class TestIndexes(TestCase):
 

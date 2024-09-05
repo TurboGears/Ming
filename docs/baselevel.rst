@@ -17,7 +17,7 @@ you want.
 While this dynamic behavior is handy in a rapid development environment where you
 might delete and re-create the database many times a day, it starts to be a
 problem when you *need* to make guarantees of the type of data in a collection
-(because you code depends on it).  The goal of Ming is to allow you to specify
+(because your code depends on it).  The goal of Ming is to allow you to specify
 the schema for your data in Python code and then develop in confidence, knowing
 the format of data you get from a query.
 
