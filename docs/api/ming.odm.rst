@@ -4,6 +4,8 @@
 
 .. automodule:: ming.odm.declarative
    :members:
+   :show-inheritance:
+   :inherited-members:
 
 .. automodule:: ming.odm.base
    :members:

@@ -1,3 +1,4 @@
+import ming.encryption
 from ming.metadata import Field
 from ming.utils import LazyProperty
 from ming import schema as S
@@ -28,6 +29,9 @@ class ORMProperty:
         return '<{} {}>'.format(
             self.__class__.__name__, self.name)
 
+class DecryptedProperty(ming.encryption.DecryptedField):
+    pass
+
 class FieldProperty(ORMProperty):
     """Declares property for a value stored in a MongoDB Document.
 
@@ -54,7 +58,8 @@ class FieldProperty(ORMProperty):
 
     @property
     def include_in_repr(self):
-        if isinstance(self.field.schema, S.Deprecated): return False
+        if isinstance(self.field.schema, (S.Binary, S.Deprecated)):
+            return False
         return True
 
     def repr(self, doc):

@@ -1,20 +1,29 @@
+from __future__ import annotations
+
 import time
 import logging
 from threading import Lock
-from typing import Union
+from typing import Union, TYPE_CHECKING
 import urllib
 from pymongo import MongoClient
 from pymongo.database import Database
-from pymongo.errors import ConnectionFailure, InvalidURI
+from pymongo.encryption import ClientEncryption, Algorithm
+from pymongo.errors import ConnectionFailure, InvalidURI, EncryptionError
 from pymongo.uri_parser import parse_uri
+from pymongocrypt.errors import MongoCryptError
+
+from ming.utils import LazyProperty
 
 from . import mim
 from . import exc
 
+if TYPE_CHECKING:
+    from . import encryption
+
 Conn = Union[mim.Connection, MongoClient]
 
 
-def create_engine(*args, **kwargs):
+def create_engine(*args, **kwargs) -> Engine:
     """Creates a new :class:`.Engine` instance.
 
     According to the provided url schema ``mongodb://`` or ``mim://``
@@ -34,7 +43,7 @@ def create_engine(*args, **kwargs):
     return Engine(use_class, args, kwargs, connect_retry, auto_ensure_indexes)
 
 
-def create_datastore(uri, **kwargs):
+def create_datastore(uri, **kwargs) -> DataStore:
     """Creates a new :class:`.DataStore` for the database identified by ``uri``.
 
     ``uri`` is a mongodb url in the form ``mongodb://username:password@address:port/dbname``,
@@ -74,6 +83,8 @@ def create_datastore(uri, **kwargs):
     if database.startswith("/"):
         database = database[1:]
 
+    encryption_config: encryption.EncryptionConfig = kwargs.pop('encryption', None)
+
     if uri:
         # User provided a valid connection URL.
         if bind:
@@ -85,14 +96,14 @@ def create_datastore(uri, **kwargs):
         # Create engine without connection.
         bind = create_engine(**kwargs)
 
-    return DataStore(bind, database)
+    return DataStore(bind, database, encryption_config)
 
 
 class Engine:
     """Engine represents the connection to a MongoDB (or in-memory database).
 
-    The ``Engine`` class lazily creates the connection the firs time it's
-    actually accessed.
+    The ``Engine`` class lazily creates the connection the first time it's
+    accessed.
     """
 
     def __init__(self, Connection,
@@ -135,6 +146,7 @@ class Engine:
             try:
                 with self._lock:
                     if self._conn is None:
+                        # NOTE: Runs MongoClient/EncryptionClient
                         self._conn = self._Connection(
                             *self._conn_args, **self._conn_kwargs)
                     else:
@@ -159,10 +171,10 @@ class DataStore:
     :func:`.create_datastore` function.
     """
 
-    def __init__(self, bind, name, authenticate=None):
+    def __init__(self, bind: Engine, name: str, encryption_config: encryption.EncryptionConfig = None):
         self.bind = bind
         self.name = name
-        self._authenticate = authenticate
+        self._encryption_config = encryption_config
         self._db = None
 
     def __repr__(self): # pragma no cover
@@ -191,3 +203,51 @@ class DataStore:
 
             self._db = self.bind[self.name]
         return self._db
+
+    @property
+    def encryption(self) -> encryption.EncryptionConfig | None:
+        return self._encryption_config
+
+    @LazyProperty
+    def encryptor(self) -> ClientEncryption:
+        """Creates and returns a :class:`pymongo.encryption.ClientEncryption` instance for the given ming datastore. It uses this to handle encryption/decryption using pymongo's native routines.
+        """
+        encryption = ClientEncryption(self.encryption.kms_providers, self.encryption.key_vault_namespace,
+                                      self.conn, self.conn.codec_options)
+        return encryption
+
+    def make_data_key(self):
+        """Mongodb's Client Side Field Level Encryption (CSFLE) requires a data key to be present in the key vault collection. This ensures that the key vault collection is properly indexed and that a data key is present for each provider.
+        """
+        # index recommended by mongodb docs:
+        key_vault_db_name, key_vault_coll_name = self.encryption.key_vault_namespace.split('.')
+        key_vault_coll = self.conn[key_vault_db_name][key_vault_coll_name]
+        key_vault_coll.create_index("keyAltNames", unique=True,
+                                    partialFilterExpression={"keyAltNames": {"$exists": True}})
+
+        for provider, options in self.encryption.provider_options.items():
+            self.encryptor.create_data_key(provider, **options)
+
+    def encr(self, s: str | None, _first_attempt=True, provider='local') -> bytes | None:
+        """Encrypts a string using the encryption configuration of the ming datastore that this class is bound to.
+        Most of the time, you won't need to call this directly, as it is used by the :meth:`ming.encryption.EncryptedDocumentMixin.encrypt_some_fields` method.
+        """
+        if s is None:
+            return None
+        try:
+            key_alt_name = self.encryption._get_key_alt_name(provider)
+            return self.encryptor.encrypt(s, Algorithm.AEAD_AES_256_CBC_HMAC_SHA_512_Deterministic,
+                                     key_alt_name=key_alt_name)
+        except (EncryptionError, MongoCryptError) as e:
+            if _first_attempt and 'not all keys requested were satisfied' in str(e):
+                self.make_data_key()
+                return self.encr(s, _first_attempt=False)
+            else:
+                raise
+
+    def decr(self, b: bytes | None) -> str | None:
+        """Decrypts a string using the encryption configuration of the ming datastore that this class is bound to.
+        """
+        if b is None:
+            return None
+        return self.encryptor.decrypt(b)

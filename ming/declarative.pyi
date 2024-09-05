@@ -2,6 +2,7 @@ from typing import TypeVar, Mapping, Any
 
 from ming.base import Object
 from ming.metadata import Manager
+from ming.encryption import EncryptedMixin
 
 M = TypeVar('M')
 
@@ -10,11 +11,16 @@ M = TypeVar('M')
 #   from ming.metadata import _Document
 #   class _Document(Object): ...methods...
 #   class Document(_Document):
-class Document(Object):
+class Document(Object, EncryptedMixin):
     def __init__(self, data:Mapping=None, skip_from_bson=False) -> None: ...
 
     @classmethod
     def make(cls, data, allow_extra=False, strip_extra=True) -> Document: ...
+
+    # Encryption-Related fields:
+
+    @classmethod
+    def make_encr(cls, data: dict) -> Document: ...
 
     # ...
     # class __mongometa__:

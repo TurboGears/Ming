@@ -1,6 +1,7 @@
 from ming.metadata import collection, Index
-from .mapper import mapper
-from .property import ORMProperty
+from ming.encryption import EncryptedMixin
+from ming.odm.mapper import mapper
+from ming.odm.property import ORMProperty
 
 
 class _MappedClassMeta(type):
@@ -92,7 +93,8 @@ class _MappedClassMeta(type):
                 doc_bases, *(fields + indexes), **collection_kwargs)
         return collection_cls
 
-class MappedClass(metaclass=_MappedClassMeta):
+
+class MappedClass(EncryptedMixin, metaclass=_MappedClassMeta):
     """Declares a Ming Mapped Document.
 
     Mapped Documents provide a declarative interface to

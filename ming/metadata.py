@@ -10,6 +10,7 @@ from . import schema as S
 from .base import Object
 from .utils import fixup_index, LazyProperty
 from .exc import MongoGone
+from .encryption import EncryptedMixin
 
 log = logging.getLogger(__name__)
 
@@ -401,7 +402,7 @@ class _FieldDescriptor:
         del inst[self.name]
 
 
-class _Document(Object):
+class _Document(Object, EncryptedMixin):
 
     def __init__(self, data=None, skip_from_bson=False):
         if data is None:
@@ -415,5 +416,7 @@ class _Document(Object):
         'Kind of a virtual constructor'
         return cls.m.make(data, **kwargs)
 
-
-
+    @classmethod
+    def make_encr(cls, data: dict):
+        data_with_encryption = cls.encrypt_some_fields(data)
+        return cls.make(data_with_encryption)

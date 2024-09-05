@@ -101,6 +101,7 @@ Documentation Content
    polymorphism
    custom_properties
    baselevel
+   encryption
    reference
    news
 

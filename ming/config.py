@@ -24,6 +24,7 @@ def configure(**kwargs):
 def configure_from_nested_dict(config):
     try:
         from formencode import schema, validators
+        import ming.validators as ming_validators
     except ImportError:
         raise MingConfigError("Need to install FormEncode to use ``ming.configure``")
 
@@ -36,6 +37,7 @@ def configure_from_nested_dict(config):
         auto_ensure_indexes = validators.StringBool(if_missing=True)
         # pymongo
         tz_aware = validators.Bool(if_missing=False)
+        encryption = ming_validators.EncryptionConfigValidator(if_missing=None)
 
     datastores = {}
     for name, datastore in config.items():

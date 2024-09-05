@@ -1,8 +1,9 @@
 from typing import Any
 
 from ming.odm.mapper import Query
+from ming.encryption import EncryptedMixin
 
-class MappedClass:
+class MappedClass(EncryptedMixin):
     def __init__(self, **kwargs) -> None: ...
 
     query: Query[MappedClass]

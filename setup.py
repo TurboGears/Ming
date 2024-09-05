@@ -33,7 +33,7 @@ setup(name='Ming',
       include_package_data=True,
       zip_safe=True,
       install_requires=[
-        "pymongo<4.9",
+        "pymongo[encryption]<4.9",
         "pytz",
       ],
       tests_require=[
