@@ -4,6 +4,10 @@ import pymongo
 
 class EmptyClass: pass
 
+# inspired by https://github.com/davidhalter/jedi/blob/master/jedi/inference/utils.py
+class UncaughtAttributeError(Exception):
+    pass
+
 class LazyProperty:
 
     def __init__(self, func):
@@ -12,8 +16,13 @@ class LazyProperty:
         self.__doc__ = func.__doc__
 
     def __get__(self, obj, klass=None):
-        if obj is None: return None
-        result = obj.__dict__[self.__name__] = self._func(obj)
+        if obj is None:
+            return None
+        try:
+            result = self._func(obj)
+        except AttributeError as e:
+            raise UncaughtAttributeError(str(e)) from e
+        obj.__dict__[self.__name__] = result
         return result
 
 class ContextualProxy:
