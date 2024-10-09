@@ -207,8 +207,6 @@ class TestIndexes(TestCase):
         collection = self.MockSession.db[self.MyDoc.m.collection_name]
         create_index = collection.create_index
         args = create_index.call_args_list
-        for a in args:
-            print(a)
         indexes = [
             ( ([ ('test1', pymongo.ASCENDING), ('test2', pymongo.ASCENDING) ],),
               dict(unique=False, sparse=False, background=True) ),
