@@ -1,4 +1,6 @@
+import io
 import sys
+from contextlib import redirect_stderr
 from unittest import TestCase, main
 
 from unittest.mock import patch, Mock
@@ -43,8 +45,10 @@ class TestConnectionFailure(TestCase):
             raise ConnectionFailure()
         engine = Engine(Connection, (), {}, 17, True,
                         _sleep=lambda x:None)
-        self.assertRaises(ConnectionFailure, engine.connect)
+        with redirect_stderr(io.StringIO()) as stderr:
+            self.assertRaises(ConnectionFailure, engine.connect)
         self.assertEqual(failures[0], 18)
+        assert 'ConnectionFailure' in stderr.getvalue()
 
 
 class TestEngineMim(TestCase):
