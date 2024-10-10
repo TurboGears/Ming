@@ -3,6 +3,14 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.15.0 (Oct 10, 2024)
+---------------------
+* drop support for Python 3.8
+* prevent installation with pymongo 4.9 or higher (earlier Ming versions will have problems with it too)
+* add support for mongodb Client Side Field Level Encryption (CSFLE)
+* type hint improvements
+* If there's an AttributeError within a @LazyProperty, expose it
+
 0.14.0 (Aug 1, 2024)
 --------------------
 
