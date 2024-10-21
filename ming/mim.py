@@ -35,7 +35,7 @@ import bson
 from bson.binary import UuidRepresentation, Binary
 from bson.codec_options import CodecOptions
 from bson.raw_bson import RawBSONDocument
-from pymongo import database, collection, ASCENDING, MongoClient, UpdateOne
+from pymongo import database, collection, ASCENDING, MongoClient as RealMongoClient, UpdateOne
 from pymongo.cursor import Cursor as PymongoCursor
 from pymongo.errors import InvalidOperation, OperationFailure, DuplicateKeyError
 from pymongo.results import DeleteResult, UpdateResult, InsertManyResult, InsertOneResult, BulkWriteResult
@@ -51,7 +51,11 @@ class PymongoCursorNoCleanup(PymongoCursor):
         pass
 
 
-class Connection:
+class MongoClient:
+    pass
+
+
+class Connection(MongoClient):
     _singleton = None
 
     @classmethod
@@ -64,12 +68,13 @@ class Connection:
         self._databases = {}
 
         # Clone defaults from a MongoClient instance.
-        mongoclient = MongoClient(uuidRepresentation=UUID_REPRESENTATION_STR)
+        mongoclient = RealMongoClient(uuidRepresentation=UUID_REPRESENTATION_STR)
         self.options = mongoclient.options
         self.read_preference = mongoclient.read_preference
         self.write_concern = mongoclient.write_concern
         self.codec_options = mongoclient.codec_options
         self.read_concern = getattr(mongoclient, 'read_concern', None)
+        mongoclient.close()
 
     def drop_all(self):
         self._databases = {}
@@ -97,6 +102,9 @@ class Connection:
 
     def list_database_names(self):
         return self._databases.keys()
+
+    def close(self):
+        pass
 
     def drop_database(self, name):
         try:
