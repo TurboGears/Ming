@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import time
+from contextlib import closing
 import logging
 from threading import Lock
 from typing import Union, TYPE_CHECKING
 import urllib
+import warnings
+import weakref
+
 from pymongo import MongoClient
 from pymongo.database import Database
 from pymongo.encryption import ClientEncryption, Algorithm
@@ -96,8 +100,8 @@ def create_datastore(uri, **kwargs) -> DataStore:
         # Create engine without connection.
         bind = create_engine(**kwargs)
 
-    return DataStore(bind, database, encryption_config)
 
+    return DataStore(bind, database, encryption_config)
 
 class Engine:
     """Engine represents the connection to a MongoDB (or in-memory database).
@@ -105,6 +109,11 @@ class Engine:
     The ``Engine`` class lazily creates the connection the first time it's
     accessed.
     """
+
+    @staticmethod
+    def _cleanup_conn(client, *args, **kwargs):
+        if getattr(client, 'close', None) is not None:
+            client.close()
 
     def __init__(self, Connection,
                  conn_args, conn_kwargs, connect_retry, auto_ensure_indexes, _sleep=time.sleep):
@@ -147,8 +156,10 @@ class Engine:
                 with self._lock:
                     if self._conn is None:
                         # NOTE: Runs MongoClient/EncryptionClient
-                        self._conn = self._Connection(
+                        conn = self._Connection(
                             *self._conn_args, **self._conn_kwargs)
+                        weakref.finalize(self, Engine._cleanup_conn, conn)
+                        self._conn = conn
                     else:
                         return self._conn
             except ConnectionFailure:
