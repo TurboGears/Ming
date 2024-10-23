@@ -3,6 +3,10 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.15.1 (Oct 23, 2024)
+---------------------
+* support pymongo 4.9+
+
 0.15.0 (Oct 10, 2024)
 ---------------------
 * drop support for Python 3.8
