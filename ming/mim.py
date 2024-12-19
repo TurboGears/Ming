@@ -127,6 +127,11 @@ class Connection(MongoClient):
     def is_mongos(self):
         return False
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
 
 class Database(database.Database):
     def __init__(self, client, name, **__):

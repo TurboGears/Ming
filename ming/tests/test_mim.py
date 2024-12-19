@@ -190,6 +190,16 @@ class TestDatastore(TestCase):
         assert coll.count_documents({'$text': {'$search': 'searched'}}) == 1
 
 
+class TestConnection(TestCase):
+
+    def setUp(self):
+        self.conn = create_datastore('mim:///testdb').conn
+
+    def test_context_manager(self):
+        with self.conn:
+            pass
+
+
 class TestDottedOperators(TestCase):
 
     def setUp(self):
