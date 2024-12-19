@@ -3,6 +3,10 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.15.2 (Dec 19, 2024)
+---------------------
+* allow mim Connections to work as context managers matching pymongo's MongoClient behavior
+
 0.15.1 (Oct 23, 2024)
 ---------------------
 * support pymongo 4.9+
