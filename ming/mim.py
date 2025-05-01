@@ -1428,11 +1428,17 @@ def wrap_as_class(value, as_class):
         return value
 
 
-def _traverse_doc(doc, key):
+def _traverse_doc(doc: dict, key: str, auto_create_fields: bool = False):
     path = key.split('.')
     cur = doc
     for part in path[:-1]:
-        cur = cur.setdefault(part, {})
+        if part not in cur:
+            if auto_create_fields:
+                cur[part] = {}
+            else:
+                return {}, path[-1]
+
+        cur = cur[part]
     return cur, path[-1]
 
 
@@ -1489,7 +1495,7 @@ class Projection:
                         raise ValueError('Unsupported projection operator %s' % projection_op)
 
             sub_doc, key = _traverse_doc(doc, name)
-            sub_result, key = _traverse_doc(result, name)
+            sub_result, key = _traverse_doc(result, name, auto_create_fields=True)
             try:
                 sub_result[key] = sub_doc[key]
             except KeyError:
