@@ -3,6 +3,10 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.15.3 (May 2, 2025)
+---------------------
+* MIM bugfix - unique indexes on deep fields no longer causes fields to be automatically created on the docs
+
 0.15.2 (Dec 19, 2024)
 ---------------------
 * allow mim Connections to work as context managers matching pymongo's MongoClient behavior
