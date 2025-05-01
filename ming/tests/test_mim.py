@@ -663,8 +663,14 @@ class TestCollection(TestCase):
         coll.insert_one({'x': {'y': None}})
         coll.insert_one({'x': {'other': 'field'}})
         coll.insert_one({'x': {'other': 'field'}})
+
         # still errors on an existing duplication
         self.assertRaises(DuplicateKeyError, coll.insert_one, {'x': {'y': 1}})
+
+        # 'x' or 'x.y' field should not get auto-created
+        coll.insert_one({'not-x': 123})
+        doc = coll.find_one({'not-x': 123})
+        assert set(doc.keys()) == {'_id', 'not-x'}
 
     def test_unique_sparse_index_whole_sdoc(self):
         coll = self.bind.db.coll
