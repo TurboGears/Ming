@@ -267,6 +267,12 @@ class TestDocumentEncryption(TestCase):
         self.assertEqual(set(doc.decrypted_field_names()), set(['name']))
         self.assertEqual(set(doc._field_names), set(['_id', 'name_encrypted', 'other']))
 
+        # allowed to save None to it
+        doc.name = None
+        doc.m.save()
+        self.assertEqual(doc.name, None)
+        self.assertEqual(doc.name_encrypted, None)
+
 class TestDocumentEncryptionReal(TestDocumentEncryption):
     DATASTORE = f"mongodb://localhost/test_ming_TestDocumentReal_{os.getpid()}?serverSelectionTimeoutMS=100"
 

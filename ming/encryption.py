@@ -114,7 +114,8 @@ class DecryptedField(Generic[T]):
         return instance.decr(getattr(instance, self.encrypted_field))
 
     def __set__(self, instance: EncryptedMixin, value: T):
-        if not isinstance(value, self.field_type):
+        # allow None, because most normal fields do not have required=True set, nor the (undocumented) allow_none
+        if value is not None and not isinstance(value, self.field_type):
             raise TypeError(f'not {self.field_type}, got {value!r}')
         setattr(instance, self.encrypted_field, instance.encr(value))
 
