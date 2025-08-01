@@ -3,6 +3,12 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.16.0 (Aug 1, 2025)
+---------------------
+* support Python 3.13 and 3.14
+* allow setting a DecryptedField to None
+* MIM automatically configure encryption for tests
+
 0.15.3 (May 2, 2025)
 ---------------------
 * MIM bugfix - unique indexes on deep fields no longer causes fields to be automatically created on the docs
