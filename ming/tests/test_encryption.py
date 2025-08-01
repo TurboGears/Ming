@@ -106,10 +106,18 @@ class TestEncryptionConfig(TestCase):
         self.assertEqual(encryption.provider_options, {'local': {'key_alt_names': ['datakey_test1', 'datakey_test2']}})
 
     def test_validation_empty(self):
-        self._parse_config(f'''ming.maindb.uri = mim://host/maindb''')
+        self._parse_config(f'''ming.maindb.uri = mongo://host/maindb''')
 
         encryption = ming.Session.by_name('maindb').bind.encryption
         self.assertIsNone(encryption)
+
+    def test_validation_empty_mim_auto_encryption(self):
+        self._parse_config(f'''ming.maindb.uri = mim://host/maindb''')
+
+        encryption = ming.Session.by_name('maindb').bind.encryption
+        self.assertIsNotNone(encryption.kms_providers['local']['key'])
+        self.assertEqual(encryption.key_vault_namespace, 'encryption_test.coll_key_vault_test')
+        self.assertEqual(encryption.provider_options, {'local': {'key_alt_names': ['datakeyName']}})
 
     def test_validation_bad_missing(self):
         with self.assertRaises(InvalidClass) as e:
@@ -272,6 +280,16 @@ class TestDocumentEncryption(TestCase):
         doc.m.save()
         self.assertEqual(doc.name, None)
         self.assertEqual(doc.name_encrypted, None)
+
+class TestDocumentEncryptionMimAutoSettings(TestDocumentEncryption):
+    def setUp(self):
+        # replace super() NOT using it
+        import_formencode()
+
+        ming.configure(**{
+            'ming.test_db.uri': self.DATASTORE,
+            # mim encryption settings should come automatically from configure_from_nested_dict
+        })
 
 class TestDocumentEncryptionReal(TestDocumentEncryption):
     DATASTORE = f"mongodb://localhost/test_ming_TestDocumentReal_{os.getpid()}?serverSelectionTimeoutMS=100"

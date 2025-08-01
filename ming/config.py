@@ -2,6 +2,7 @@
 from ming.exc import MingConfigError
 from ming.session import Session
 from ming.datastore import create_datastore
+from ming.tests import make_encryption_key
 
 
 def variable_decode(**kwargs):
@@ -19,6 +20,9 @@ def configure(**kwargs):
     """
     config = variable_decode(**kwargs)
     configure_from_nested_dict(config["ming"])
+
+
+MIM_TEST_KEY = make_encryption_key('test local key')
 
 
 def configure_from_nested_dict(config):
@@ -41,6 +45,21 @@ def configure_from_nested_dict(config):
 
     datastores = {}
     for name, datastore in config.items():
+        if datastore['uri'].startswith('mim://') and 'encryption' not in datastore:
+            datastore['encryption'] = {
+                'kms_providers': {
+                    'local': {
+                        'key': MIM_TEST_KEY
+                    }
+                },
+                'key_vault_namespace': 'encryption_test.coll_key_vault_test',
+                'provider_options': {
+                    'local': {
+                        'key_alt_names': '["datakeyName"]'
+                    }
+                }
+            }
+
         args = DatastoreSchema.to_python(datastore, None)
         database = args.pop("database", None)
         if database is None:
