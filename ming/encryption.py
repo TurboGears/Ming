@@ -111,6 +111,8 @@ class DecryptedField(Generic[T]):
         self.encrypted_field = encrypted_field
 
     def __get__(self, instance: EncryptedMixin, owner) -> T:
+        if instance is None:
+            return self
         return instance.decr(getattr(instance, self.encrypted_field))
 
     def __set__(self, instance: EncryptedMixin, value: T):
