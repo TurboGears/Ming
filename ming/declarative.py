@@ -1,5 +1,6 @@
 from .metadata import Field, Index
 from .metadata import _Document, _FieldDescriptor, _ManagerDescriptor, _ClassManager
+from .encryption import EncryptedField, EncryptedFieldDescriptor
 
 
 class _DocumentMeta(type):
@@ -17,7 +18,11 @@ class _DocumentMeta(type):
         # Set the names of the fields
         clsdct = {}
         for k,v in dct.items():
-            if isinstance(v, Field):
+            if isinstance(v, EncryptedField):
+                if v.name is None: v.name = k
+                fields.append(v)
+                v = EncryptedFieldDescriptor(v)
+            elif isinstance(v, Field):
                 if v.name is None: v.name = k
                 fields.append(v)
                 v = _FieldDescriptor(v)
