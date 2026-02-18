@@ -58,37 +58,28 @@ def _is_dict_schema(schema_type):
     return isinstance(schema_type, dict)
 
 
-def _encrypt_value_recursive(value, schema, encr_func, field_name=None):
-    """Recursively encrypt a value according to its schema.
-
-    This is the main entry point for recursive encryption. It handles:
-    - Scalar encrypted fields (field_name ends with _encrypted, type is S.Binary)
-    - Nested dicts
-    - Lists (of encrypted values, dicts, or nested lists)
-
-    :param value: The value to encrypt
-    :param schema: The schema for this value
-    :param encr_func: The encryption function to use
-    :param field_name: The field name (used to determine if encryption is needed)
-    :returns: The encrypted value
-    """
+def _encrypt_value_recursive(value, schema, encr_func, field_name=None, force_encrypt=False):
+    """Recursively encrypt a value according to its schema."""
     if value is None:
         return None
 
     if _is_dict_schema(schema):
         return _encrypt_dict_recursive(value, schema, encr_func)
-    elif _is_list_schema(schema):
-        return _encrypt_list_recursive(value, schema, encr_func, field_name)
-    elif field_name and _is_encrypted_field(field_name, schema):
+
+    if _is_list_schema(schema):
+        return _encrypt_list_recursive(value, schema, encr_func, field_name, force_encrypt=force_encrypt)
+
+    if schema is S.Binary and (
+        force_encrypt
+        or (field_name and _is_encrypted_field(field_name, schema))
+    ):
         return encr_func(value)
+
     return value
 
 
 def _encrypt_dict_recursive(value, schema, encr_func):
     """Encrypt a dict value, handling virtual name mapping.
-
-    Accepts input using either virtual names (username) or storage names
-    (username_encrypted) and always outputs with storage names.
 
     :param value: The dict value to encrypt
     :param schema: The schema defining the dict structure
@@ -130,37 +121,25 @@ def _encrypt_dict_recursive(value, schema, encr_func):
 
 
 def _encrypt_list_recursive(value, schema, encr_func, field_name, force_encrypt=False):
-    """Encrypt a list value.
-
-    If force_encrypt is True, or if the parent field name ends with _encrypted
-    and the item schema is S.Binary, all list items are encrypted.
-    Otherwise, items are processed recursively.
-
-    :param value: The list value to encrypt
-    :param schema: The list schema (e.g., [S.Binary] or [{'field': type}])
-    :param encr_func: The encryption function to use
-    :param field_name: The parent field name (determines if items are encrypted)
-    :param force_encrypt: If True, encrypt items regardless of field name (for top-level EncryptedProperty)
-    :returns: A new list with encrypted values
-    """
+    """Encrypt a list value."""
     if not value:
         return value
 
     item_schema = schema[0] if schema else None
-    items_encrypted = force_encrypt or (field_name and field_name.endswith(ENCRYPTED_SUFFIX))
+    item_field_name = field_name if field_name and field_name.endswith(ENCRYPTED_SUFFIX) else None
+    items_encrypted = force_encrypt or bool(item_field_name)
 
     result = []
     for item in value:
-        if item is None:
-            result.append(None)
-        elif items_encrypted and item_schema is S.Binary:
-            result.append(encr_func(item))
-        elif _is_dict_schema(item_schema):
-            result.append(_encrypt_dict_recursive(item, item_schema, encr_func))
-        elif _is_list_schema(item_schema):
-            result.append(_encrypt_list_recursive(item, item_schema, encr_func, field_name))
-        else:
-            result.append(item)
+        encrypted_value = _encrypt_value_recursive(
+            item,
+            item_schema,
+            encr_func,
+            field_name=item_field_name,
+            force_encrypt=items_encrypted,
+        )
+        result.append(encrypted_value)
+
     return result
 
 
@@ -247,19 +226,14 @@ class EncryptedListWrapper:
 
     def _encrypt_item(self, item):
         """Encrypt or process a single item for writing."""
-        if item is None:
-            return None
-
-        if self._items_encrypted and self._item_schema is S.Binary:
-            return self._instance.encr(item)
-        elif _is_dict_schema(self._item_schema):
-            return _encrypt_dict_recursive(item, self._item_schema, self._instance.encr)
-        elif _is_list_schema(self._item_schema):
-            return _encrypt_list_recursive(
-                item, self._item_schema, self._instance.encr,
-                ENCRYPTED_SUFFIX if self._items_encrypted else None
-            )
-        return item
+        encrypted_iem = _encrypt_value_recursive(
+            item,
+            self._item_schema,
+            self._instance.encr,
+            field_name=ENCRYPTED_SUFFIX if self._items_encrypted else None,
+            force_encrypt=self._items_encrypted,
+        )
+        return encrypted_iem
 
     def _mark_dirty(self):
         """Mark the list as modified for dirty tracking."""
@@ -278,6 +252,36 @@ class EncryptedListWrapper:
         else:
             self._doc[index] = self._encrypt_item(value)
         self._mark_dirty()
+
+    def __delitem__(self, index):
+        del self._doc[index]
+        self._mark_dirty()
+
+    def __add__(self, other):
+        return list(self) + list(other)
+
+    def __radd__(self, other):
+        return list(other) + list(self)
+
+    def __iadd__(self, other):
+        self.extend(other)
+        return self
+
+    def __mul__(self, n):
+        return list(self) * n
+
+    def __rmul__(self, n):
+        return n * list(self)
+
+    def __imul__(self, n):
+        if n <= 0:
+            self.clear()
+            return self
+
+        current = list(self)
+        for _ in range(n - 1):
+            self.extend(current)
+        return self
 
     def append(self, value):
         self._doc.append(self._encrypt_item(value))
@@ -302,6 +306,13 @@ class EncryptedListWrapper:
         encrypted_value = self._encrypt_item(value)
         self._doc.remove(encrypted_value)
         self._mark_dirty()
+
+    def index(self, value, *args):
+        encrypted_value = self._encrypt_item(value)
+        return self._doc.index(encrypted_value, *args)
+
+    def replace(self, values):
+        self[:] = values
 
     def clear(self):
         self._doc.clear()
@@ -377,10 +388,7 @@ class EncryptedDictWrapper:
         if self._tracker is not None:
             self._tracker.added_item(value)
 
-    def __getitem__(self, key):
-        storage_key = self._resolve_key(key)
-        value = self._doc[storage_key]
-
+    def _wrap_storage_value(self, storage_key, value):
         if storage_key in self._encrypted_fields and value is not None:
             return self._instance.decr(value)
         if storage_key in self._nested_dicts and value is not None:
@@ -402,6 +410,11 @@ class EncryptedDictWrapper:
             )
         return value
 
+    def __getitem__(self, key):
+        storage_key = self._resolve_key(key)
+        value = self._doc[storage_key]
+        return self._wrap_storage_value(storage_key, value)
+
     def __setitem__(self, key, value):
         storage_key = self._resolve_key(key)
 
@@ -411,8 +424,13 @@ class EncryptedDictWrapper:
             value = _encrypt_dict_recursive(value, self._nested_dicts[storage_key], self._instance.encr)
         elif storage_key in self._nested_lists and value is not None:
             list_schema, items_encrypted = self._nested_lists[storage_key]
-            field_name = storage_key if items_encrypted else None
-            value = _encrypt_list_recursive(value, list_schema, self._instance.encr, field_name)
+            value = _encrypt_list_recursive(
+                value,
+                list_schema,
+                self._instance.encr,
+                storage_key if items_encrypted else None,
+                force_encrypt=items_encrypted,
+            )
 
         old_value = self._doc.get(storage_key)
         if old_value != value:
@@ -426,11 +444,69 @@ class EncryptedDictWrapper:
             raise AttributeError(key)
 
     def __setattr__(self, key, value):
+        if key.startswith('_') or hasattr(self.__class__, key):
+            object.__setattr__(self, key, value)
+            return
         self[key] = value
 
     def __contains__(self, key):
         storage_key = self._resolve_key(key)
         return storage_key in self._doc
+
+    def __delitem__(self, key):
+        storage_key = self._resolve_key(key)
+        value = self._doc.pop(storage_key)
+        self._mark_dirty(value)
+
+    def pop(self, key, *default):
+        if len(default) > 1:
+            raise TypeError('pop expected at most 2 arguments')
+
+        storage_key = self._resolve_key(key)
+        if storage_key not in self._doc:
+            if default:
+                return default[0]
+            raise KeyError(key)
+
+        value = self._doc.pop(storage_key)
+        self._mark_dirty(value)
+        return self._wrap_storage_value(storage_key, value)
+
+    def popitem(self):
+        storage_key, value = self._doc.popitem()
+        self._mark_dirty(value)
+        return self._get_virtual_key(storage_key), self._wrap_storage_value(storage_key, value)
+
+    def clear(self):
+        if self._doc:
+            self._doc.clear()
+            self._mark_dirty(None)
+
+    def setdefault(self, key, default=None):
+        if key in self:
+            return self[key]
+        self[key] = default
+        return self[key]
+
+    def update(self, *args, **kwargs):
+        if len(args) > 1:
+            raise TypeError('update expected at most 1 arguments')
+
+        if args:
+            source = args[0]
+            if hasattr(source, 'keys'):
+                for key in source:
+                    self[key] = source[key]
+            else:
+                for key, value in source:
+                    self[key] = value
+
+        for key, value in kwargs.items():
+            self[key] = value
+
+    def replace(self, value):
+        self.clear()
+        self.update(value)
 
     def get(self, key, default=None):
         try:
@@ -653,29 +729,20 @@ class EncryptedMixin:
                 if fld.endswith('_encrypted')]
 
     @classmethod
-    def _encrypted_field_index(cls) -> dict[str, 'EncryptedField']:
-        """Returns a dict of EncryptedField instances by field name.
-
-        :return: A dict mapping field names to EncryptedField instances
-        """
+    def _encrypted_field_index(cls) -> dict[str, object]:
+        """Return nested-encryption declarations keyed by field name."""
         from ming.declarative import Document
         from ming.odm.declarative import MappedClass
         if issubclass(cls, Document):
             return {
                 name: field for name, field in cls.m.field_index.items()
-                if isinstance(field, EncryptedField)
+                if isinstance(field, NestedEncryptedField)
             }
         if issubclass(cls, MappedClass):
-            # For ODM, check property_index for EncryptedProperty instances
-            # EncryptedProperty is in Allura, not Ming, so we check by attribute
-            from ming.odm.property import FieldProperty
-            result = {}
-            for name, prop in cls.query.mapper.property_index.items():
-                if isinstance(prop, FieldProperty) and hasattr(prop, '_encrypted_field_schema'):
-                    # This would be an EncryptedProperty from Allura
-                    # For now, we don't have a way to detect these generically
-                    pass
-            return result
+            return {
+                name: prop for name, prop in cls.query.mapper.property_index.items()
+                if isinstance(prop, NestedEncryptedProperty)
+            }
         return {}
 
     @classmethod
@@ -684,7 +751,8 @@ class EncryptedMixin:
 
         This handles both:
         1. Top-level encrypted fields (e.g., ``email`` → ``email_encrypted``)
-        2. Nested encrypted fields in EncryptedField schemas (e.g., ``author.username`` → ``author.username_encrypted``)
+        2. Nested encrypted fields in NestedEncryptedField/NestedEncryptedProperty schemas
+           (e.g., ``author.username`` → ``author.username_encrypted``)
 
         :param data: a dictionary of data to be encrypted
         :return: a modified copy of the ``data`` param with the currently-unencrypted-but-encryptable fields replaced with ``_encrypted`` counterparts.
@@ -697,19 +765,17 @@ class EncryptedMixin:
                 val = encrypted_data.pop(fld)
                 encrypted_data[f'{fld}_encrypted'] = cls.encr(val)
 
-        # Handle EncryptedField instances (nested encrypted structures)
+        # Handle nested encrypted field/property instances.
         for field_name, field in cls._encrypted_field_index().items():
             if field_name in encrypted_data:
                 val = encrypted_data[field_name]
                 if val is not None:
+                    schema = field._encrypted_schema
                     if field._is_list:
-                        encrypted_data[field_name] = _encrypt_list_recursive(
-                            val, field.type, cls.encr, field_name, force_encrypt=True
-                        )
+                        encrypted_data[field_name] = _encrypt_list_recursive(val, schema, cls.encr, field_name,
+                                                                             force_encrypt=True)
                     elif field._is_dict:
-                        encrypted_data[field_name] = _encrypt_dict_recursive(
-                            val, field.type, cls.encr
-                        )
+                        encrypted_data[field_name] = _encrypt_dict_recursive(val, schema, cls.encr)
 
         return encrypted_data
 
@@ -727,104 +793,42 @@ class EncryptedMixin:
         return decrypted_data
 
 
-class EncryptedField:
-    """A Field for dict or list schemas where specified fields are stored encrypted.
-
-    Supports two schema types:
-    - Dict schemas: Fields with '_encrypted' suffix and S.Binary type are encrypted
-    - List schemas: Items are encrypted based on item schema type
-
-    For dict schemas, fields are identified as encrypted based on the naming convention:
-    - Field name ends with '_encrypted'
-    - Field type is S.Binary
-
-    This field automatically:
-    - Accepts input using virtual names (e.g., 'username') or storage names ('username_encrypted')
-    - Encrypts values on set using storage names
-    - Decrypts values on get via appropriate wrapper with virtual name access
-    - Supports nested dicts and lists with encrypted fields
-
-    Example usage::
-
-        class MyDocument(Document):
-            class __mongometa__:
-                name = 'my_doc'
-                session = some_session
-
-            _id = Field(S.ObjectId)
-            # Dict schema with encrypted fields
-            author = EncryptedField('author', {
-                'id': S.ObjectId,
-                'username_encrypted': S.Binary,  # Accessed as doc.author.username
-                'email_encrypted': S.Binary,     # Accessed as doc.author.email
-                'logged_ip': str,                # Not encrypted (no suffix)
-                'avatar': S.Binary,              # Not encrypted (no suffix, just binary data)
-            })
-
-            # List schema - all items encrypted
-            secrets = EncryptedField('secrets', [S.Binary])
-
-            # List of dicts with encrypted fields
-            payroll = EncryptedField('payroll', [{'name': str, 'salary_encrypted': S.Binary}])
-
-    When setting values, use virtual names::
-
-        doc.author = {'id': some_id, 'username': 'john', 'email': 'john@example.com'}
-
-    When getting values, encrypted fields are automatically decrypted::
-
-        print(doc.author.username)  # Returns 'john', not encrypted bytes
-
-    :param name: The field name in the MongoDB document
-    :param schema: Dict or list defining the field schema
-    """
+class NestedEncryptedField:
+    """Field declaration for nested dict/list schemas with encrypted leaves."""
 
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if isinstance(args[0], str):
-                raise ValueError('When called with only one argument EncryptedField() '
-                                 'parameter should be the field type')
-
+                raise ValueError(
+                    'When called with only one argument NestedEncryptedField() '
+                    'parameter should be the field type'
+                )
             self.name = None
             self.type = args[0]
         elif len(args) == 2:
             self.name = args[0]
             self.type = args[1]
         else:
-            raise TypeError('EncryptedField() takes 1 or 2 argments, not %s' % len(args))
-        self.index = kwargs.pop('index', False)
-        self.unique = kwargs.pop('unique', False)
-        self.sparse = kwargs.pop('sparse', False)
-        self.schema = S.SchemaItem.make(self.type, **kwargs)
+            raise TypeError(
+                'NestedEncryptedField() takes 1 or 2 arguments, not %s' % len(args)
+            )
 
+        self.schema = S.SchemaItem.make(self.type, **kwargs)
+        self._encrypted_schema = self.type
         self._is_list = _is_list_schema(self.type)
         self._is_dict = _is_dict_schema(self.type)
 
+        if not (self._is_list or self._is_dict):
+            raise TypeError('NestedEncryptedField requires a dict or list schema')
+
     def __repr__(self):
-        if self.unique:
-            flags = 'index unique'
-            if self.sparse:
-                flags += ' sparse'
-        elif self.sparse:
-            flags = 'index sparse'
-        elif self.index:
-            flags = 'index'
-        else:
-            flags = ''
-        return f'<EncryptedField {self.name}({self.schema}){flags}>'
+        return f'<NestedEncryptedField {self.name}({self.schema})>'
 
 
-class EncryptedFieldDescriptor:
-    """Descriptor for EncryptedField that provides transparent encryption/decryption.
+class NestedEncryptedFieldDescriptor:
+    """Descriptor for NestedEncryptedField."""
 
-    This descriptor intercepts get/set operations on EncryptedField attributes:
-    - On get: Returns an EncryptedDictWrapper or EncryptedListWrapper for transparent decryption
-    - On set: Encrypts values using the recursive encryption helpers
-
-    :param field: The EncryptedField instance this descriptor manages
-    """
-
-    def __init__(self, field: EncryptedField):
+    def __init__(self, field: NestedEncryptedField):
         self.field = field
         self.name = field.name
 
@@ -832,48 +836,42 @@ class EncryptedFieldDescriptor:
         if inst is None:
             return self
 
+        schema = self.field._encrypted_schema
         if self.field._is_list:
-            try:
-                doc = inst.get(self.name, [])
-            except KeyError:
-                doc = []
-
+            doc = inst.get(self.name)
             if doc is None:
                 doc = []
-
-            item_schema = self.field.type[0] if self.field.type else None
+                inst[self.name] = doc
+            item_schema = schema[0] if schema else None
             return EncryptedListWrapper(
                 doc=doc,
-                tracker=None,  # Document models don't have a tracker
+                tracker=None,
                 item_schema=item_schema,
                 instance=inst,
-                items_encrypted=True,  # Top-level EncryptedField always encrypts list items
+                items_encrypted=True,
             )
-        else:
-            try:
-                doc = inst.get(self.name, {})
-            except KeyError:
-                doc = {}
 
-            if doc is None:
-                doc = {}
-
-            return EncryptedDictWrapper(
-                doc=doc,
-                tracker=None,  # Document models don't have a tracker
-                schema=self.field.type,
-                instance=inst,
-            )
+        doc = inst.get(self.name)
+        if doc is None:
+            doc = {}
+            inst[self.name] = doc
+        return EncryptedDictWrapper(
+            doc=doc,
+            tracker=None,
+            schema=schema,
+            instance=inst,
+        )
 
     def __set__(self, inst, value):
         if value is None:
             inst[self.name] = value
             return
 
+        schema = self.field._encrypted_schema
         if self.field._is_list:
-            encrypted_value = _encrypt_list_recursive(value, self.field.type, inst.encr, self.name, force_encrypt=True)
+            encrypted_value = _encrypt_list_recursive(value, schema, inst.encr, self.name, force_encrypt=True)
         else:
-            encrypted_value = _encrypt_dict_recursive(value, self.field.type, inst.encr)
+            encrypted_value = _encrypt_dict_recursive(value, schema, inst.encr)
 
         inst[self.name] = encrypted_value
 
@@ -881,60 +879,38 @@ class EncryptedFieldDescriptor:
         del inst[self.name]
 
 
-class EncryptedProperty:
-    """A FieldProperty for dict or list schemas where specified fields are stored encrypted.
+class NestedEncryptedProperty:
+    """FieldProperty declaration for nested dict/list schemas with encrypted leaves."""
 
-    Supports two schema types:
-    - Dict schemas: Fields with '_encrypted' suffix and S.Binary type are encrypted
-    - List schemas: Items are encrypted based on item schema type
+    _impl_class = None
 
-    For dict schemas, fields are identified as encrypted based on the naming convention:
-    - Field name ends with '_encrypted'
-    - Field type is S.Binary
+    @classmethod
+    def _get_impl_class(cls):
+        if cls._impl_class is None:
+            from ming.odm.property import FieldProperty
 
-    This property automatically:
-    - Accepts input using virtual names (e.g., 'username') or storage names ('username_encrypted')
-    - Encrypts values on set using storage names
-    - Decrypts values on get via appropriate wrapper with virtual name access
-    - Supports nested dicts and lists with encrypted fields
+            # Avoid importing FieldProperty at module import time to prevent
+            # ming.encryption <-> ming.odm.property circular import issues.
+            class _NestedEncryptedPropertyImpl(NestedEncryptedProperty, FieldProperty):
+                pass
 
-    Example usage::
+            cls._impl_class = _NestedEncryptedPropertyImpl
+        return cls._impl_class
 
-        class MyDocument(MappedClass):
-            # Dict schema with encrypted fields
-            author = EncryptedProperty({
-                'id': S.ObjectId,
-                'username_encrypted': S.Binary,  # Accessed as author.username
-                'email_encrypted': S.Binary,     # Accessed as author.email
-                'logged_ip': str,                # Not encrypted (no suffix)
-                'avatar': S.Binary,              # Not encrypted (no suffix, just binary data)
-                'tags_encrypted': [S.Binary],    # List of encrypted strings
-                'contacts': [{'name': str, 'phone_encrypted': S.Binary}],  # List of dicts
-            })
-
-            # List schema - all items encrypted
-            secrets = EncryptedProperty([S.Binary])
-
-            # List of dicts with encrypted fields
-            payroll = EncryptedProperty([{'name': str, 'salary_encrypted': S.Binary}])
-
-    When setting values, use virtual names::
-
-        doc.author = {'id': some_id, 'username': 'john', 'email': 'john@example.com'}
-
-    When getting values, encrypted fields are automatically decrypted::
-
-        print(doc.author.username)  # Returns 'john', not encrypted bytes
-
-    :param schema: Dict or list defining the field schema
-    """
+    def __new__(cls, *args, **kwargs):
+        if cls is NestedEncryptedProperty:
+            return object.__new__(cls._get_impl_class())
+        return object.__new__(cls)
 
     def __init__(self, schema):
         self.schema = schema
+        self._encrypted_schema = schema
         self._is_list = _is_list_schema(schema)
         self._is_dict = _is_dict_schema(schema)
-        from ming.odm.property import FieldProperty
-        self.__class__.__bases__ = (FieldProperty,)
+
+        if not (self._is_list or self._is_dict):
+            raise TypeError('NestedEncryptedProperty requires a dict or list schema')
+
         super().__init__(schema)
 
     def __set__(self, instance, value):
@@ -953,31 +929,32 @@ class EncryptedProperty:
         if instance is None:
             return self
 
+        from ming.odm.base import state
+
         st = state(instance)
+        document = st.document if st.document is not None else {}
 
         if self._is_list:
-            try:
-                doc = st.document.get(self.name, [])
-            except KeyError:
+            doc = document.get(self.name)
+            if doc is None:
                 doc = []
-
+                document[self.name] = doc
             item_schema = self.schema[0] if self.schema else None
             return EncryptedListWrapper(
                 doc=doc,
                 tracker=st.tracker,
                 item_schema=item_schema,
                 instance=instance,
-                items_encrypted=True,  # Top-level EncryptedProperty always encrypts list items
+                items_encrypted=True,
             )
-        else:
-            try:
-                doc = st.document.get(self.name, {})
-            except KeyError:
-                doc = {}
 
-            return EncryptedDictWrapper(
-                doc=doc,
-                tracker=st.tracker,
-                schema=self.schema,
-                instance=instance,
-            )
+        doc = document.get(self.name)
+        if doc is None:
+            doc = {}
+            document[self.name] = doc
+        return EncryptedDictWrapper(
+            doc=doc,
+            tracker=st.tracker,
+            schema=self.schema,
+            instance=instance,
+        )

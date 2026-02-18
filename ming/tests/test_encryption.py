@@ -4,8 +4,8 @@ from unittest import SkipTest, TestCase
 
 import ming
 from ming import create_datastore, Document, Field, schema as S
-from ming.odm import session, ODMSession, Mapper, MappedClass, FieldProperty, DecryptedProperty
-from ming.encryption import DecryptedField, EncryptedField
+from ming.odm import state, session, ODMSession, Mapper, MappedClass, FieldProperty, DecryptedProperty
+from ming.encryption import DecryptedField, NestedEncryptedField, NestedEncryptedProperty
 from ming.odm.odmsession import ThreadLocalODMSession
 
 from . import make_encryption_key
@@ -363,7 +363,7 @@ class TestMappingReal(TestMapping):
     DATASTORE = f"mongodb://localhost/test_ming_TestDocumentReal_{os.getpid()}?serverSelectionTimeoutMS=100"
 
 
-class TestEncryptedFieldDocument(TestCase):
+class TestNestedEncryptedFieldDocument(TestCase):
     """Tests for EncryptedField with Document models (non-ODM)."""
     DATASTORE = "mim://host/test_db"
 
@@ -389,7 +389,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_encrypted_dict'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            author = EncryptedField('author', {
+            author = NestedEncryptedField({
                 'id': S.ObjectId,
                 'username_encrypted': S.Binary,
                 'display_name': str,
@@ -420,7 +420,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_encrypted_list_strings'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            secrets = EncryptedField('secrets', [S.Binary])
+            secrets = NestedEncryptedField([S.Binary])
 
         doc = TestDoc.make(dict(_id=1))
         doc.secrets = ['secret1', 'secret2', 'secret3']
@@ -445,7 +445,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_encrypted_list_dicts'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            contacts = EncryptedField('contacts', [{'name': str, 'phone_encrypted': S.Binary}])
+            contacts = NestedEncryptedField([{'name': str, 'phone_encrypted': S.Binary}])
 
         doc = TestDoc.make(dict(_id=1))
         doc.contacts = [
@@ -470,7 +470,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_nested_encrypted'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            author = EncryptedField('author', {
+            author = NestedEncryptedField({
                 'username_encrypted': S.Binary,
                 'profile': {
                     'ssn_encrypted': S.Binary,
@@ -507,7 +507,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_non_encrypted_binary'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            author = EncryptedField('author', {
+            author = NestedEncryptedField({
                 'username_encrypted': S.Binary,
                 'avatar': S.Binary,  # Binary but no _encrypted suffix
             })
@@ -522,9 +522,14 @@ class TestEncryptedFieldDocument(TestCase):
 
         # avatar should NOT be encrypted (stored as-is)
         self.assertEqual(doc['author']['avatar'], avatar_bytes)
+        self.assertIsNotNone(TestDoc.m.get(**{'author.avatar': avatar_bytes}))
         # username should be encrypted
         self.assertIsInstance(doc['author']['username_encrypted'], bytes)
         self.assertNotEqual(doc['author']['username_encrypted'], b'john')
+        self.assertIsNotNone(TestDoc.m.get(**{
+            'author.username_encrypted': TestDoc.encr('john'),
+            'author.username': {'$exists': False},
+        }))
 
     def test_encrypted_field_with_unset_value(self):
         """Test EncryptedField with unset value - gets schema default."""
@@ -533,7 +538,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_unset_value'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            author = EncryptedField('author', {
+            author = NestedEncryptedField({
                 'username_encrypted': S.Binary,
             })
 
@@ -553,7 +558,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_empty_string'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            author = EncryptedField('author', {
+            author = NestedEncryptedField({
                 'username_encrypted': S.Binary,
             })
 
@@ -572,7 +577,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_iteration'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            author = EncryptedField('author', {
+            author = NestedEncryptedField({
                 'username_encrypted': S.Binary,
                 'display_name': str,
             })
@@ -599,7 +604,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_list_contains'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            secrets = EncryptedField('secrets', [S.Binary])
+            secrets = NestedEncryptedField([S.Binary])
 
         doc = TestDoc.make(dict(_id=1))
         doc.secrets = ['secret1', 'secret2']
@@ -616,7 +621,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_make_encr_dict'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            author = EncryptedField('author', {
+            author = NestedEncryptedField({
                 'id': int,
                 'username_encrypted': S.Binary,
                 'email_encrypted': S.Binary,
@@ -657,7 +662,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_make_encr_list'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            secrets = EncryptedField('secrets', [S.Binary])
+            secrets = NestedEncryptedField([S.Binary])
 
         # Use make_encr with plaintext list items
         doc = TestDoc.make_encr(dict(
@@ -681,7 +686,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_make_encr_list_dicts'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            contacts = EncryptedField('contacts', [{'name': str, 'phone_encrypted': S.Binary}])
+            contacts = NestedEncryptedField([{'name': str, 'phone_encrypted': S.Binary}])
 
         # Use make_encr with virtual names in list items
         doc = TestDoc.make_encr(dict(
@@ -714,7 +719,7 @@ class TestEncryptedFieldDocument(TestCase):
             # Top-level encrypted field
             ssn_encrypted = Field(S.Binary)
             # Nested encrypted field
-            profile = EncryptedField('profile', {
+            profile = NestedEncryptedField({
                 'name': str,
                 'email_encrypted': S.Binary,
             })
@@ -752,7 +757,7 @@ class TestEncryptedFieldDocument(TestCase):
                 name = 'test_make_encr_missing'
                 session = ming.Session.by_name('test_db')
             _id = Field(S.Anything)
-            author = EncryptedField('author', {
+            author = NestedEncryptedField({
                 'username_encrypted': S.Binary,
             })
 
@@ -763,3 +768,225 @@ class TestEncryptedFieldDocument(TestCase):
         # The field gets default schema value
         self.assertEqual(doc['author'], {'username_encrypted': None})
         self.assertIsNone(doc.author.username)
+
+
+class TestNestedEncryptedPropertyMapped(TestCase):
+    DATASTORE = 'mim:///test_db'
+
+    def setUp(self):
+        Mapper._mapper_by_classname.clear()
+        ming.configure(**{
+            'ming.test_db.uri': self.DATASTORE,
+            'ming.test_db.encryption.kms_providers.local.key': make_encryption_key(self.__class__.__name__),
+            'ming.test_db.encryption.key_vault_namespace': 'encryption_test.coll_key_vault_test',
+            'ming.test_db.encryption.provider_options.local.key_alt_names': '["test_datakey_1"]'
+        })
+        self.datastore = ming.Session._datastores.get('test_db')
+        self.session = ODMSession(bind=self.datastore)
+
+    def tearDown(self):
+        self.session.clear()
+        try:
+            self.datastore.conn.drop_all()
+        except TypeError:
+            self.datastore.conn.drop_database(self.datastore.db)
+            self.datastore.conn.drop_database('encryption_test')
+        Mapper._mapper_by_classname.clear()
+
+    def test_nested_encrypted_property_and_dirty_tracking(self):
+        class TestMapped(MappedClass):
+            class __mongometa__:
+                name = 'test_nested_encrypted_property'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            profile = NestedEncryptedProperty({
+                'username_encrypted': S.Binary,
+                'avatar': S.Binary,
+            })
+            secrets = NestedEncryptedProperty([S.Binary])
+
+        obj = TestMapped(
+            _id=None,
+            profile={'username': 'john', 'avatar': b'raw-avatar-bytes'},
+            secrets=['first-secret'],
+        )
+        self.session.flush()
+
+        # Baseline decryption and storage behavior
+        self.assertEqual(obj.profile.username, 'john')
+        self.assertEqual(obj.profile.avatar, b'raw-avatar-bytes')
+        self.assertEqual(list(obj.secrets), ['first-secret'])
+
+        raw_doc = state(obj).document
+        self.assertIsInstance(raw_doc['profile']['username_encrypted'], bytes)
+        self.assertEqual(raw_doc['profile']['avatar'], b'raw-avatar-bytes')
+        self.assertEqual(raw_doc['secrets'][0], TestMapped.encr('first-secret'))
+
+        # Strong query assertions on encrypted and non-encrypted storage
+        self.assertIsNotNone(TestMapped.query.find({
+            'profile.avatar': b'raw-avatar-bytes',
+        }).first())
+        self.assertIsNotNone(TestMapped.query.find({
+            'profile.username_encrypted': TestMapped.encr('john'),
+            'profile.username': {'$exists': False},
+        }).first())
+
+        # Class-level encryption path should also detect NestedEncryptedProperty
+        encrypted = TestMapped.encrypt_some_fields({
+            'profile': {'username': 'mark', 'avatar': b'raw-2'},
+            'secrets': ['one', 'two'],
+        })
+        self.assertIsInstance(encrypted['profile']['username_encrypted'], bytes)
+        self.assertEqual(encrypted['profile']['avatar'], b'raw-2')
+        self.assertEqual(encrypted['secrets'][0], TestMapped.encr('one'))
+
+        # Dirty tracking via dict wrapper
+        self.assertEqual(state(obj).status, state(obj).clean)
+        obj.profile.username = 'jane'
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(state(obj).status, state(obj).clean)
+        self.assertEqual(obj.profile.username, 'jane')
+
+        # Dirty tracking via list wrapper + list operations parity
+        self.assertEqual(obj.secrets + ['x'], ['first-secret', 'x'])
+        self.assertEqual(['x'] + obj.secrets, ['x', 'first-secret'])
+
+        obj.secrets += ['second-secret']
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.secrets), ['first-secret', 'second-secret'])
+
+        del obj.secrets[0]
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.secrets), ['second-secret'])
+
+    def test_mapped_list_of_dicts_encryption(self):
+        class TestMappedContacts(MappedClass):
+            class __mongometa__:
+                name = 'test_nested_encrypted_property_contacts'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            contacts = NestedEncryptedProperty([{
+                'name': str,
+                'phone_encrypted': S.Binary,
+            }])
+
+        obj = TestMappedContacts(
+            _id=None,
+            contacts=[
+                {'name': 'Alice', 'phone': '111-1111'},
+                {'name': 'Bob', 'phone': '222-2222'},
+            ],
+        )
+        self.session.flush()
+
+        raw_doc = state(obj).document
+        self.assertEqual(raw_doc['contacts'][0]['name'], 'Alice')
+        self.assertEqual(raw_doc['contacts'][0]['phone_encrypted'], TestMappedContacts.encr('111-1111'))
+        self.assertEqual(obj.contacts[0].phone, '111-1111')
+        self.assertEqual(obj.contacts[1].phone, '222-2222')
+
+        self.assertIsNotNone(TestMappedContacts.query.find({
+            'contacts.phone_encrypted': TestMappedContacts.encr('111-1111'),
+        }).first())
+
+    def test_mapped_defaults_when_unset(self):
+        class TestMappedDefaults(MappedClass):
+            class __mongometa__:
+                name = 'test_nested_encrypted_property_defaults'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            profile = NestedEncryptedProperty({'username_encrypted': S.Binary})
+            secrets = NestedEncryptedProperty([S.Binary])
+
+        obj = TestMappedDefaults(_id=None)
+        self.session.flush()
+
+        self.assertEqual(dict(obj.profile.items()), {'username': None})
+        self.assertEqual(list(obj.secrets), [])
+
+        obj.profile.username = 'john'
+        obj.secrets.append('s1')
+        self.session.flush()
+        self.assertEqual(obj.profile.username, 'john')
+        self.assertEqual(list(obj.secrets), ['s1'])
+
+    def test_mapped_dict_wrapper_mutators_dirty_tracking(self):
+        class TestMappedDictOps(MappedClass):
+            class __mongometa__:
+                name = 'test_nested_encrypted_property_dict_ops'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            profile = NestedEncryptedProperty({
+                'username_encrypted': S.Binary,
+                'email_encrypted': S.Binary,
+                'avatar': S.Binary,
+            })
+
+        obj = TestMappedDictOps(_id=None, profile={'username': 'john', 'avatar': b'a'})
+        self.session.flush()
+        self.assertEqual(state(obj).status, state(obj).clean)
+
+        obj.profile.setdefault('nickname', 'jj')
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(obj.profile.nickname, 'jj')
+
+        obj.profile.update({'username': 'jane'})
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(obj.profile.username, 'jane')
+
+        popped = obj.profile.pop('email')
+        self.assertIsNone(popped)
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertNotIn('email', obj.profile)
+
+        obj.profile.replace({'username': 'mark', 'avatar': b'b'})
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(obj.profile.username, 'mark')
+        self.assertEqual(obj.profile.avatar, b'b')
+
+    def test_mapped_list_wrapper_mutators_dirty_tracking(self):
+        class TestMappedListOps(MappedClass):
+            class __mongometa__:
+                name = 'test_nested_encrypted_property_list_ops'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            secrets = NestedEncryptedProperty([S.Binary])
+
+        obj = TestMappedListOps(_id=None, secrets=['a', 'b'])
+        self.session.flush()
+        self.assertEqual(state(obj).status, state(obj).clean)
+
+        obj.secrets.insert(1, 'x')
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.secrets), ['a', 'x', 'b'])
+
+        obj.secrets[1:3] = ['y', 'z']
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.secrets), ['a', 'y', 'z'])
+
+        self.assertEqual(obj.secrets.index('y'), 1)
+        self.assertIn('z', obj.secrets)
+
+        obj.secrets.replace(['m'])
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.secrets), ['m'])
+
+        obj.secrets *= 3
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.secrets), ['m', 'm', 'm'])

@@ -10,7 +10,7 @@ from . import schema as S
 from .base import Object
 from .utils import fixup_index, LazyProperty
 from .exc import MongoGone
-from .encryption import EncryptedMixin, EncryptedField, EncryptedFieldDescriptor
+from .encryption import EncryptedMixin, NestedEncryptedField, NestedEncryptedFieldDescriptor
 
 log = logging.getLogger(__name__)
 
@@ -105,8 +105,8 @@ def collection(*args, **kwargs):
         args, kwargs)
     dct = {}
     for f in fields:
-        if isinstance(f, EncryptedField):
-            dct[f.name] = EncryptedFieldDescriptor(f)
+        if isinstance(f, NestedEncryptedField):
+            dct[f.name] = NestedEncryptedFieldDescriptor(f)
         else:
             dct[f.name] = _FieldDescriptor(f)
     if 'polymorphic_identity' in kwargs:
@@ -155,7 +155,7 @@ def _process_collection_args(args, kwargs):
         field_index.update(b.m.field_index)
         indexes += b.m.indexes
     for a in args:
-        if isinstance(a, (Field, EncryptedField)):
+        if isinstance(a, (Field, NestedEncryptedField)):
             if a.name is None:
                 raise ValueError(f"Field {a} is missing a valid name")
 
