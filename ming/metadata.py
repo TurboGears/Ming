@@ -10,7 +10,7 @@ from . import schema as S
 from .base import Object
 from .utils import fixup_index, LazyProperty
 from .exc import MongoGone
-from .encryption import EncryptedMixin
+from .encryption import EncryptedMixin, NestedEncryptedField, NestedEncryptedFieldDescriptor
 
 log = logging.getLogger(__name__)
 
@@ -103,7 +103,12 @@ class Index:
 def collection(*args, **kwargs):
     fields, indexes, collection_name, bases, session = _process_collection_args(
         args, kwargs)
-    dct = {f.name: _FieldDescriptor(f) for f in fields}
+    dct = {}
+    for f in fields:
+        if isinstance(f, NestedEncryptedField):
+            dct[f.name] = NestedEncryptedFieldDescriptor(f)
+        else:
+            dct[f.name] = _FieldDescriptor(f)
     if 'polymorphic_identity' in kwargs:
         clsname = 'Document<{}:{}>'.format(
             collection_name, kwargs['polymorphic_identity'])
@@ -150,7 +155,7 @@ def _process_collection_args(args, kwargs):
         field_index.update(b.m.field_index)
         indexes += b.m.indexes
     for a in args:
-        if isinstance(a, Field):
+        if isinstance(a, (Field, NestedEncryptedField)):
             if a.name is None:
                 raise ValueError(f"Field {a} is missing a valid name")
 
