@@ -3,6 +3,12 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.17.0 (Apr 13, 2026)
+---------------------
+* Add encryption support for nested dicts and lists (#78)
+* make getattr(ModelClass, 'foo_encrypted') work
+* fix some type annotations
+
 0.16.0 (Aug 1, 2025)
 ---------------------
 * support Python 3.13 and 3.14
