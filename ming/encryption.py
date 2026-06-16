@@ -654,6 +654,87 @@ class DecryptedField(Generic[T]):
         setattr(instance, self.encrypted_field, instance.encr(value))
 
 
+class DecryptedListField:
+    """Virtual Document field for lists stored in a sibling encrypted field.
+
+    ``DecryptedListField('emails_encrypted')`` exposes plaintext list
+    operations while storing encrypted values in ``emails_encrypted``.
+    """
+
+    def __init__(self, encrypted_field: str):
+        self.encrypted_field = encrypted_field
+
+    def _encrypt_list(self, encr_func, value):
+        if value is None:
+            return []
+        return _encrypt_list_recursive(value, [S.Binary], encr_func, self.encrypted_field, force_encrypt=True)
+
+    def __get__(self, instance: EncryptedMixin, owner):
+        if instance is None:
+            return self
+
+        doc = instance.get(self.encrypted_field)
+        if doc is None:
+            doc = []
+            instance[self.encrypted_field] = doc
+        return EncryptedListWrapper(
+            doc=doc,
+            tracker=None,
+            item_schema=S.Binary,
+            instance=instance,
+            items_encrypted=True,
+        )
+
+    def __set__(self, instance: EncryptedMixin, value):
+        instance[self.encrypted_field] = self._encrypt_list(instance.encr, value)
+
+    def __delete__(self, instance):
+        del instance[self.encrypted_field]
+
+
+class DecryptedListProperty:
+    """Virtual ODM property for lists stored in a sibling encrypted field.
+
+    ``DecryptedListProperty('emails_encrypted')`` exposes plaintext list
+    operations while storing encrypted values in ``emails_encrypted``.
+    """
+
+    def __init__(self, encrypted_field: str):
+        self.encrypted_field = encrypted_field
+
+    def _encrypt_list(self, encr_func, value):
+        if value is None:
+            return []
+        return _encrypt_list_recursive(value, [S.Binary], encr_func, self.encrypted_field, force_encrypt=True)
+
+    def __get__(self, instance: EncryptedMixin, owner):
+        if instance is None:
+            return self
+
+        from ming.odm.base import state
+
+        st = state(instance)
+        doc = st.document.get(self.encrypted_field)
+        if doc is None:
+            doc = []
+            st.document[self.encrypted_field] = doc
+        return EncryptedListWrapper(
+            doc=doc,
+            tracker=st.tracker,
+            item_schema=S.Binary,
+            instance=instance,
+            items_encrypted=True,
+        )
+
+    def __set__(self, instance: EncryptedMixin, value):
+        setattr(instance, self.encrypted_field, self._encrypt_list(instance.encr, value))
+
+    def __delete__(self, instance):
+        from ming.odm.base import state
+
+        state(instance).delete(self.encrypted_field)
+
+
 class EncryptedMixin:
     """A mixin intended to be used with :class:`~ming.declarative.Document`
     or :class:`~ming.odm.declarative.MappedClass` to provide encryption.
@@ -763,7 +844,11 @@ class EncryptedMixin:
         for fld in cls.decrypted_field_names():
             if fld in encrypted_data:
                 val = encrypted_data.pop(fld)
-                encrypted_data[f'{fld}_encrypted'] = cls.encr(val)
+                prop = getattr(cls, fld, None)
+                if isinstance(prop, (DecryptedListField, DecryptedListProperty)):
+                    encrypted_data[prop.encrypted_field] = prop._encrypt_list(cls.encr, val)
+                else:
+                    encrypted_data[f'{fld}_encrypted'] = cls.encr(val)
 
         # Handle nested encrypted field/property instances.
         for field_name, field in cls._encrypted_field_index().items():
@@ -787,7 +872,10 @@ class EncryptedMixin:
         for k in self._field_names:
             if k.endswith('_encrypted'):
                 k_decrypted = k.replace('_encrypted', '')
-                decrypted_data[k_decrypted] = getattr(self, k_decrypted)
+                value = getattr(self, k_decrypted)
+                if isinstance(getattr(type(self), k_decrypted, None), (DecryptedListField, DecryptedListProperty)):
+                    value = list(value)
+                decrypted_data[k_decrypted] = value
             else:
                 decrypted_data[k] = getattr(self, k)
         return decrypted_data
