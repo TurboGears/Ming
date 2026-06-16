@@ -4,8 +4,11 @@ from unittest import SkipTest, TestCase
 
 import ming
 from ming import create_datastore, Document, Field, schema as S
-from ming.odm import state, session, ODMSession, Mapper, MappedClass, FieldProperty, DecryptedProperty
-from ming.encryption import DecryptedField, NestedEncryptedField, NestedEncryptedProperty
+from ming.odm import (
+    state, session, ODMSession, Mapper, MappedClass, FieldProperty, DecryptedProperty,
+    DecryptedListProperty,
+)
+from ming.encryption import DecryptedField, DecryptedListField, NestedEncryptedField, NestedEncryptedProperty
 from ming.odm.odmsession import ThreadLocalODMSession
 
 from . import make_encryption_key
@@ -769,6 +772,43 @@ class TestNestedEncryptedFieldDocument(TestCase):
         self.assertEqual(doc['author'], {'username_encrypted': None})
         self.assertIsNone(doc.author.username)
 
+    def test_decrypted_list_field_uses_sibling_encrypted_field(self):
+        class TestDoc(Document):
+            class __mongometa__:
+                name = 'test_decrypted_list_field'
+                session = ming.Session.by_name('test_db')
+
+            _id = Field(S.Anything)
+            emails = DecryptedListField('emails_encrypted')
+            emails_encrypted = Field([S.Binary])
+
+        doc = TestDoc.make_encr(dict(
+            _id=1,
+            emails=['first@example.com', None],
+        ))
+        doc.m.save()
+
+        self.assertNotIn('emails', doc)
+        self.assertEqual(doc['emails_encrypted'][0], TestDoc.encr('first@example.com'))
+        self.assertIsNone(doc['emails_encrypted'][1])
+        self.assertEqual(list(doc.emails), ['first@example.com', None])
+        self.assertEqual(doc.emails[0], 'first@example.com')
+
+        doc.emails.append('second@example.com')
+        doc.m.save()
+        self.assertEqual(list(doc.emails), ['first@example.com', None, 'second@example.com'])
+        self.assertEqual(doc['emails_encrypted'][2], TestDoc.encr('second@example.com'))
+
+        doc.emails[0] = 'updated@example.com'
+        del doc.emails[1]
+        doc.m.save()
+        self.assertEqual(list(doc.emails), ['updated@example.com', 'second@example.com'])
+        self.assertEqual(doc['emails_encrypted'][0], TestDoc.encr('updated@example.com'))
+
+        doc.emails = ['reset@example.com']
+        self.assertEqual(doc['emails_encrypted'], [TestDoc.encr('reset@example.com')])
+        self.assertEqual(doc.decrypt_some_fields(), {'_id': 1, 'emails': ['reset@example.com']})
+
 
 class TestNestedEncryptedPropertyMapped(TestCase):
     DATASTORE = 'mim:///test_db'
@@ -990,3 +1030,43 @@ class TestNestedEncryptedPropertyMapped(TestCase):
         self.assertEqual(state(obj).status, state(obj).dirty)
         self.session.flush()
         self.assertEqual(list(obj.secrets), ['m', 'm', 'm'])
+
+    def test_decrypted_list_property_uses_sibling_encrypted_field(self):
+        class TestMappedEmails(MappedClass):
+            class __mongometa__:
+                name = 'test_decrypted_list_property'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            emails = DecryptedListProperty('emails_encrypted')
+            emails_encrypted = FieldProperty([S.Binary])
+
+        obj = TestMappedEmails(_id=None, emails=['first@example.com', None])
+        self.session.flush()
+
+        raw_doc = state(obj).document
+        self.assertNotIn('emails', raw_doc)
+        self.assertEqual(raw_doc['emails_encrypted'][0], TestMappedEmails.encr('first@example.com'))
+        self.assertIsNone(raw_doc['emails_encrypted'][1])
+        self.assertEqual(list(obj.emails), ['first@example.com', None])
+        self.assertEqual(obj.emails[0], 'first@example.com')
+
+        obj.emails.append('second@example.com')
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.emails), ['first@example.com', None, 'second@example.com'])
+        self.assertEqual(raw_doc['emails_encrypted'][2], TestMappedEmails.encr('second@example.com'))
+
+        obj.emails[0] = 'updated@example.com'
+        del obj.emails[1]
+        self.session.flush()
+        self.assertEqual(list(obj.emails), ['updated@example.com', 'second@example.com'])
+        self.assertEqual(raw_doc['emails_encrypted'][0], TestMappedEmails.encr('updated@example.com'))
+
+        encrypted = TestMappedEmails.encrypt_some_fields({
+            'emails': ['one@example.com', 'two@example.com'],
+        })
+        self.assertNotIn('emails', encrypted)
+        self.assertEqual(encrypted['emails_encrypted'][0], TestMappedEmails.encr('one@example.com'))
+
+        self.assertEqual(obj.decrypt_some_fields()['emails'], ['updated@example.com', 'second@example.com'])

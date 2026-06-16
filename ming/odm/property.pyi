@@ -25,5 +25,8 @@ class RelationProperty:
     @overload
     def __new__(self, related: Type[MC], via: str=None, fetch=True) -> Iterable[MC]:...
 
+class DecryptedListProperty:
+    def __init__(self, encrypted_field: str) -> None: ...
+
 
 def __getattr__(name) -> Any: ...  # marks file as incomplete

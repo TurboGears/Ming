@@ -32,6 +32,9 @@ class ORMProperty:
 class DecryptedProperty(ming.encryption.DecryptedField):
     pass
 
+class DecryptedListProperty(ming.encryption.DecryptedListProperty):
+    pass
+
 class FieldProperty(ORMProperty):
     """Declares property for a value stored in a MongoDB Document.
 
