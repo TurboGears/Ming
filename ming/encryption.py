@@ -226,19 +226,29 @@ class EncryptedListWrapper:
 
     def _encrypt_item(self, item):
         """Encrypt or process a single item for writing."""
-        encrypted_iem = _encrypt_value_recursive(
+        encrypted_item = _encrypt_value_recursive(
             item,
             self._item_schema,
             self._instance.encr,
             field_name=ENCRYPTED_SUFFIX if self._items_encrypted else None,
             force_encrypt=self._items_encrypted,
         )
-        return encrypted_iem
+        return encrypted_item
 
     def _mark_dirty(self):
         """Mark the list as modified for dirty tracking."""
         if self._tracker is not None:
             self._tracker.added_item(self._doc)
+
+    def _plain_list(self):
+        return list(self)
+
+    def _coerce_list_comparison(self, other):
+        if isinstance(other, EncryptedListWrapper):
+            return other._plain_list()
+        if isinstance(other, list):
+            return other
+        return NotImplemented
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -283,6 +293,42 @@ class EncryptedListWrapper:
             self.extend(current)
         return self
 
+    def __eq__(self, other):
+        other_list = self._coerce_list_comparison(other)
+        if other_list is NotImplemented:
+            return False
+        return self._plain_list() == other_list
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __lt__(self, other):
+        other_list = self._coerce_list_comparison(other)
+        if other_list is NotImplemented:
+            return NotImplemented
+        return self._plain_list() < other_list
+
+    def __le__(self, other):
+        other_list = self._coerce_list_comparison(other)
+        if other_list is NotImplemented:
+            return NotImplemented
+        return self._plain_list() <= other_list
+
+    def __gt__(self, other):
+        other_list = self._coerce_list_comparison(other)
+        if other_list is NotImplemented:
+            return NotImplemented
+        return self._plain_list() > other_list
+
+    def __ge__(self, other):
+        other_list = self._coerce_list_comparison(other)
+        if other_list is NotImplemented:
+            return NotImplemented
+        return self._plain_list() >= other_list
+
+    def __reversed__(self):
+        return reversed(self._plain_list())
+
     def append(self, value):
         self._doc.append(self._encrypt_item(value))
         self._mark_dirty()
@@ -302,14 +348,27 @@ class EncryptedListWrapper:
         return self._wrap_item(item)
 
     def remove(self, value):
-        # Need to find and remove the encrypted version
-        encrypted_value = self._encrypt_item(value)
-        self._doc.remove(encrypted_value)
+        del self._doc[self.index(value)]
         self._mark_dirty()
 
     def index(self, value, *args):
-        encrypted_value = self._encrypt_item(value)
-        return self._doc.index(encrypted_value, *args)
+        return self._plain_list().index(value, *args)
+
+    def count(self, value):
+        return self._plain_list().count(value)
+
+    def copy(self):
+        return self._plain_list().copy()
+
+    def reverse(self):
+        self._doc.reverse()
+        self._mark_dirty()
+
+    def sort(self, *, key=None, reverse=False):
+        values = self._plain_list()
+        values.sort(key=key, reverse=reverse)
+        self._doc[:] = [self._encrypt_item(value) for value in values]
+        self._mark_dirty()
 
     def replace(self, values):
         self[:] = values
@@ -333,7 +392,6 @@ class EncryptedListWrapper:
 
     def __repr__(self):
         return f"EncryptedListWrapper({list(self)})"
-
 
 class EncryptedDictWrapper:
     """Generic dict wrapper that transparently encrypts/decrypts specified fields.
