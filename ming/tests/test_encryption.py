@@ -8,7 +8,10 @@ from ming.odm import (
     state, session, ODMSession, Mapper, MappedClass, FieldProperty, DecryptedProperty,
     DecryptedListProperty,
 )
-from ming.encryption import DecryptedField, DecryptedListField, NestedEncryptedField, NestedEncryptedProperty
+from ming.encryption import (
+    DecryptedField, DecryptedListField, EncryptedListWrapper,
+    NestedEncryptedField, NestedEncryptedProperty,
+)
 from ming.odm.odmsession import ThreadLocalODMSession
 
 from . import make_encryption_key
@@ -1030,6 +1033,63 @@ class TestNestedEncryptedPropertyMapped(TestCase):
         self.assertEqual(state(obj).status, state(obj).dirty)
         self.session.flush()
         self.assertEqual(list(obj.secrets), ['m', 'm', 'm'])
+
+    def test_mapped_list_wrapper_matches_list_behavior(self):
+        class TestMappedListBehavior(MappedClass):
+            class __mongometa__:
+                name = 'test_nested_encrypted_property_list_behavior'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            secrets = NestedEncryptedProperty([S.Binary])
+
+        obj = TestMappedListBehavior(_id=None, secrets=['b', 'a', 'b'])
+        self.session.flush()
+        self.assertEqual(state(obj).status, state(obj).clean)
+
+        self.assertEqual(obj.secrets, ['b', 'a', 'b'])
+        self.assertNotEqual(obj.secrets, ['a', 'b'])
+        self.assertLess(obj.secrets, ['c'])
+        self.assertGreater(obj.secrets, ['a'])
+        self.assertEqual(list(reversed(obj.secrets)), ['b', 'a', 'b'])
+        self.assertEqual(obj.secrets.count('b'), 2)
+        self.assertEqual(obj.secrets.copy(), ['b', 'a', 'b'])
+
+        obj.secrets.reverse()
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.secrets), ['b', 'a', 'b'])
+
+        obj.secrets.sort()
+        self.assertEqual(state(obj).status, state(obj).dirty)
+        self.session.flush()
+        self.assertEqual(list(obj.secrets), ['a', 'b', 'b'])
+
+    def test_encrypted_list_wrapper_index_and_remove_compare_plaintext_values(self):
+        class NonDeterministicEncryption:
+            def __init__(self):
+                self.calls = 0
+
+            def encr(self, value):
+                self.calls += 1
+                return f'{value}:{self.calls}'.encode()
+
+            def decr(self, value):
+                return value.decode().split(':', 1)[0]
+
+        instance = NonDeterministicEncryption()
+        doc = [instance.encr('a'), instance.encr('b')]
+        wrapped = EncryptedListWrapper(
+            doc=doc,
+            tracker=None,
+            item_schema=S.Binary,
+            instance=instance,
+            items_encrypted=True,
+        )
+
+        self.assertEqual(wrapped.index('a'), 0)
+        wrapped.remove('b')
+        self.assertEqual(list(wrapped), ['a'])
 
     def test_decrypted_list_property_uses_sibling_encrypted_field(self):
         class TestMappedEmails(MappedClass):
