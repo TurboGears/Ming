@@ -3,6 +3,11 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.17.1 (Jun 26, 2026)
+---------------------
+* Add encryption support for top-level lists with DecryptedListField and DecryptedListProperty
+* CI: update pypy and actions versions
+
 0.17.0 (Apr 13, 2026)
 ---------------------
 * Add encryption support for nested dicts and lists (#78)
