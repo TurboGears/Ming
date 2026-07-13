@@ -48,8 +48,10 @@ class MingMiddleware:
         ContextualODMSession.close_all(context)
 
     def _cleanup_iterator(self, result):
-        yield from result
-        self._cleanup_request()
+        try:
+            yield from result
+        finally:
+            self._cleanup_request()
 
 
 def make_ming_autoflush_middleware(global_conf, **app_conf):
