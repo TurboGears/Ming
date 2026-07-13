@@ -27,6 +27,7 @@ class TestRelation(TestCase):
         self.create_app =  TestApp(MingMiddleware(self._wsgi_create_object))
         self.remove_app =  TestApp(MingMiddleware(self._wsgi_remove_object))
         self.remove_exc =  TestApp(MingMiddleware(self._wsgi_remove_object_exc))
+        self.stream_error_app = TestApp(MingMiddleware(self._wsgi_create_object_streaming_error))
 
     def tearDown(self):
         self.datastore.conn.drop_all()
@@ -48,10 +49,25 @@ class TestRelation(TestCase):
             pass
         assert self.Parent.query.find().count() == 1
 
+    def test_streaming_generator_error_cleans_up(self):
+        with self.assertRaises(RuntimeError):
+            self.stream_error_app.get('/')
+        assert self.Parent.query.find().count() == 1
+
     def _wsgi_create_object(self, environ, start_response):
         self.Parent()
         start_response('200 OK', [('Content-Type', 'text/plain')])
         return [b'Test']
+
+    def _wsgi_create_object_streaming_error(self, environ, start_response):
+        self.Parent()
+        start_response('200 OK', [('Content-Type', 'text/plain')])
+
+        def app_iter():
+            yield b'Test'
+            raise RuntimeError('boom')
+
+        return app_iter()
 
     def _wsgi_remove_object(self, environ, start_response):
         p = self.Parent.query.get()
