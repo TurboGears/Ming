@@ -832,6 +832,40 @@ class TestMatch(TestCase):
         self.assertIsNone(mim.match({'e': { '$exists': 1 } }, doc))
         self.assertIsNotNone(mim.match({'e': { '$exists': 0 } }, doc))
 
+    def test_type(self):
+        doc = {'s': 'x', 'i': 1, 'l': 2**40, 'f': 1.5, 'b': True, 'n': None, 'o': {'x': 1}, 'a': ['x', 1],
+               'id': bson.ObjectId(), 'dt': datetime(2020, 1, 1), 'bin': bson.Binary(b'x'),
+               'u': uuid.uuid4(), 'js': bson.Code('x'), 'mk': bson.MinKey()}
+        self.assertIsNotNone(mim.match({'s': {'$type': 'string'}}, doc))
+        self.assertIsNotNone(mim.match({'s': {'$type': 2}}, doc))
+        self.assertIsNone(mim.match({'s': {'$type': 'int'}}, doc))
+        self.assertIsNotNone(mim.match({'i': {'$type': 'int'}}, doc))
+        self.assertIsNotNone(mim.match({'l': {'$type': 'long'}}, doc))
+        self.assertIsNotNone(mim.match({'f': {'$type': 'double'}}, doc))
+        self.assertIsNotNone(mim.match({'b': {'$type': 'bool'}}, doc))
+        self.assertIsNone(mim.match({'b': {'$type': 'int'}}, doc))
+        self.assertIsNotNone(mim.match({'n': {'$type': 'null'}}, doc))
+        self.assertIsNotNone(mim.match({'o': {'$type': 'object'}}, doc))
+        self.assertIsNotNone(mim.match({'id': {'$type': 'objectId'}}, doc))
+        self.assertIsNotNone(mim.match({'dt': {'$type': 'date'}}, doc))
+        self.assertIsNotNone(mim.match({'bin': {'$type': 'binData'}}, doc))
+        self.assertIsNotNone(mim.match({'u': {'$type': 'binData'}}, doc))
+        self.assertIsNotNone(mim.match({'js': {'$type': 'javascript'}}, doc))
+        self.assertIsNone(mim.match({'js': {'$type': 'string'}}, doc))
+        self.assertIsNotNone(mim.match({'mk': {'$type': 'minKey'}}, doc))
+        self.assertIsNotNone(mim.match({'mk': {'$type': -1}}, doc))
+        self.assertIsNone(mim.match({'missing': {'$type': 'null'}}, doc))
+        for f in ('i', 'l', 'f'):
+            self.assertIsNotNone(mim.match({f: {'$type': 'number'}}, doc))
+        self.assertIsNone(mim.match({'b': {'$type': 'number'}}, doc))
+        self.assertIsNotNone(mim.match({'n': {'$type': ['string', 'null']}}, doc))
+        self.assertIsNone(mim.match({'i': {'$type': ['string', 'null']}}, doc))
+        # arrays match on the array itself or any element
+        self.assertIsNotNone(mim.match({'a': {'$type': 'array'}}, doc))
+        self.assertIsNotNone(mim.match({'a': {'$type': 'string'}}, doc))
+        self.assertIsNotNone(mim.match({'a': {'$type': 'int'}}, doc))
+        self.assertIsNone(mim.match({'a': {'$type': 'double'}}, doc))
+
     def test_all(self):
         doc = { 'c': [ 1, 2 ] }
         self.assertIsNotNone(mim.match({'c': {'$all': [] } }, doc))
