@@ -3,6 +3,11 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.17.3 (Sep 28, 2026)
+---------------------
+* support Python 3.15
+* support $type in MIM
+
 0.17.2 (Jul 29, 2026)
 ---------------------
 * better cleanup in MingMiddleware
