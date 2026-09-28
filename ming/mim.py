@@ -1022,6 +1022,12 @@ class Match:
                     if value.lower() in self[field].lower():
                         return True
             return False
+        if op == '$type':
+            wanted = value if isinstance(value, list) else [value]
+            codes = {_BSON_TYPE_ALIASES.get(t, t) for t in wanted}
+            if 'number' in wanted:
+                codes |= {1, 16, 18, 19}
+            return _bson_type_code(val) in codes
         raise NotImplementedError(op)
 
     def _match_regex(self, regex, val):
@@ -1330,6 +1336,21 @@ class MatchList(Match):
             self._orig.append(None)
         self._doc[key] = default
         self._orig[key] = default
+
+
+# mongo server's $type aliases; pymongo only has the numeric codes
+_BSON_TYPE_ALIASES = {
+    'double': 1, 'string': 2, 'object': 3, 'array': 4, 'binData': 5, 'objectId': 7, 'bool': 8, 'date': 9,
+    'null': 10, 'regex': 11, 'javascript': 13, 'int': 16, 'timestamp': 17, 'long': 18, 'decimal': 19,
+    'minKey': -1, 'maxKey': 127,
+}
+
+
+def _bson_type_code(val) -> int | None:
+    if val == ():
+        return None
+    code = bson_safe({'': val._orig if isinstance(val, Match) else val})[4]  # type byte of the first element
+    return -1 if code == 0xFF else code  # minKey
 
 
 def _parse_query(v):
