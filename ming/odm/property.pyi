@@ -28,5 +28,8 @@ class RelationProperty:
 class DecryptedListProperty:
     def __init__(self, encrypted_field: str) -> None: ...
 
+class EncryptableFieldProperty:
+    def __new__(self, field_type, *args, encrypted_field: str, enabled_by: str, **kwargs) -> Any: ...
+
 
 def __getattr__(name) -> Any: ...  # marks file as incomplete
