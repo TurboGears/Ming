@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypeVar, Generic
 
+from bson import json_util
+
+from ming.base import Object
 from ming.utils import classproperty
 import ming.schema as S
 
@@ -13,6 +16,9 @@ if TYPE_CHECKING:
 
 # Suffix used to identify fields that should be encrypted
 ENCRYPTED_SUFFIX = '_encrypted'
+
+# Datetimes are naive like the ones read from Mongo, which isn't the default of pymongo 3's CANONICAL_JSON_OPTIONS
+_VALUE_JSON_OPTIONS = json_util.JSONOptions(json_mode=json_util.JSONMode.CANONICAL, tz_aware=False)
 
 
 def _is_encrypted_field(field_name, field_type):
@@ -846,6 +852,24 @@ class EncryptedMixin:
         """Decrypts a string using the encryption configuration of the ming datastore that this class is bound to.
         """
         return cls._datastore.decr(b)
+
+    @classmethod
+    def encr_value(cls, value, provider='local') -> bytes | None:
+        """Encrypts any BSON value (a list, dict, ObjectId, etc.), serialized as canonical extended JSON so its types survive.
+        Because the value is encrypted as a whole, it can't be queried except by comparing the whole value.
+        """
+        if value is None:
+            return None
+        return cls.encr(json_util.dumps(value, json_options=_VALUE_JSON_OPTIONS), provider=provider)
+
+    @classmethod
+    def decr_value(cls, b: bytes | None):
+        """Decrypts a value encrypted with :meth:`encr_value`. Dicts are returned as :class:`ming.base.Object`,
+        so attribute access works on them like on any other field value.
+        """
+        if b is None:
+            return None
+        return Object.from_bson(json_util.loads(cls.decr(b), json_options=_VALUE_JSON_OPTIONS))
 
     @classmethod
     def decrypted_field_names(cls) -> list[str]:

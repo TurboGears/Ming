@@ -1,12 +1,15 @@
 from configparser import ConfigParser
+from datetime import datetime
 import os
 from unittest import SkipTest, TestCase
+
+from bson import ObjectId
 
 import ming
 from ming import create_datastore, Document, Field, schema as S
 from ming.odm import (
     state, session, ODMSession, Mapper, MappedClass, FieldProperty, DecryptedProperty,
-    DecryptedListProperty,
+    DecryptedListProperty, EncryptableFieldProperty, FieldPropertyWithMissingNone,
 )
 from ming.encryption import (
     DecryptedField, DecryptedListField, EncryptedListWrapper,
@@ -1130,3 +1133,219 @@ class TestNestedEncryptedPropertyMapped(TestCase):
         self.assertEqual(encrypted['emails_encrypted'][0], TestMappedEmails.encr('one@example.com'))
 
         self.assertEqual(obj.decrypt_some_fields()['emails'], ['updated@example.com', 'second@example.com'])
+
+
+class TestEncryptableFieldProperty(TestCase):
+    DATASTORE = 'mim:///test_db'
+
+    def setUp(self):
+        Mapper._mapper_by_classname.clear()
+        ming.configure(**{
+            'ming.test_db.uri': self.DATASTORE,
+            'ming.test_db.encryption.kms_providers.local.key': make_encryption_key(self.__class__.__name__),
+            'ming.test_db.encryption.key_vault_namespace': 'encryption_test.coll_key_vault_test',
+            'ming.test_db.encryption.provider_options.local.key_alt_names': '["test_datakey_1"]'
+        })
+        self.datastore = ming.Session._datastores.get('test_db')
+        self.session = ODMSession(bind=self.datastore)
+
+        class Task(MappedClass):
+            class __mongometa__:
+                name = 'test_encryptable'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            encrypted = FieldProperty(bool, if_missing=False)
+            args = EncryptableFieldProperty([], encrypted_field='args_encrypted', enabled_by='encrypted')
+            args_encrypted = FieldProperty(S.Binary, if_missing=None)
+            kwargs = EncryptableFieldProperty({None: None}, encrypted_field='kwargs_encrypted', enabled_by='encrypted')
+            kwargs_encrypted = FieldProperty(S.Binary, if_missing=None)
+            result = EncryptableFieldProperty(None, if_missing=None, encrypted_field='result_encrypted',
+                                              enabled_by='encrypted')
+            result_encrypted = FieldProperty(S.Binary, if_missing=None)
+
+        self.Task = Task
+        Mapper.compile_all()
+
+    def tearDown(self):
+        self.session.clear()
+        try:
+            self.datastore.conn.drop_all()
+        except TypeError:
+            self.datastore.conn.drop_database(self.datastore.db)
+            self.datastore.conn.drop_database('encryption_test')
+        Mapper._mapper_by_classname.clear()
+
+    def _raw(self, obj):
+        self.session.flush()
+        return self.datastore.db.test_encryptable.find_one({'_id': obj._id})
+
+    def test_encrypted(self):
+        oid = ObjectId()
+        when = datetime(2026, 1, 2, 3, 4, 5)
+        task = self.Task(encrypted=True, args=['foo@example.com', oid, 1, 1.5, when, b'x', None],
+                         kwargs={'email': 'foo@example.com', 'nested': {'list': [{'id': oid}]}})
+        task.result = 'traceback with foo@example.com'
+
+        raw = self._raw(task)
+        self.assertEqual(raw['args'], [])
+        self.assertEqual(raw['kwargs'], {})
+        self.assertIsNone(raw['result'])
+        self.assertIsInstance(raw['args_encrypted'], bytes)
+        self.assertNotIn(b'foo@example.com', bytes(raw['args_encrypted']))
+
+        self.session.clear()
+        task = self.Task.query.get(_id=task._id)
+        self.assertEqual(task.args, ['foo@example.com', oid, 1, 1.5, when, b'x', None])
+        self.assertEqual(task.kwargs.nested.list[0].id, oid)
+        self.assertEqual(task.result, 'traceback with foo@example.com')
+
+    def test_plaintext(self):
+        task = self.Task(args=['x'], kwargs={'a': 1})
+        task.result = 'done'
+
+        raw = self._raw(task)
+        self.assertIs(raw['encrypted'], False)
+        self.assertEqual(raw['args'], ['x'])
+        self.assertEqual(raw['result'], 'done')
+        self.assertIsNone(raw['args_encrypted'])
+        self.assertIsNotNone(self.Task.query.get(args=['x']))
+
+        # instrumented like a normal field, so changes in place are saved
+        task.kwargs['b'] = 2
+        self.session.flush()
+        self.session.clear()
+        self.assertEqual(self.Task.query.get(_id=task._id).kwargs, {'a': 1, 'b': 2})
+
+    def test_document_without_the_fields(self):
+        self.datastore.db.test_encryptable.insert_one({'_id': ObjectId(), 'args': ['old']})
+        task = self.Task.query.get(args=['old'])
+        self.assertIs(task.encrypted, False)
+        self.assertEqual(task.args, ['old'])
+        self.assertIsNone(task.result)
+
+    def test_model_init_sets_enabled_by_first(self):
+        class InitTask(self.Task):
+            class __mongometa__:
+                polymorphic_identity = 'init'
+
+            def __init__(self, encrypted=False, **kwargs):
+                self.encrypted = encrypted
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+
+        Mapper.compile_all()
+        task = InitTask(args=['secret'], kwargs={'a': 'secret'}, encrypted=True)
+        raw = self._raw(task)
+        self.assertEqual(raw['args'], [])
+        self.assertEqual(raw['kwargs'], {})
+        self.assertEqual(task.args, ['secret'])
+
+    def test_validates(self):
+        with self.assertRaises(S.Invalid):
+            self.Task(encrypted=True, args='not a list')
+        with self.assertRaises(S.Invalid):
+            self.Task(args='not a list')
+
+    def test_repr_hides_encrypted_values(self):
+        task = self.Task(encrypted=True, args=['secret'])
+        self.assertNotIn('secret', repr(task))
+        self.assertIn('<encrypted>', repr(task))
+        self.assertIn('plain', repr(self.Task(args=['plain'])))
+
+    def test_in_place_changes_are_not_saved(self):
+        task = self.Task(encrypted=True, kwargs={'a': 1})
+        task.kwargs['b'] = 2
+        self.assertEqual(task.kwargs, {'a': 1})
+        task.kwargs = {**task.kwargs, 'b': 2}
+        self.assertEqual(task.kwargs, {'a': 1, 'b': 2})
+
+    def test_delete(self):
+        task = self.Task(encrypted=True, args=['secret'])
+        self.session.flush()
+        del task.args
+        self.assertEqual(task.args, [])
+        self.assertIsNone(self._raw(task)['args_encrypted'])
+
+        task = self.Task(args=['plain'])
+        self.session.flush()
+        del task.args
+        self.assertNotIn('args', self._raw(task))
+
+    def test_changing_enabled_by_leaves_no_old_value(self):
+        task = self.Task(args=['plain'])
+        self.session.flush()
+        task.encrypted = True
+        task.args = ['secret']
+        raw = self._raw(task)
+        self.assertNotIn('args', raw)
+        self.assertEqual(task.args, ['secret'])
+
+        task.encrypted = False
+        task.args = ['plain again']
+        raw = self._raw(task)
+        self.assertEqual(raw['args'], ['plain again'])
+        self.assertIsNone(raw['args_encrypted'])
+        self.assertEqual(task.args, ['plain again'])
+
+    def test_field_names_and_decrypt_some_fields(self):
+        self.assertEqual(set(self.Task.encrypted_field_names()),
+                         {'args_encrypted', 'kwargs_encrypted', 'result_encrypted'})
+
+        task = self.Task(encrypted=True, args=['x'])
+        decrypted = task.decrypt_some_fields()
+        self.assertEqual(decrypted['args'], ['x'])
+        self.assertNotIn('args_encrypted', decrypted)
+
+    def test_plaintext_documents_without_the_fields(self):
+        class SparseTask(MappedClass):
+            class __mongometa__:
+                name = 'test_encryptable'
+                session = self.session
+
+            _id = FieldProperty(S.ObjectId)
+            encrypted = FieldPropertyWithMissingNone(bool, if_missing=S.Missing)
+            args = EncryptableFieldProperty([], encrypted_field='args_encrypted', enabled_by='encrypted')
+            args_encrypted = FieldPropertyWithMissingNone(S.Binary, if_missing=S.Missing)
+
+            def __init__(self, encrypted=False, **kwargs):
+                if encrypted:
+                    self.encrypted = True
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+
+        Mapper.compile_all()
+        task = SparseTask(args=['x'])
+        task.args = ['y']
+        self.assertEqual(self._raw(task), {'_id': task._id, 'args': ['y']})
+        self.assertIsNone(task.encrypted)
+        self.assertEqual(task.args, ['y'])
+        del task.args
+        self.assertEqual(self._raw(task), {'_id': task._id})
+
+        task = SparseTask(encrypted=True, args=['secret'])
+        raw = self._raw(task)
+        self.assertIs(raw['encrypted'], True)
+        self.assertEqual(SparseTask.decr_value(raw['args_encrypted']), ['secret'])
+        self.session.clear()
+        self.assertEqual(SparseTask.query.get(_id=task._id).args, ['secret'])
+
+    def test_encr_value_none(self):
+        self.assertIsNone(self.Task.encr_value(None))
+        self.assertIsNone(self.Task.decr_value(None))
+        self.assertEqual(self.Task.decr_value(self.Task.encr_value('str')), 'str')
+
+    def test_subclass(self):
+        class SubTask(self.Task):
+            class __mongometa__:
+                polymorphic_identity = 'sub'
+            extra = FieldProperty(str)
+
+        Mapper.compile_all()
+        task = SubTask(encrypted=True, args=['secret'], extra='x')
+        self.assertEqual(self._raw(task)['args'], [])
+        self.assertEqual(task.args, ['secret'])
+
+
+class TestEncryptableFieldPropertyReal(TestEncryptableFieldProperty):
+    DATASTORE = f"mongodb://localhost/test_ming_TestEncryptableReal_{os.getpid()}?serverSelectionTimeoutMS=100"

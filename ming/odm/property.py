@@ -130,6 +130,80 @@ class FieldPropertyWithMissingNone(FieldProperty):
             return value
 
 
+class EncryptableFieldProperty(FieldProperty):
+    """A field that each document stores either as plaintext, or encrypted in a sibling field.
+
+    Unlike :class:`.DecryptedProperty`, which encrypts every document and only takes strings, this holds any
+    value its schema allows, and a boolean field of the document chooses whether it's encrypted:
+
+    .. code-block:: python
+
+        class Task(MappedClass):
+            encrypted = FieldProperty(bool, if_missing=False)
+            args = EncryptableFieldProperty([], encrypted_field='args_encrypted', enabled_by='encrypted')
+            args_encrypted = FieldProperty(S.Binary, if_missing=None)
+
+            def __init__(self, encrypted=False, **kwargs):
+                self.encrypted = encrypted  # first, encryptable fields read it when assigned
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+
+    The value is encrypted as a whole, so Mongo can't query inside it, but plaintext documents in the same
+    collection can still be queried. Reads use the encrypted field if it has a value, which makes documents safe
+    to read whatever their ``enabled_by`` is.
+
+    ``enabled_by`` must be set before this field, or the value is stored as plaintext. Constructors assign their
+    keyword arguments in the order given, so set it first in the model's ``__init__``, as above, to not depend on
+    callers. Changing it later only affects values set afterwards.
+    To leave plaintext documents without these fields, declare ``enabled_by`` and ``encrypted_field`` as
+    :class:`.FieldPropertyWithMissingNone` with ``if_missing=S.Missing``, and only set ``enabled_by`` when it's true.
+    Encrypted values are decrypted on every read and are plain copies: mutate and reassign them, since a change
+    in place is not saved.
+
+    :param encrypted_field: The name of the :class:`~ming.schema.Binary` field that holds encrypted values
+    :param enabled_by: The name of the boolean field that turns on encryption for a document
+
+    Other arguments are the same as for :class:`.FieldProperty`.
+    """
+    def __init__(self, field_type, *args, encrypted_field, enabled_by, **kwargs):
+        super().__init__(field_type, *args, **kwargs)
+        self.encrypted_field = encrypted_field
+        self.enabled_by = enabled_by
+
+    def repr(self, doc):
+        if getattr(doc, self.encrypted_field) is not None:
+            return '<encrypted>'
+        return super().repr(doc)
+
+    def __get__(self, instance, cls=None):
+        if instance is None: return self
+        encrypted = getattr(instance, self.encrypted_field)
+        if encrypted is not None:
+            return instance.decr_value(encrypted)
+        return super().__get__(instance, cls)
+
+    def __set__(self, instance, value):
+        if getattr(instance, self.enabled_by):
+            value = self.field.schema.validate(deinstrument(value))
+            setattr(instance, self.encrypted_field, instance.encr_value(value))
+            st = state(instance)
+            if st.document.get(self.name):
+                st.delete(self.name)  # no plaintext copy left behind, reads fall back to the empty value
+                st.soil()
+        else:
+            if getattr(instance, self.encrypted_field) is not None:
+                setattr(instance, self.encrypted_field, None)
+            super().__set__(instance, value)
+
+    def __delete__(self, instance, cls=None):
+        if getattr(instance, self.encrypted_field) is not None:
+            setattr(instance, self.encrypted_field, None)
+        st = state(instance)
+        if self.name in st.document:
+            super().__delete__(instance, cls)
+            st.soil()
+
+
 class ForeignIdProperty(FieldProperty):
     """Declares a field to store one or more ObjectIds of a related objects.
 
