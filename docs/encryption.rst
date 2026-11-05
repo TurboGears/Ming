@@ -87,3 +87,41 @@ Similarly to the foundation level, this approach requires that you follow a few 
    * Its first argument should be the type that you expect the decrypted data to be (`str`, `int`, etc.).
    * The second argument should be the name of the encrypted field (e.g. `email_encrypted`).
    * The DecryptedProperty's name should be the same as the encrypted :class:`~ming.odm.declarative.DecryptedProperty`, but without the `_encrypted` suffix (e.g. `email`).
+
+
+Encrypting Only Some Documents
+----------------------------------
+
+:class:`~ming.odm.property.EncryptableFieldProperty` is for collections where only some documents hold sensitive data, and the others must stay queryable. Each document chooses whether it's encrypted, and the value can be anything its schema allows, not just a string.
+
+.. code-block:: python
+
+        class Task(MappedClass):
+            class __mongometa__:
+                session = session
+                name = 'tasks'
+            _id = FieldProperty(schema.ObjectId)
+
+            encrypted = FieldProperty(bool, if_missing=False)
+            args = EncryptableFieldProperty([], encrypted_field='args_encrypted', enabled_by='encrypted')
+            args_encrypted = FieldProperty(S.Binary, if_missing=None)
+
+            def __init__(self, encrypted=False, **kwargs):
+                self.encrypted = encrypted  # first, encryptable fields read it when assigned
+                for k, v in kwargs.items():
+                    setattr(self, k, v)
+
+        Task(encrypted=True, args=['foo@example.com', ObjectId()])  # stored only in args_encrypted
+        Task(args=['some value'])  # stored in args, as usual
+        Task.query.find({'args': 'some value'})  # finds only the plaintext task
+
+The value is serialized to canonical extended JSON, so BSON types survive, and then encrypted as a whole with :meth:`~ming.encryption.EncryptedMixin.encr_value`.
+
+Keep in mind that:
+
+* The ``enabled_by`` field must be set before the encryptable fields, or their values are stored as plaintext. Constructors assign their keyword arguments in the order given, so set it first in the model's ``__init__``, as above, to not depend on callers.
+* Changing the ``enabled_by`` field later only affects values set afterwards.
+* To leave plaintext documents without these fields, for example when older code reads the same collection, declare the ``enabled_by`` and encrypted fields as :class:`~ming.odm.property.FieldPropertyWithMissingNone` with ``if_missing=S.Missing``, and only set ``enabled_by`` when it's true.
+* Encrypted values can't be queried, except by comparing the whole value.
+* :meth:`~ming.encryption.EncryptedMixin.encrypt_some_fields` doesn't support these fields: it ignores ``enabled_by`` and only takes strings. Set them through the property instead.
+* Encrypted values are decrypted on every read and are plain copies. Mutate and reassign them, since a change in place is not saved.
