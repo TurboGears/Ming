@@ -179,6 +179,34 @@ class TestDatastore(TestCase):
         assert session.bind.conn is not None
         assert session.bind.db is not None
 
+    def test_configure_share_engines(self):
+        ming.configure(share_engines=True, **{
+            'ming.gutenberg.uri': 'mongodb://u:p@db1:27017/gutenberg?authSource=admin',
+            'ming.allura.uri': 'mongodb://u:p@db1:27017/pyforge',
+            'ming.allura.authSource': 'admin',
+            'ming.other.uri': 'mongodb://u:p@db1:27017/other',  # no authSource -> auths against "other"
+            'ming.tz.uri': 'mongodb://u:p@db1:27017/tz?authSource=admin',
+            'ming.tz.tz_aware': True,
+            'ming.dstat.uri': 'mongodb://db2:27017/dstat',
+            'ming.mim.uri': 'mim:///mimdb',
+        })
+        ds = Session._datastores
+        assert ds['gutenberg'].bind is ds['allura'].bind
+        assert ds['other'].bind is not ds['gutenberg'].bind
+        assert ds['tz'].bind is not ds['gutenberg'].bind
+        assert ds['dstat'].bind is not ds['gutenberg'].bind
+        assert ds['mim'].bind is not ds['gutenberg'].bind
+        assert ds['mim'].bind.conn is mim.Connection.get()
+        assert [ds['gutenberg'].name, ds['allura'].name] == ['gutenberg', 'pyforge']
+        assert Session.by_name('allura').bind is ds['allura']
+
+    def test_configure_no_share_engines_by_default(self):
+        ming.configure(**{
+            'ming.a.uri': 'mongodb://db1:27017/a',
+            'ming.b.uri': 'mongodb://db1:27017/b',
+        })
+        assert Session._datastores['a'].bind is not Session._datastores['b'].bind
+
     def test_no_kwargs_with_bind(self):
         self.assertRaises(
             ming.exc.MingConfigError,
