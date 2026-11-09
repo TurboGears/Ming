@@ -3,6 +3,11 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.18.0 (Nov 9, 2026)
+--------------------
+* drop Python 3.9 and 3.10 support
+* Add EncryptableFieldProperty
+
 0.17.3 (Sep 28, 2026)
 ---------------------
 * support Python 3.15
