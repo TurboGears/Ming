@@ -47,6 +47,23 @@ def create_engine(*args, **kwargs) -> Engine:
     return Engine(use_class, args, kwargs, connect_retry, auto_ensure_indexes)
 
 
+def engine_key(uri: str | None, encryption=None, **kwargs) -> tuple | None:
+    """Identity of the client ``create_engine(uri, **kwargs)`` would build, ignoring the target database.
+
+    Datastores with equal keys can safely share one :class:`.Engine`.
+    Returns None for anything that isn't a ``mongodb://`` URI (``mim://`` is already a singleton).
+    """
+    if not uri or not uri.startswith(('mongodb://', 'mongodb+srv://')):
+        return None
+    parsed = parse_uri(uri)
+    opts = {k.lower(): v for k, v in {**parsed['options'], **kwargs}.items()}
+    # with credentials and no authSource, the URI's database is the auth database, so it must stay in the key
+    if parsed['username'] and 'authsource' not in opts:
+        opts['authsource'] = parsed['database'] or 'admin'
+    return (tuple(sorted(parsed['nodelist'])), parsed['username'], parsed['password'],
+            tuple(sorted(opts.items(), key=str)))
+
+
 def create_datastore(uri, **kwargs) -> DataStore:
     """Creates a new :class:`.DataStore` for the database identified by ``uri``.
 
