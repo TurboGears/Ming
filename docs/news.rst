@@ -3,6 +3,10 @@ Ming News / Release Notes
 
 The latest releases support PyMongo v3 and v4
 
+0.18.1 (Nov 19, 2026)
+---------------------
+* new option to share mongo connections
+
 0.18.0 (Nov 9, 2026)
 --------------------
 * drop Python 3.9 and 3.10 support
