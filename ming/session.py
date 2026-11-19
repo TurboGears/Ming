@@ -104,8 +104,11 @@ class Session:
     def find_by(self, cls, **kwargs):
         return self.find(cls, kwargs)
 
-    def count(self, cls):
-        return self._impl(cls).estimated_document_count()
+    def count(self, cls, filter: dict | None = None, *args, **kwargs):
+        if filter:
+            return self._impl(cls).count_documents(filter, *args, **kwargs)
+        else:
+            return self._impl(cls).estimated_document_count(*args, **kwargs)
 
     def create_index(self, cls, fields, **kwargs):
         index_fields = fixup_index(fields)
