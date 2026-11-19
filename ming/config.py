@@ -1,7 +1,7 @@
 
 from ming.exc import MingConfigError
 from ming.session import Session
-from ming.datastore import create_datastore
+from ming.datastore import create_datastore, engine_key
 from ming.tests import make_encryption_key
 
 
@@ -13,19 +13,23 @@ def variable_decode(**kwargs):
     return fe_variable_decode(kwargs)
 
 
-def configure(**kwargs):
+def configure(share_engines=False, **kwargs):
     """
     Given a (flat) dictionary of config values, creates DataStores
     and saves them by name
+
+    With ``share_engines=True``, datastores that connect to the same server
+    with the same credentials and options share a single :class:`.Engine`
+    (and so a single MongoClient and connection pool).
     """
     config = variable_decode(**kwargs)
-    configure_from_nested_dict(config["ming"])
+    configure_from_nested_dict(config["ming"], share_engines=share_engines)
 
 
 MIM_TEST_KEY = make_encryption_key('test local key')
 
 
-def configure_from_nested_dict(config):
+def configure_from_nested_dict(config, share_engines=False):
     try:
         from formencode import schema, validators
         import ming.validators as ming_validators
@@ -44,6 +48,7 @@ def configure_from_nested_dict(config):
         encryption = ming_validators.EncryptionConfigValidator(if_missing=None)
 
     datastores = {}
+    engines = {}
     for name, datastore in config.items():
         if datastore['uri'].startswith('mim://') and 'encryption' not in datastore:
             datastore['encryption'] = {
@@ -63,9 +68,15 @@ def configure_from_nested_dict(config):
         args = DatastoreSchema.to_python(datastore, None)
         database = args.pop("database", None)
         if database is None:
-            datastores[name] = create_datastore(**args)
+            ds = create_datastore(**args)
         else:
-            datastores[name] = create_datastore(database=database, **args)
+            ds = create_datastore(database=database, **args)
+        if share_engines:
+            key = engine_key(database=database, **args)
+            if key is not None:
+                # engines connect lazily, so the discarded one never opened a connection
+                ds.bind = engines.setdefault(key, ds.bind)
+        datastores[name] = ds
     Session._datastores = datastores
     # bind any existing sessions
     for name, session in Session._registry.items():
